@@ -10,7 +10,7 @@ You can install this plugin using [Beta Reviewers Auto-update Tester](https://gi
 
 ## How do I create a blog/ get an API key?
 
-This is not generally available yet.
+This is not generally available yet. Keep an eye out!
 
 
 
