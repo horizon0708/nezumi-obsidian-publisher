@@ -1,0 +1,14 @@
+
+
+button:disabled,
+button[disabled]{
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+
+
+
+.error-message {
+	color: 	#ff3333;
+	font-size: small;
+}
