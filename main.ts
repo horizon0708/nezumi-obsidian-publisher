@@ -30,11 +30,13 @@ export default class BlogSync extends Plugin {
 				id: `test-upload-blog-${id}`,
 				name: `Push updates to ${name}`,
 				callback: async () => {
+					Logger.setLevel(Logger.DEBUG);
 					const network = new SyncManager(
 						this.app,
 						this.settingTab.blogs[i]
 					);
 					const result = await network.push();
+					console.log(result);
 					Logger.info(result);
 				},
 			});
