@@ -45,12 +45,19 @@ export class Manifest {
 		return value.md5;
 	}
 
-	addSlugAndCheckCollision(path: PathString, slug: string) {
+	hasSlugCollision(path: PathString, slug: string) {
 		const duplicatePath = this.localSlugs.get(slug);
 		if (!duplicatePath) {
 			this.localSlugs.set(slug, path);
+			return false;
 		}
-		return duplicatePath;
+
+		this.skippedDueToCollsion(
+			path,
+			`${duplicatePath} already has slug: ${slug}. Please manually set a unique slug.`
+		);
+
+		return true;
 	}
 
 	addAssetPath(path: PathString) {

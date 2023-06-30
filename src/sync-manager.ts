@@ -37,25 +37,26 @@ export class SyncManager {
 			this.blog.syncFolder
 		);
 
-		const postsToUpload = this.app.vault
+		const postFiles = this.app.vault
 			.getFiles()
-			.filter(
-				(file) =>
-					file.path.startsWith(this.syncFolder) &&
-					file.path.endsWith(".md")
-			)
-			.map((file) => file.path);
-		console.log(postsToUpload);
+			.filter((file) => this.filterForPosts(file, manifest));
+		console.log(postFiles);
 
+		postFiles.forEach((file) => {
+			this.recordEmbeddedAssetPaths(file, manifest);
+		});
+		console.log("assets", manifest.assetsToUpload);
 		// Not sure why but Promise.all seems to error out with ERR_EMPTY_RESPONSE on some files
 		// IMPROVEMENT: look into batching requests
-		for (const path of postsToUpload) {
+		for (const path of postFiles) {
 			await this.upload(path, manifest);
 		}
 		for (const path of manifest.assetsToUpload) {
-			await this.upload(path, manifest);
+			const file = this.app.vault.getAbstractFileByPath(path);
+			if (file instanceof TFile) {
+				await this.upload(file, manifest);
+			}
 		}
-		console.log(manifest.assetsToUpload);
 
 		return {
 			deleteResult: await this.deleteMany(manifest.getFilesToDelete),
@@ -63,7 +64,21 @@ export class SyncManager {
 		};
 	};
 
-	private getEmbeddedAssets = (file: TFile, manifest: Manifest) => {
+	private filterForPosts = (file: TFile, manifest: Manifest) => {
+		const { path } = file;
+		if (!path.startsWith(this.syncFolder) || !path.endsWith(".md")) {
+			return false;
+		}
+		const slug =
+			this.app.metadataCache.getFileCache(file)?.frontmatter?.[
+				pluginConfig.slugKey
+			] ?? file.basename.toLowerCase().replace(/[^a-z0-9]+/, "-");
+
+		this.addSlugToFrontmatter(file, slug);
+		return !manifest.hasSlugCollision(path, slug);
+	};
+
+	private recordEmbeddedAssetPaths = (file: TFile, manifest: Manifest) => {
 		const fileLinks = this.app.metadataCache.resolvedLinks[file.path];
 		if (!fileLinks) {
 			return;
@@ -76,36 +91,10 @@ export class SyncManager {
 		}
 	};
 
-	private upload = async (path: string, manifest: Manifest) => {
+	private uploadPost = async (file: TFile, manifest: Manifest) => {
+		const { path } = file;
 		try {
-			const file = this.app.vault.getAbstractFileByPath(path);
-			if (!file) {
-				manifest.skipped(path, "Not a valid file");
-				return;
-			}
-			if (!(file instanceof TFile)) {
-				manifest.skipped(path, "Is a folder");
-				return;
-			}
-
 			const { apiKey, endpoint } = this.blog;
-			const slug = this.getSlug(file);
-			if (slug) {
-				const duplicatePath = manifest.addSlugAndCheckCollision(
-					path,
-					slug
-				);
-
-				if (duplicatePath) {
-					manifest.skippedDueToCollsion(
-						path,
-						`${duplicatePath} already has slug: ${slug}. Please manually set a unique slug.`
-					);
-					return;
-				}
-			}
-
-			this.getEmbeddedAssets(file, manifest);
 			const { type, md5, content } = await this.readFile(file);
 			const serverMd5 = manifest.getServerMd5(file.path);
 			if (serverMd5 && serverMd5 === md5) {
@@ -114,7 +103,54 @@ export class SyncManager {
 			}
 
 			const basePayload = {
-				slug,
+				slug: this.getSlug(file),
+				path: manifest.stripSyncFolder(file.path),
+				apiKey,
+				endpoint,
+				md5,
+			};
+
+			// IMPROVEMENT: add dry run
+			// IMPROVEMENT: add retry
+			const res =
+				type === "post"
+					? await uploadPost({
+							...basePayload,
+							type: "post",
+							content: content as string,
+					  })
+					: await uploadAsset({
+							...basePayload,
+							type: "asset",
+							content: content as ArrayBuffer,
+					  });
+
+			if (!("json" in res)) {
+				manifest.failed(path, res.error);
+				return;
+			}
+
+			manifest.succeeded(path);
+			return;
+		} catch (e) {
+			manifest.failed(path, e.message);
+			return;
+		}
+	};
+
+	private upload = async (file: TFile, manifest: Manifest) => {
+		const { path } = file;
+		try {
+			const { apiKey, endpoint } = this.blog;
+			const { type, md5, content } = await this.readFile(file);
+			const serverMd5 = manifest.getServerMd5(file.path);
+			if (serverMd5 && serverMd5 === md5) {
+				manifest.skipped(path, "MD5 matches");
+				return;
+			}
+
+			const basePayload = {
+				slug: this.getSlug(file),
 				path: manifest.stripSyncFolder(file.path),
 				apiKey,
 				endpoint,
@@ -197,11 +233,11 @@ export class SyncManager {
 		}
 
 		let newSlug = file.basename.toLowerCase().replace(/[^a-z0-9]+/, "-");
-		this.addSlug(file, newSlug);
+		this.addSlugToFrontmatter(file, newSlug);
 		return newSlug;
 	};
 
-	private addSlug = async (file: TFile, slug: string) => {
+	private addSlugToFrontmatter = async (file: TFile, slug: string) => {
 		try {
 			await this.app.fileManager.processFrontMatter(
 				file,
