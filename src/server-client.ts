@@ -73,7 +73,7 @@ export const uploadPost = async (
 		const { endpoint, apiKey } = params;
 		const baseUrl = endpoint ?? pluginConfig.baseUrl;
 		return await requestUrl({
-			url: `${baseUrl}/files`,
+			url: `${baseUrl}/posts`,
 			method: HttpMethod.POST,
 			headers: {
 				...jsonContentType,
@@ -98,7 +98,7 @@ export const uploadAsset = async (
 		const baseUrl = endpoint ?? pluginConfig.baseUrl;
 		const boundaryString = buildRandomBoundaryString();
 		return await requestUrl({
-			url: `${baseUrl}/files`,
+			url: `${baseUrl}/assets`,
 			method: HttpMethod.POST,
 			headers: {
 				["content-type"]: `multipart/form-data; boundary=----${boundaryString}`,

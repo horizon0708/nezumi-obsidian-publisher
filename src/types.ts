@@ -61,7 +61,8 @@ export type UploadResponse = ServerResponse<{ slug: string }>;
 
 export type GetFileListResponse = ServerResponse<{
 	blog: { id: number };
-	files: ServerFile[];
+	posts: ServerFile[];
+	assets: ServerFile[];
 }>;
 
 export type PingRequest = {

@@ -1,14 +1,7 @@
-import { App, TFile } from "obsidian";
-import {
-	deleteFiles,
-	getFileList,
-	uploadAsset,
-	uploadPost,
-} from "./server-client";
+import { App } from "obsidian";
+import { deleteFiles, getFileList } from "./server-client";
 import { Blog } from "./types";
-import { Manifest } from "./manifest";
-import SparkMD5 from "spark-md5";
-import { pluginConfig } from "./plugin-config";
+
 import { PostManifest } from "./post-manifest";
 import { AssetManifest } from "./asset-manifest";
 
@@ -32,19 +25,19 @@ export class SyncManager {
 		}
 
 		const postManifest = new PostManifest(
-			filesResponse.json.files,
+			filesResponse.json.posts,
 			this.blog,
 			this.app
 		);
 		const assetManifest = new AssetManifest(
-			filesResponse.json.files,
+			filesResponse.json.assets,
 			postManifest.embeddedAssetPaths,
 			this.blog,
 			this.app
 		);
 
 		console.log("assets", assetManifest.pendingAssets);
-		// Not sure why but Promise.all seems to error out with ERR_EMPTY_RESPONSE on some files
+		// Not sure why but Promise.all seems to error out with ERR_EMPTY_RESPONSE sometimes
 		// IMPROVEMENT: look into batching requests
 		for (const post of postManifest.pendingPosts) {
 			await post.upload();
