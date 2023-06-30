@@ -51,7 +51,6 @@ export type UploadPostPayload = BasePayload & {
 export type UploadAssetPayload = BasePayload & {
 	type: "asset";
 	path: string;
-	slug: string;
 	content: ArrayBuffer;
 	md5: string;
 };
