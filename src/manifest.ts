@@ -21,6 +21,7 @@ export class Manifest {
 		LocalFileState
 	>();
 	private localSlugs: Map<string, PathString> = new Map<string, PathString>();
+	private embeddedAssets: Set<PathString> = new Set<PathString>();
 	private syncFolder: string;
 
 	constructor(files: ServerFile[], syncFolder: string) {
@@ -52,6 +53,10 @@ export class Manifest {
 		return duplicatePath;
 	}
 
+	addAssetPath(path: PathString) {
+		this.embeddedAssets.add(path);
+	}
+
 	stripSyncFolder(path: PathString): PathWithoutSyncFolder {
 		if (this.syncFolder !== "/") {
 			return path.slice(this.syncFolder.length + 1);
@@ -69,6 +74,10 @@ export class Manifest {
 
 		Logger.debug("getFilesToDelete", this.serverFiles);
 		return toDelete;
+	}
+
+	get assetsToUpload() {
+		return Array.from(this.embeddedAssets);
 	}
 
 	skipped(path: PathString, message: string) {

@@ -25,6 +25,7 @@ export class SyncManager {
 
 	push = async () => {
 		const filesResponse = await getFileList(this.blog);
+		console.log(filesResponse);
 		if (!("json" in filesResponse)) {
 			return {
 				code: "GET_FILES_FAILURE",
@@ -36,21 +37,43 @@ export class SyncManager {
 			this.blog.syncFolder
 		);
 
-		const toTryUpload = this.app.vault
+		const postsToUpload = this.app.vault
 			.getFiles()
-			.filter((file) => file.path.startsWith(this.syncFolder))
+			.filter(
+				(file) =>
+					file.path.startsWith(this.syncFolder) &&
+					file.path.endsWith(".md")
+			)
 			.map((file) => file.path);
+		console.log(postsToUpload);
 
 		// Not sure why but Promise.all seems to error out with ERR_EMPTY_RESPONSE on some files
 		// IMPROVEMENT: look into batching requests
-		for (const path of toTryUpload) {
+		for (const path of postsToUpload) {
 			await this.upload(path, manifest);
 		}
+		for (const path of manifest.assetsToUpload) {
+			await this.upload(path, manifest);
+		}
+		console.log(manifest.assetsToUpload);
 
 		return {
 			deleteResult: await this.deleteMany(manifest.getFilesToDelete),
 			uploadResult: manifest.uploadResult,
 		};
+	};
+
+	private getEmbeddedAssets = (file: TFile, manifest: Manifest) => {
+		const fileLinks = this.app.metadataCache.resolvedLinks[file.path];
+		if (!fileLinks) {
+			return;
+		}
+		for (const path in fileLinks) {
+			console.log(path);
+			if (!path.endsWith(".md")) {
+				manifest.addAssetPath(path);
+			}
+		}
 	};
 
 	private upload = async (path: string, manifest: Manifest) => {
@@ -64,6 +87,7 @@ export class SyncManager {
 				manifest.skipped(path, "Is a folder");
 				return;
 			}
+
 			const { apiKey, endpoint } = this.blog;
 			const slug = this.getSlug(file);
 			if (slug) {
@@ -81,6 +105,7 @@ export class SyncManager {
 				}
 			}
 
+			this.getEmbeddedAssets(file, manifest);
 			const { type, md5, content } = await this.readFile(file);
 			const serverMd5 = manifest.getServerMd5(file.path);
 			if (serverMd5 && serverMd5 === md5) {
