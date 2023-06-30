@@ -7,6 +7,8 @@ export type Blog = {
 	subdomain: string;
 };
 
+export type FileUploadState = "pending" | "skipped" | "uploaded" | "failed";
+
 export type PluginData = {
 	blogs: Blog[];
 };

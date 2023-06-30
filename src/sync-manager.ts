@@ -9,6 +9,8 @@ import { Blog } from "./types";
 import { Manifest } from "./manifest";
 import SparkMD5 from "spark-md5";
 import { pluginConfig } from "./plugin-config";
+import { Post } from "./post";
+import { PostManifest } from "./post-manifest";
 
 const SLUG = "slug";
 
@@ -36,20 +38,20 @@ export class SyncManager {
 			filesResponse.json.files,
 			this.blog.syncFolder
 		);
+		const postManifest = new PostManifest(
+			filesResponse.json.files,
+			this.blog,
+			this.app
+		);
 
-		const postFiles = this.app.vault
-			.getFiles()
-			.filter((file) => this.filterForPosts(file, manifest));
-		console.log(postFiles);
-
-		postFiles.forEach((file) => {
-			this.recordEmbeddedAssetPaths(file, manifest);
-		});
+		// postFiles.forEach((file) => {
+		// 	this.recordEmbeddedAssetPaths(file, manifest);
+		// });
 		console.log("assets", manifest.assetsToUpload);
 		// Not sure why but Promise.all seems to error out with ERR_EMPTY_RESPONSE on some files
 		// IMPROVEMENT: look into batching requests
-		for (const path of postFiles) {
-			await this.upload(path, manifest);
+		for (const post of postManifest.pendingPosts) {
+			await post.upload();
 		}
 		for (const path of manifest.assetsToUpload) {
 			const file = this.app.vault.getAbstractFileByPath(path);
@@ -60,7 +62,7 @@ export class SyncManager {
 
 		return {
 			deleteResult: await this.deleteMany(manifest.getFilesToDelete),
-			uploadResult: manifest.uploadResult,
+			uploadResult: postManifest.uploadResult,
 		};
 	};
 
@@ -88,53 +90,6 @@ export class SyncManager {
 			if (!path.endsWith(".md")) {
 				manifest.addAssetPath(path);
 			}
-		}
-	};
-
-	private uploadPost = async (file: TFile, manifest: Manifest) => {
-		const { path } = file;
-		try {
-			const { apiKey, endpoint } = this.blog;
-			const { type, md5, content } = await this.readFile(file);
-			const serverMd5 = manifest.getServerMd5(file.path);
-			if (serverMd5 && serverMd5 === md5) {
-				manifest.skipped(path, "MD5 matches");
-				return;
-			}
-
-			const basePayload = {
-				slug: this.getSlug(file),
-				path: manifest.stripSyncFolder(file.path),
-				apiKey,
-				endpoint,
-				md5,
-			};
-
-			// IMPROVEMENT: add dry run
-			// IMPROVEMENT: add retry
-			const res =
-				type === "post"
-					? await uploadPost({
-							...basePayload,
-							type: "post",
-							content: content as string,
-					  })
-					: await uploadAsset({
-							...basePayload,
-							type: "asset",
-							content: content as ArrayBuffer,
-					  });
-
-			if (!("json" in res)) {
-				manifest.failed(path, res.error);
-				return;
-			}
-
-			manifest.succeeded(path);
-			return;
-		} catch (e) {
-			manifest.failed(path, e.message);
-			return;
 		}
 	};
 

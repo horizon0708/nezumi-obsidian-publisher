@@ -1,7 +1,6 @@
 import { App, TFile } from "obsidian";
-import { Manifest } from "./manifest";
 import { pluginConfig } from "./plugin-config";
-import { Blog } from "./types";
+import { Blog, FileUploadState } from "./types";
 import SparkMD5 from "spark-md5";
 import { uploadPost } from "./server-client";
 
@@ -9,72 +8,91 @@ type PostParams = {
 	blog: Blog;
 	file: TFile;
 	app: App;
-	manifest: Manifest;
+	serverMd5?: string;
 };
 
 export class Post {
 	private file: TFile;
 	private blog: Blog;
 	private app: App;
-	private manifest: Manifest;
-	private slug: string;
-	private status: "pending" | "skipped" | "uploaded" | "failed" = "pending";
-	private reason: string | null = null;
+	private serverMd5?: string;
+	slug: string;
+	status: FileUploadState = "pending";
+	message?: string;
 
-	constructor({ file, blog, app, manifest }: PostParams) {
+	constructor({ file, blog, app, serverMd5 }: PostParams) {
 		this.file = file;
 		this.blog = blog;
 		this.app = app;
-		this.slug = file.basename.toLowerCase().replace(/[^a-z0-9]+/, "-");
-		this.manifest = manifest;
-	}
-
-	get isValid() {
-		const { path } = this.file;
-		if (!path.startsWith(this.blog.syncFolder) || !path.endsWith(".md")) {
-			return false;
-		}
-		const slug =
-			this.app.metadataCache.getFileCache(this.file)?.frontmatter?.[
-				pluginConfig.slugKey
-			] ?? this.slug;
-
-		this.addSlugToFrontmatter(this.file, slug);
-		return !this.manifest.hasSlugCollision(path, slug);
+		this.slug =
+			this.slugFromFrontmatter ??
+			file.basename.toLowerCase().replace(/[^a-z0-9]+/, "-");
+		this.serverMd5 = serverMd5;
 	}
 
 	upload = async () => {
 		try {
 			const { apiKey, endpoint } = this.blog;
+
+			// add slug to frontmatter before calculating MD5
+			await this.addSlugToFrontmatter(this.file, this.slug);
+
 			const content = await this.app.vault.cachedRead(this.file);
 			const md5 = SparkMD5.hash(content);
-			const serverMd5 = this.manifest.getServerMd5(this.file.path);
-			if (serverMd5 && serverMd5 === md5) {
-				this.manifest.skipped(this.file.path, "MD5 matches");
+			if (this.serverMd5 && this.serverMd5 === md5) {
+				this.setStatus("skipped", "MD5 matches");
 				return;
 			}
-
-			const payload = {
+			const res = await uploadPost({
 				slug: this.slug,
 				path: this.pathWithoutSyncFolder,
 				apiKey,
 				endpoint,
 				md5,
-				type: "post" as const,
+				type: "post",
 				content,
-			};
-
-			const res = await uploadPost(payload);
+			});
 			if (!("json" in res)) {
-				this.manifest.failed(this.file.path, res.error);
+				this.setStatus("failed", res.error);
 			}
+
+			this.setStatus("uploaded");
 		} catch (e) {
-			this.manifest.failed(this.file.path, e.message);
+			this.setStatus("failed", e.message);
 		}
 	};
 
+	setStatus = (status: FileUploadState, message?: string) => {
+		this.status = status;
+		this.message = message;
+	};
+
+	get embeddedAssetPaths() {
+		const fileLinks = this.app.metadataCache.resolvedLinks[this.file.path];
+		if (!fileLinks) {
+			return;
+		}
+		const paths = [];
+		for (const path in fileLinks) {
+			if (!path.endsWith(".md")) {
+				paths.push(path);
+			}
+		}
+		return paths;
+	}
+
+	private get slugFromFrontmatter() {
+		const { app, file } = this;
+		return app.metadataCache.getFileCache(file)?.frontmatter?.[
+			pluginConfig.slugKey
+		];
+	}
+
 	private addSlugToFrontmatter = async (file: TFile, slug: string) => {
 		try {
+			if (this.slugFromFrontmatter && this.slugFromFrontmatter === slug) {
+				return;
+			}
 			await this.app.fileManager.processFrontMatter(
 				file,
 				(frontmatter) => {
