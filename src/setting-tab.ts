@@ -4,6 +4,7 @@ import { Blog } from "./types";
 import { pingBlog } from "./server-client";
 import { BlogModal } from "./blog-modal";
 import { pluginConfig } from "./plugin-config";
+import { pingBlogFP } from "./network";
 
 type BlogFieldState = Blog & {
 	errorEl: HTMLElement | null;
@@ -79,6 +80,14 @@ export class SettingTab extends PluginSettingTab {
 
 	private saveBlog = async (values: Record<string, string>) => {
 		const { apiKey, syncFolder, endpoint, name: customName } = values;
+		const b = await pingBlogFP({
+			apiKeyHeader: pluginConfig.apiKeyHeader,
+			apiKeyValue: apiKey,
+			baseUrl: endpoint ?? pluginConfig.baseUrl,
+		})();
+		console.log("---");
+		console.log(b);
+		console.log("---");
 		const pingResponse = await pingBlog({ apiKey, endpoint });
 		let message = "";
 		if ("json" in pingResponse) {
