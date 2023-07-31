@@ -55,8 +55,6 @@ export type UploadAssetPayload = BasePayload & {
 	md5: string;
 };
 
-export type UploadPayload = UploadPostPayload | UploadAssetPayload;
-
 export type UploadResponse = ServerResponse<{ slug: string }>;
 
 export type GetFileListResponse = ServerResponse<{
