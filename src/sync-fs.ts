@@ -1,6 +1,7 @@
 import * as RTE from "fp-ts/ReaderTaskEither";
 import * as TE from "fp-ts/TaskEither";
 import { flow, pipe } from "fp-ts/function";
+import * as S from "fp-ts/Semigroup";
 import * as A from "fp-ts/Array";
 import {
 	getDefaultSlugFromFile,
@@ -12,6 +13,7 @@ import {
 import SparkMD5 from "spark-md5";
 import { TFile } from "obsidian";
 import * as R from "fp-ts/Record";
+import * as struct from "fp-ts/struct";
 
 export type FPost = {
 	slug: string;
@@ -56,28 +58,14 @@ const addPostContentTE = (file: TFile) => (record: Record<string, any>) =>
 // 	content,
 // }))
 
-const setPostContentAndMD5 = (file: TFile) =>
+const getPostContentAndMD5 = (file: TFile) =>
 	pipe(
 		readPostRTE(file),
-		RTE.map(
-			(content) =>
-				({ content, md5: SparkMD5.hash(content) } as Record<
-					string,
-					string
-				>)
-		)
+		RTE.map((content) => {
+			const md5 = SparkMD5.hash(content);
+			return { content, md5 };
+		})
 	);
-
-const addContentMD5 = (record: Record<string, any>) => {
-	const content = record["content"];
-	if (typeof content === "undefined") {
-		return record;
-	}
-	return {
-		...record,
-		// md5: SparkMD5.hash(content),
-	};
-};
 
 const addEmbeddedAssets = (file: TFile) =>
 	pipe(
@@ -87,7 +75,27 @@ const addEmbeddedAssets = (file: TFile) =>
 		}))
 	);
 
-RTE.sequenceArray([getEmbeddedAssets(new TFile())]);
+/**
+ * Gets slug for the TFile, and updates TFile's frontmatter if necessary
+ */
+const getAndMaybeUpdateSlug = (file: TFile) =>
+	pipe(
+		[getSlugFromFrontmatter, getDefaultSlugFromFile],
+		A.map((f) => f(file)),
+		RTE.sequenceArray,
+		RTE.tap(maybeUpdatePostFrontmatter(file)),
+		RTE.map(([fmSlug, defaultSlug]) => {
+			const slug = fmSlug === "" ? defaultSlug : fmSlug;
+			return { slug };
+		})
+	);
+
+export const e = (file: TFile) =>
+	pipe(
+		[getAndMaybeUpdateSlug, getPostContentAndMD5, getEmbeddedAssets],
+		A.map((f) => f(file)),
+		RTE.sequenceArray
+	);
 
 export const testMd5 = (file: TFile) =>
 	pipe(
@@ -100,14 +108,11 @@ export const testMd5 = (file: TFile) =>
 				(slugs) => [
 					RTE.of(setSlug(slugs)),
 					addEmbeddedAssets(file),
-					setPostContentAndMD5(file),
+					getPostContentAndMD5(file),
 				],
-				RTE.sequenceArray
+				RTE.sequenceArray,
+				// RTE.map(R.fromFoldableMap(last(), A.Foldable))
+				RTE.map(A.reduce({}, (acc, curr) => ({ ...acc, ...curr })))
 			)
-		),
-		RTE.map((e) => R.fromFoldableMap(e, A.Foldable))
-		// RTE.chain(RTE.sequenceArray)
-		// RTE.map(setSlug),
-		// RTE.chain(addPostContentTE(file)),
-		// RTE.map(addContentMD5)
+		)
 	);

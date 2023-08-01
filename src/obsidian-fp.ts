@@ -76,7 +76,10 @@ export const getEmbeddedAssets = (file: TFile) =>
 				R.toArray,
 				A.filter(([path, n]) => path.endsWith(".md5")),
 				A.map(([path, n]) => path),
-				(paths) => new Set(paths)
+				(paths) => {
+					const embeddedAssets = new Set<string>(paths);
+					return { embeddedAssets } as Record<string, any>;
+				}
 			)
 		)
 	);
