@@ -1,118 +1,88 @@
 import * as RTE from "fp-ts/ReaderTaskEither";
+import * as SRTE from "fp-ts/StateReaderTaskEither";
 import * as TE from "fp-ts/TaskEither";
 import { flow, pipe } from "fp-ts/function";
 import * as S from "fp-ts/Semigroup";
 import * as A from "fp-ts/Array";
 import {
-	getDefaultSlugFromFile,
+	getAndMaybeUpdateSlug,
 	getEmbeddedAssets,
-	getSlugFromFrontmatter,
 	readPostRTE,
-	updateSlug,
 } from "./obsidian-fp";
 import SparkMD5 from "spark-md5";
-import { TFile } from "obsidian";
-import * as R from "fp-ts/Record";
-import * as struct from "fp-ts/struct";
+import { App, TFile } from "obsidian";
+import { Blog } from "./types";
 
-export type FPost = {
-	slug: string;
+type Input = {
+	file: TFile;
+	serverMd5?: string;
 };
 
-const shouldUpdateFrontmatter = ([slugFromFrontmatter, defaultSlug]: [
-	string,
-	string
-]) => {
-	if (slugFromFrontmatter === "") {
-		return RTE.of(defaultSlug);
-	}
-	return RTE.left("slug already exists");
+type Context = {
+	app: App;
+	blog: Blog;
 };
 
-const maybeUpdatePostFrontmatter = (file: TFile) =>
-	flow(
-		shouldUpdateFrontmatter,
-		RTE.chain((slug) => updateSlug(file, slug)),
-		RTE.orElse(() => RTE.of(undefined))
-	);
+type FileState = Record<string, any>;
 
-const setSlug = ([getSlugFromFrontmatter, defaultSlug]: [
-	string,
-	string
-]): Record<string, any> => {
-	const slug =
-		getSlugFromFrontmatter === "" ? defaultSlug : getSlugFromFrontmatter;
-	return { slug };
-};
+type FileParamBuilder = (
+	file: TFile
+) => SRTE.StateReaderTaskEither<FileState, Context, unknown, string>;
 
-/**
- *  Surely there is a shorthand/ eqv. function for pipe into mapping?
- */
-const addPostContentTE = (file: TFile) => (record: Record<string, any>) =>
+const returnEmptyString = () => SRTE.of("");
+
+// const checkPathStart: FileParamBuilder = (file) =>
+// 	pipe(
+// 		SRTE.ask<FileState, Context>(),
+// 		SRTE.chain(({ blog }) => {
+// 			if (file.path.startsWith(blog.syncFolder)) {
+// 				return SRTE.left("File is not in sync folder");
+// 			}
+// 			return returnEmptyString();
+// 		})
+// 	);
+
+const getContentAndMD5_SRTE: FileParamBuilder = (file) =>
 	pipe(
 		readPostRTE(file),
-		RTE.map((content) => ({ ...record, content }))
+		SRTE.fromReaderTaskEither,
+		SRTE.map((content) =>
+			SRTE.modify((state: FileState) => ({
+				...state,
+				content,
+				md5: SparkMD5.hash(content),
+			}))
+		),
+		SRTE.chain(returnEmptyString)
 	);
-// RTE.map((content) => ({
-// 	...record,
-// 	content,
-// }))
 
-const getPostContentAndMD5 = (file: TFile) =>
+const getAndMaybeUpdateSlug_SRTE: FileParamBuilder = (file) =>
 	pipe(
-		readPostRTE(file),
-		RTE.map((content) => {
-			const md5 = SparkMD5.hash(content);
-			return { content, md5 };
-		})
+		getAndMaybeUpdateSlug(file),
+		SRTE.fromReaderTaskEither,
+		SRTE.chain((slug) =>
+			SRTE.modify((state: FileState) => ({ ...state, slug }))
+		),
+		SRTE.chain(returnEmptyString)
 	);
 
-const addEmbeddedAssets = (file: TFile) =>
+const getEmbeddedAssets_SRTE: FileParamBuilder = (file) =>
 	pipe(
 		getEmbeddedAssets(file),
-		RTE.map((embeddedAssets) => ({
-			embeddedAssets,
-		}))
+		SRTE.fromReaderTaskEither,
+		SRTE.chain((embeddedAssets) =>
+			SRTE.modify((state: FileState) => ({ ...state, embeddedAssets }))
+		),
+		SRTE.chain(returnEmptyString)
 	);
 
-/**
- * Gets slug for the TFile, and updates TFile's frontmatter if necessary
- */
-const getAndMaybeUpdateSlug = (file: TFile) =>
+export const processPost = ({ file }: Input) =>
 	pipe(
-		[getSlugFromFrontmatter, getDefaultSlugFromFile],
+		[
+			getAndMaybeUpdateSlug_SRTE,
+			getContentAndMD5_SRTE,
+			getEmbeddedAssets_SRTE,
+		],
 		A.map((f) => f(file)),
-		RTE.sequenceArray,
-		RTE.tap(maybeUpdatePostFrontmatter(file)),
-		RTE.map(([fmSlug, defaultSlug]) => {
-			const slug = fmSlug === "" ? defaultSlug : fmSlug;
-			return { slug };
-		})
-	);
-
-export const e = (file: TFile) =>
-	pipe(
-		[getAndMaybeUpdateSlug, getPostContentAndMD5, getEmbeddedAssets],
-		A.map((f) => f(file)),
-		RTE.sequenceArray
-	);
-
-export const testMd5 = (file: TFile) =>
-	pipe(
-		[getSlugFromFrontmatter, getDefaultSlugFromFile],
-		A.map((f) => f(file)),
-		RTE.sequenceArray,
-		RTE.tap(maybeUpdatePostFrontmatter(file)),
-		RTE.chain(
-			flow(
-				(slugs) => [
-					RTE.of(setSlug(slugs)),
-					addEmbeddedAssets(file),
-					getPostContentAndMD5(file),
-				],
-				RTE.sequenceArray,
-				// RTE.map(R.fromFoldableMap(last(), A.Foldable))
-				RTE.map(A.reduce({}, (acc, curr) => ({ ...acc, ...curr })))
-			)
-		)
+		SRTE.sequenceArray
 	);
