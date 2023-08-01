@@ -3,8 +3,10 @@ import * as RS from "fp-ts/State";
 import { flow } from "fp-ts/function";
 import { pluginConfig } from "./plugin-config";
 import * as TE from "fp-ts/TaskEither";
+import * as E from "fp-ts/Either";
 import { requestUrl } from "obsidian";
 import Logger from "js-logger";
+import * as t from "io-ts";
 
 type Dependencies = {
 	baseUrl: string;
@@ -77,15 +79,26 @@ const fetchTE = TE.tryCatchK(requestUrl, (err: any) => {
 	return {
 		status: 500,
 		error: err?.message,
-	};
+	} as any;
 });
+
+const pingBlogResponse = t.type({
+	blog: t.type({
+		id: t.string,
+		name: t.string,
+		subdomain: t.string,
+	}),
+});
+
+const b = pingBlogResponse.decode;
 
 export const pingBlogFP = flow(
 	flow(
 		putUrl("ping"),
-		R.flatMap(putJsonContentType),
-		R.flatMap(putMethod(HttpMethod.GET)),
-		R.flatMap(putApiKey)
+		R.chain(putJsonContentType),
+		R.chain(putMethod(HttpMethod.GET)),
+		R.chain(putApiKey)
 	)(baseParams),
-	fetchTE
+	fetchTE,
+	TE.chain((e) => TE.fromEither(pingBlogResponse.decode(e?.json)))
 );

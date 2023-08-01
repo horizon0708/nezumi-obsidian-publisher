@@ -1,7 +1,8 @@
-import { App, Plugin } from "obsidian";
+import { App, Plugin, TFile } from "obsidian";
 import { SyncManager } from "src/sync-manager";
 import Logger from "js-logger";
 import { SettingTab } from "src/setting-tab";
+import { testMd5 } from "src/sync-fs";
 
 export default class BlogSync extends Plugin {
 	settingTab: SettingTab;
@@ -38,6 +39,29 @@ export default class BlogSync extends Plugin {
 					const result = await network.push();
 					console.log(result);
 					Logger.info(result);
+				},
+			});
+
+			this.addCommand({
+				id: `test-test-${id}`,
+				name: `test for ${name}`,
+				callback: async () => {
+					Logger.setLevel(Logger.DEBUG);
+					const file =
+						this.app.vault.getAbstractFileByPath(
+							"TestBlog/About.md"
+						);
+
+					if (file instanceof TFile) {
+						const res = await testMd5({
+							app: this.app,
+							file,
+						})();
+						console.log(res);
+						if (res._tag === "Right") {
+							console.log(res.right);
+						}
+					}
 				},
 			});
 		}
