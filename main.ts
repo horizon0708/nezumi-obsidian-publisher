@@ -53,10 +53,7 @@ export default class BlogSync extends Plugin {
 						);
 
 					if (file instanceof TFile) {
-						const res = await testMd5({
-							app: this.app,
-							file,
-						})();
+						const res = await testMd5(file)({ app: this.app })();
 						console.log(res);
 						if (res._tag === "Right") {
 							console.log(res.right);
