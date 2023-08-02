@@ -3,7 +3,7 @@ import { SyncManager } from "src/sync-manager";
 import Logger from "js-logger";
 import { SettingTab } from "src/setting-tab";
 import { processPost } from "src/sync-fs";
-import { getFilesToBeSynced_SRTE } from "src/manifest-fp";
+import { getFilesToBeSynced_RTE } from "src/manifest-fp";
 
 export default class BlogSync extends Plugin {
 	settingTab: SettingTab;
@@ -54,19 +54,21 @@ export default class BlogSync extends Plugin {
 						);
 
 					if (file instanceof TFile) {
-						// const d = await processPost({
-						// 	file,
-						// 	serverMd5: "",
-						// })({})({
+						const deps = {
+							file,
+							serverMd5: "",
+							app: this.app,
+							blog: this.settingTab.blogs[i],
+						};
+
+						const d = await processPost(deps)();
+						console.log(d);
+
+						// const d = await getFilesToBeSynced_SRTE({
 						// 	app: this.app,
 						// 	blog: this.settingTab.blogs[i],
 						// })();
-
-						const d = await getFilesToBeSynced_SRTE({
-							app: this.app,
-							blog: this.settingTab.blogs[i],
-						})();
-						console.log(d);
+						// console.log(d);
 
 						// const res = await testMd5(file)({ app: this.app })();
 						// console.log(res);

@@ -92,11 +92,9 @@ export const getEmbeddedAssets = (file: TFile) =>
 			flow(
 				({ app }) => app.metadataCache.resolvedLinks[file.path],
 				R.toArray,
-				A.filter(([path, n]) => path.endsWith(".md5")),
+				A.filter(([path, n]) => path.endsWith(".md")),
 				A.map(([path, n]) => path),
-				(paths) => {
-					return new Set<string>(paths);
-				}
+				(paths) => new Set<string>(paths)
 			)
 		)
 	);

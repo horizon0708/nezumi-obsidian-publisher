@@ -1,9 +1,5 @@
 import * as RTE from "fp-ts/ReaderTaskEither";
-import * as SRTE from "fp-ts/StateReaderTaskEither";
-import * as TE from "fp-ts/TaskEither";
-import { flow, pipe } from "fp-ts/function";
-import * as S from "fp-ts/Semigroup";
-import * as A from "fp-ts/Array";
+import { pipe } from "fp-ts/function";
 import {
 	getAndMaybeUpdateSlug,
 	getEmbeddedAssets,
@@ -13,76 +9,64 @@ import SparkMD5 from "spark-md5";
 import { App, TFile } from "obsidian";
 import { Blog } from "./types";
 
-type Input = {
+type FileContext = {
+	app: App;
+	blog: Blog;
 	file: TFile;
 	serverMd5?: string;
 };
 
-type Context = {
-	app: App;
-	blog: Blog;
-};
+type FileParamsBuilder2 = (
+	params: Record<string, any>
+) => RTE.ReaderTaskEither<FileContext, unknown, Record<string, any>>;
 
-type FileState = Record<string, any>;
-
-type FileParamBuilder = (
-	file: TFile
-) => SRTE.StateReaderTaskEither<FileState, Context, unknown, string>;
-
-const returnEmptyString = () => SRTE.of("");
-
-// const checkPathStart: FileParamBuilder = (file) =>
-// 	pipe(
-// 		SRTE.ask<FileState, Context>(),
-// 		SRTE.chain(({ blog }) => {
-// 			if (file.path.startsWith(blog.syncFolder)) {
-// 				return SRTE.left("File is not in sync folder");
-// 			}
-// 			return returnEmptyString();
-// 		})
-// 	);
-
-const getContentAndMD5_SRTE: FileParamBuilder = (file) =>
+const getAndMaybeUpdateSlug_RTE: FileParamsBuilder2 = (params) =>
 	pipe(
-		readPostRTE(file),
-		SRTE.fromReaderTaskEither,
-		SRTE.map((content) =>
-			SRTE.modify((state: FileState) => ({
-				...state,
-				content,
-				md5: SparkMD5.hash(content),
-			}))
-		),
-		SRTE.chain(returnEmptyString)
+		RTE.ask<FileContext>(),
+		RTE.chain(({ file }) => getAndMaybeUpdateSlug(file)),
+		RTE.map((slug) => ({ ...params, slug }))
 	);
 
-const getAndMaybeUpdateSlug_SRTE: FileParamBuilder = (file) =>
+const getContentAndMD5_RTE: FileParamsBuilder2 = (params) =>
 	pipe(
-		getAndMaybeUpdateSlug(file),
-		SRTE.fromReaderTaskEither,
-		SRTE.chain((slug) =>
-			SRTE.modify((state: FileState) => ({ ...state, slug }))
-		),
-		SRTE.chain(returnEmptyString)
+		RTE.ask<FileContext>(),
+		RTE.chain(({ file, serverMd5 }) =>
+			pipe(
+				readPostRTE(file),
+				RTE.map((content) => ({
+					...params,
+					content,
+					md5: SparkMD5.hash(content),
+				})),
+				RTE.chain(({ md5 }) =>
+					serverMd5 && serverMd5 === md5
+						? RTE.left({ ...params, status: "SKIP/MD5_MATCH" })
+						: RTE.of(params)
+				)
+			)
+		)
 	);
 
-const getEmbeddedAssets_SRTE: FileParamBuilder = (file) =>
+const getEmbeddedAssets_RTE: FileParamsBuilder2 = (params) =>
 	pipe(
-		getEmbeddedAssets(file),
-		SRTE.fromReaderTaskEither,
-		SRTE.chain((embeddedAssets) =>
-			SRTE.modify((state: FileState) => ({ ...state, embeddedAssets }))
-		),
-		SRTE.chain(returnEmptyString)
+		RTE.ask<FileContext>(),
+		RTE.chain(({ file }) => getEmbeddedAssets(file)),
+		RTE.map((embeddedAssets) => ({
+			...params,
+			embeddedAssets,
+		}))
 	);
 
-export const processPost = ({ file }: Input) =>
-	pipe(
-		[
-			getAndMaybeUpdateSlug_SRTE,
-			getContentAndMD5_SRTE,
-			getEmbeddedAssets_SRTE,
-		],
-		A.map((f) => f(file)),
-		SRTE.sequenceArray
-	);
+export const processPost = pipe(
+	getAndMaybeUpdateSlug_RTE({}),
+	RTE.chain(getContentAndMD5_RTE),
+	RTE.chain(getEmbeddedAssets_RTE),
+	// TODO: io-ts to cast runtime data into type?
+	// we use Either to shortcut processing when an error occurs
+	// but we don't want to short circuit the whole process
+	// so we convert left into right
+	RTE.fold(
+		(e) => RTE.right(e),
+		(a) => RTE.right(a)
+	)
+);

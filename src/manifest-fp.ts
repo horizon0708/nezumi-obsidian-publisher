@@ -7,6 +7,14 @@ import { flow, pipe } from "fp-ts/function";
 import { getFiles_RTE } from "./obsidian-fp";
 import { Blog } from "./types";
 import { processPost } from "./sync-fs";
+import { sequenceT } from "fp-ts/lib/Apply";
+import { Semigroup } from "fp-ts/Semigroup";
+
+type Post = Record<string, any>;
+
+type ProcessedPost = {
+	data: Post;
+};
 
 type ServerFileState = {
 	md5: string;
@@ -24,15 +32,20 @@ type BlogContext = {
 	blog: Blog;
 };
 
+type ManifestContext = {
+	app: App;
+	blog: Blog;
+	serverPosts: Map<string, ServerFileState>;
+};
+
 const re = pipe(SRTE.modify((state: State) => ({ ...state })));
 
-export const getFilesToBeSynced_SRTE = pipe(
-	SRTE.asks((deps: BlogContext) => deps.blog.syncFolder),
-	SRTE.chainW((syncFolder) =>
+export const getFilesToBeSynced_RTE = pipe(
+	RTE.asks((deps: BlogContext) => deps.blog.syncFolder),
+	RTE.chainW((syncFolder) =>
 		pipe(
 			getFiles_RTE,
-			SRTE.fromReaderTaskEither,
-			SRTE.map(
+			RTE.map(
 				flow(
 					A.filter((file) => file.path.endsWith(".md")),
 					A.filter((file) => file.path.startsWith(syncFolder))
@@ -45,6 +58,26 @@ export const getFilesToBeSynced_SRTE = pipe(
 
 const getServerPath = (file: TFile) => (syncFolder: string) =>
 	syncFolder === "/" ? file.path : file.path.slice(syncFolder.length + 1);
+
+const checkServerPosts = (file: TFile) =>
+	pipe(
+		RTE.asks((deps: ManifestContext) => deps),
+		RTE.chainW(({ serverPosts, app, blog }) => {
+			return RTE.of({
+				app,
+				blog,
+				file,
+			});
+		})
+	);
+
+const addFilesToServerPosts_RTE = (file: TFile) =>
+	pipe(
+		RTE.asks((deps: ManifestContext) => deps),
+		RTE.chainW(({ serverPosts, app, blog }) =>
+			pipe(processPost({ app, blog, file }), RTE.fromTaskEither)
+		)
+	);
 
 const addFilesToServerPosts = (file: TFile) => {
 	return pipe(
@@ -67,20 +100,20 @@ const addFilesToServerPosts = (file: TFile) => {
 	);
 };
 
-const addFilesToLocalPostsAndSlugs = ({
-	file,
-}: {
-	file: TFile;
-	serverMd5: string;
-}) => pipe(SRTE.gets((state: State) => state));
-
 export const processManifest = pipe(
-	getFilesToBeSynced_SRTE,
-	SRTE.map(
-		flow(
-			A.map(flow(addFilesToServerPosts)),
-			SRTE.sequenceArray,
-			SRTE.chainW(A.map(Array.from))
+	RTE.asks((deps: ManifestContext) => deps),
+	RTE.chain(({ serverPosts, blog }) =>
+		pipe(
+			getFilesToBeSynced_RTE,
+			RTE.map(
+				flow(
+					A.map((file) => processPost({ app, blog, file })),
+					A.reduce(
+						TE.of<never, Record<string, any>[]>([]),
+						sequenceT(TE.ApplySeq)
+					)
+				)
+			)
 		)
 	)
 );
