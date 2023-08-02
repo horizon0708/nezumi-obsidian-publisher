@@ -2,7 +2,7 @@ import { App, Plugin, TFile } from "obsidian";
 import { SyncManager } from "src/sync-manager";
 import Logger from "js-logger";
 import { SettingTab } from "src/setting-tab";
-import { processPost } from "src/sync-fs";
+import { processPost, tester } from "src/sync-fs";
 import { getFilesToBeSynced_RTE } from "src/manifest-fp";
 
 export default class BlogSync extends Plugin {
@@ -61,8 +61,12 @@ export default class BlogSync extends Plugin {
 							blog: this.settingTab.blogs[i],
 						};
 
-						const d = await processPost(deps)();
-						console.log(d);
+						const e = await tester([1, 2, 3, 4])({
+							n: new Map<number, number>(),
+						})({})();
+						console.log(e);
+						// const d = await processPost(deps)();
+						// console.log(d);
 
 						// const d = await getFilesToBeSynced_SRTE({
 						// 	app: this.app,

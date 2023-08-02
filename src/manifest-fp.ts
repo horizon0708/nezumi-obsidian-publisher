@@ -39,6 +39,7 @@ type ManifestContext = {
 };
 
 const re = pipe(SRTE.modify((state: State) => ({ ...state })));
+(window as any).tee = () => console.log("hi");
 
 export const getFilesToBeSynced_RTE = pipe(
 	RTE.asks((deps: BlogContext) => deps.blog.syncFolder),
