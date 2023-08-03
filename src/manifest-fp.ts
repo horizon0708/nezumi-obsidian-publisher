@@ -1,11 +1,14 @@
 import * as RTE from "fp-ts/ReaderTaskEither";
+import * as TE from "fp-ts/TaskEither";
 import * as A from "fp-ts/Array";
+import * as tuples from "fp-ts/Tuple";
+import { Semigroup } from "fp-ts/Semigroup";
+import { Monoid } from "fp-ts/Monoid";
 import { App, TFile } from "obsidian";
 import { flow, pipe } from "fp-ts/function";
 import { getFiles_RTE } from "./obsidian-fp";
 import { Blog, ServerFile } from "./types";
-import { processPost } from "./sync-fs";
-import { get } from "http";
+import { FileProcessingState, Post, processPost } from "./sync-fs";
 
 type ServerFileState = {
 	md5: string;
@@ -23,7 +26,7 @@ type ManifestContext = {
 	serverPosts: Map<string, ServerFileState>;
 };
 
-export const getFilesToBeSynced_RTE = pipe(
+export const getSyncCandidateFiles = pipe(
 	RTE.ask<{ blog: Blog }>(),
 	RTE.chainW(({ blog: { syncFolder } }) =>
 		pipe(
@@ -39,6 +42,22 @@ export const getFilesToBeSynced_RTE = pipe(
 	)
 );
 
+const emptyFileProcessingState = {
+	serverPosts: new Map<string, ServerFileState>(),
+	localPosts: new Map<string, Record<string, string>>(),
+	localSlugs: new Map<string, string>(),
+	embeddedAssets: new Set<string>(),
+};
+
+const resultMonoid: Monoid<[Post[], FileProcessingState]> = {
+	concat: (x, y) => {
+		const [xPosts] = x;
+		const [yPosts, yState] = y;
+		return [xPosts.concat(yPosts), yState];
+	},
+	empty: [[], emptyFileProcessingState],
+};
+
 const buildServerFiles = (files: ServerFile[]) => {
 	const serverPosts = new Map<string, ServerFileState>();
 	files.forEach(({ path, md5 }) => {
@@ -46,6 +65,12 @@ const buildServerFiles = (files: ServerFile[]) => {
 	});
 	return serverPosts;
 };
+
+const buildManifestContext = (serverFilesArr: ServerFile[]) =>
+	RTE.asks<BlogContext, ManifestContext>((context) => ({
+		...context,
+		serverPosts: buildServerFiles(serverFilesArr),
+	}));
 
 const processFileToPost = (file: TFile) =>
 	pipe(
@@ -58,30 +83,28 @@ const processFileToPost = (file: TFile) =>
 					localSlugs: new Map<string, string>(),
 					embeddedAssets: new Set<string>(),
 				})({ app, blog, file }),
+				// Hmm I really don't like this
+				// I wonder if I was doing something wrong before
+				TE.fold(
+					(e) => TE.of([e, {}] as [Post, FileProcessingState]),
+					TE.of
+				),
 				RTE.fromTaskEither
 			)
 		)
 	);
-
-const buildManifestContext = (serverFilesArr: ServerFile[]) =>
-	RTE.asks<BlogContext, ManifestContext>((context) => ({
-		...context,
-		serverPosts: buildServerFiles(serverFilesArr),
-	}));
 
 export const processManifest = (serverFilesArr: ServerFile[]) =>
 	pipe(
 		buildManifestContext(serverFilesArr),
 		RTE.chain((context) => {
 			const processFileTE = pipe(
-				getFilesToBeSynced_RTE,
-				RTE.chain(flow(A.map(processFileToPost), RTE.sequenceArray))
+				getSyncCandidateFiles,
+				RTE.chain(flow(A.map(processFileToPost), RTE.sequenceSeqArray))
 			)(context);
 			return RTE.fromTaskEither(processFileTE);
-		})
-
-		// getFilesToBeSynced_RTE,
-		// RTE.chainW(flow(A.map(processFileToPost), RTE.sequenceArray))
+		}),
+		RTE.map(A.foldMap(resultMonoid)(([post, state]) => [[post], state]))
 	);
 
 // equivalent to above - leaving it for posterity/ study later

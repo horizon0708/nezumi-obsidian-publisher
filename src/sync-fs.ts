@@ -31,7 +31,7 @@ enum FileStatus {
 	PENDING_UPLOAD = "UPLOAD/PENDING",
 }
 
-type Post = {
+export type Post = {
 	slug: string;
 	content: string;
 	md5: string;
@@ -40,13 +40,13 @@ type Post = {
 	status: FileStatus;
 };
 
-type ErroredPost = {
+export type ErroredPost = {
 	// This errors out unfortunately
 	// status: Exclude<FileStatus, FileStatus.PENDING>;
 	status: FileStatus;
 } & Partial<Post>;
 
-type State = {
+export type FileProcessingState = {
 	serverPosts: ServerPosts;
 	localPosts: LocalPosts;
 	localSlugs: LocalSlugs;
@@ -88,7 +88,7 @@ const example1 = pipe(a({}), SRTE.chain(b), SRTE.chain(c));
 
 const setSlug = <T>(params: T) =>
 	pipe(
-		SRTE.ask<State, FileContext, any>(),
+		SRTE.ask<FileProcessingState, FileContext, any>(),
 		SRTE.flatMapReaderTaskEither(({ file }) => getAndMaybeUpdateSlug(file)),
 		SRTE.map((slug) => ({ ...params, slug })),
 		SRTE.mapLeft(() => ({
@@ -100,8 +100,8 @@ const setSlug = <T>(params: T) =>
 const checkLocalSlug = <T extends { slug: string }>(params: T) =>
 	pipe(
 		// annoying I have to specify types each time :/
-		SRTE.get<State, FileContext>(),
-		SRTE.chain((state: State) => {
+		SRTE.get<FileProcessingState, FileContext>(),
+		SRTE.chain((state: FileProcessingState) => {
 			const slug = params["slug"];
 			if (state.localSlugs.has(slug)) {
 				return SRTE.left({
@@ -116,9 +116,9 @@ const checkLocalSlug = <T extends { slug: string }>(params: T) =>
 // I want this to be Effect...
 const registerLocalSlug = <T extends { slug: string }>(params: T) =>
 	pipe(
-		SRTE.ask<State, FileContext>(),
+		SRTE.ask<FileProcessingState, FileContext>(),
 		SRTE.chain(({ file }) =>
-			SRTE.modify<State, FileContext>((state) => {
+			SRTE.modify<FileProcessingState, FileContext>((state) => {
 				// mutating but yeah, sue me.
 				state.localSlugs.set(params.slug, file.path);
 				return state;
@@ -128,7 +128,7 @@ const registerLocalSlug = <T extends { slug: string }>(params: T) =>
 
 const setMarkdownContentAndMD5 = <T>(params: T) =>
 	pipe(
-		SRTE.ask<State, FileContext>(),
+		SRTE.ask<FileProcessingState, FileContext>(),
 		// so chainReaderTaskEitherK converts the typings of Deps?
 		// A: yes K stands for Kleisli
 		SRTE.chainReaderTaskEitherK(({ file }) => readPostRTE(file)),
@@ -151,7 +151,7 @@ const getServerPath = (file: TFile) => (syncFolder: string) =>
 
 const setServerMD5 = <T, K>(params: T) =>
 	pipe(
-		SRTE.ask<State, FileContext>(),
+		SRTE.ask<FileProcessingState, FileContext>(),
 		SRTE.chain(({ file, blog }) =>
 			SRTE.gets((state) => {
 				const serverPath = getServerPath(file)(blog.syncFolder);
@@ -168,7 +168,7 @@ const setServerMD5 = <T, K>(params: T) =>
 const markServerPostAsHavingLocalCopy = <T extends { serverPath: string }>(
 	params: T
 ) =>
-	SRTE.modify<State, FileContext>((state) => {
+	SRTE.modify<FileProcessingState, FileContext>((state) => {
 		const sp = state.serverPosts.get(params.serverPath);
 		if (sp) {
 			sp.hasLocalCopy = true;
@@ -178,7 +178,7 @@ const markServerPostAsHavingLocalCopy = <T extends { serverPath: string }>(
 
 const checkMD5 = <T extends { md5: string }>(params: T) =>
 	pipe(
-		SRTE.ask<State, FileContext>(),
+		SRTE.ask<FileProcessingState, FileContext>(),
 		SRTE.chain(({ serverMd5 }) =>
 			serverMd5 && serverMd5 === params.md5
 				? SRTE.left({
@@ -195,7 +195,7 @@ const checkMD5 = <T extends { md5: string }>(params: T) =>
 
 const setEmbeddedAssets = <T>(params: T) =>
 	pipe(
-		SRTE.ask<State, FileContext>(),
+		SRTE.ask<FileProcessingState, FileContext>(),
 		SRTE.chainReaderTaskEitherK(({ file }) => getEmbeddedAssets(file)),
 		SRTE.map((embeddedAssets) => ({
 			...params,
@@ -212,7 +212,7 @@ const setEmbeddedAssets = <T>(params: T) =>
 const registerEmbeddedAssets = <T extends { embeddedAssets: Set<string> }, K>(
 	params: T
 ) =>
-	SRTE.modify<State, FileContext, ErroredPost>((state) => {
+	SRTE.modify<FileProcessingState, FileContext, ErroredPost>((state) => {
 		params.embeddedAssets.forEach((path) => {
 			state.embeddedAssets.add(path);
 		});
@@ -223,7 +223,7 @@ const initialState = { status: FileStatus.PENDING };
 
 // TODO: test this and clean up
 export const processPost: SRTE.StateReaderTaskEither<
-	State,
+	FileProcessingState,
 	FileContext,
 	ErroredPost,
 	Post
@@ -237,6 +237,7 @@ export const processPost: SRTE.StateReaderTaskEither<
 	SRTE.chain(checkMD5),
 	SRTE.chain(setEmbeddedAssets),
 	SRTE.chainFirst(registerEmbeddedAssets)
+	// SRTE.chainEitherK((e) => E.fold(e => E.right(e), r => E.right(r))(e))
 );
 
 const be = setSlug(initialState);
