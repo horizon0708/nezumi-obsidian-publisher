@@ -83,6 +83,37 @@ const setSlug = <T>(params: T) =>
 		}))
 	);
 
+// const checkL =
+// 	<T extends { slug: string }>(params: T) =>
+// 	(state: { localSlugs: LocalSlugs }) => {
+// 		const slug = params.slug;
+// 		if (state.localSlugs.has(slug)) {
+// 			return E.left({
+// 				...params,
+// 				status: FileStatus.SLUG_COLLISION,
+// 			});
+// 		}
+// 		return E.right(params);
+// 	};
+
+// const lift = <T extends { slug: string }>(
+// 	fn: (params: T) => (state: { localSlugs: LocalSlugs }) => E.Either<T, T>
+// ): ((
+// 	params: T
+// ) => SRTE.StateReaderTaskEither<
+// 	{ localSlugs: LocalSlugs },
+// 	unknown,
+// 	unknown,
+// 	T
+// >) => {
+// 	return (params: T) => {
+// 		return SRTE.fromEitherK(fn(params))
+// 	};
+// };
+
+// const check2 = <T extends { slug: string }>(params: T) =>
+// 	SRTE.fromEither(checkL(params));
+
 // NEXT: kinda want to define liftEither
 const checkLocalSlug = <T extends { slug: string }>(params: T) =>
 	pipe(
@@ -135,7 +166,7 @@ const getServerPath = (file: TFile) => (syncFolder: string) =>
 // chain is destroying type for Left
 // Though I don't think it should be? it should be a union type
 
-const setServerMD5 = <T, K>(params: T) =>
+const setServerMD5 = <T>(params: T) =>
 	pipe(
 		SRTE.ask<FileProcessingState, FileContext>(),
 		SRTE.chain(({ file, blog }) =>
@@ -151,6 +182,7 @@ const setServerMD5 = <T, K>(params: T) =>
 		SRTE.mapLeft(() => ({ ...params, status: FileStatus.READ_ERROR }))
 	);
 
+// start from here to write lift function
 const markServerPostAsHavingLocalCopy = <T extends { serverPath: string }>(
 	params: T
 ) =>
@@ -209,6 +241,7 @@ const pushPostToState = (post: Post) =>
 		return state;
 	});
 
+// group effects together! as they don't do anything
 export const processPost: SRTE.StateReaderTaskEither<
 	FileProcessingState,
 	FileContext,
