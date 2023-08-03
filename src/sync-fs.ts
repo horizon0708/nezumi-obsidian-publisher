@@ -241,6 +241,8 @@ const pushPostToState = (post: Post) =>
 		return state;
 	});
 
+SRTE.bind;
+
 // group effects together! as they don't do anything
 export const processPost: SRTE.StateReaderTaskEither<
 	FileProcessingState,
@@ -260,3 +262,8 @@ export const processPost: SRTE.StateReaderTaskEither<
 	SRTE.chainFirst(registerEmbeddedAssets),
 	SRTE.chainFirst(pushPostToState)
 );
+
+const a1 = SRTE.of(1);
+const a2 = SRTE.of(2);
+
+const ar = pipe(a1, SRTE.bindTo("a1"));
