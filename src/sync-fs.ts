@@ -33,6 +33,7 @@ enum FileStatus {
 
 export type Post = {
 	slug: string;
+	path: string;
 	content: string;
 	md5: string;
 	serverMd5: string;
@@ -43,6 +44,7 @@ export type Post = {
 export type ErroredPost = {
 	// This errors out unfortunately
 	// status: Exclude<FileStatus, FileStatus.PENDING>;
+	path: string;
 	status: FileStatus;
 } & Partial<Post>;
 
@@ -59,7 +61,7 @@ type ServerFileState = {
 };
 
 type ServerPosts = Map<string, ServerFileState>;
-type LocalPosts = Map<string, Record<string, string>>;
+type LocalPosts = Map<string, Post | ErroredPost>;
 type LocalSlugs = Map<string, string>;
 
 type SS = { n: Map<number, number> };
@@ -85,6 +87,14 @@ const b = <T>(p: T) => SRTE.of({ ...p, b: "b" });
 const c = <T extends { b: string }>(p: T) => SRTE.of({ ...p, c: "c" });
 
 const example1 = pipe(a({}), SRTE.chain(b), SRTE.chain(c));
+
+const createBasePost = pipe(
+	SRTE.ask<FileProcessingState, FileContext>(),
+	SRTE.map(({ file }) => ({
+		path: file.path,
+		status: FileStatus.PENDING,
+	}))
+);
 
 const setSlug = <T>(params: T) =>
 	pipe(
@@ -207,8 +217,6 @@ const setEmbeddedAssets = <T>(params: T) =>
 		}))
 	);
 
-// NEXT: register embedded assets
-
 const registerEmbeddedAssets = <T extends { embeddedAssets: Set<string> }, K>(
 	params: T
 ) =>
@@ -219,7 +227,17 @@ const registerEmbeddedAssets = <T extends { embeddedAssets: Set<string> }, K>(
 		return state;
 	});
 
-const initialState = { status: FileStatus.PENDING };
+const pushPostToState = (post: Post) =>
+	SRTE.modify<FileProcessingState, FileContext, ErroredPost>((state) => {
+		state.localPosts.set(post.path, post);
+		return state;
+	});
+
+const pushErroredPostToState = (post: ErroredPost) =>
+	SRTE.modify<FileProcessingState, FileContext, ErroredPost>((state) => {
+		state.localPosts.set(post.path, post);
+		return state;
+	});
 
 // TODO: test this and clean up
 export const processPost: SRTE.StateReaderTaskEither<
@@ -228,7 +246,8 @@ export const processPost: SRTE.StateReaderTaskEither<
 	ErroredPost,
 	Post
 > = pipe(
-	setSlug(initialState),
+	createBasePost,
+	SRTE.chain(setSlug),
 	SRTE.chain(checkLocalSlug),
 	SRTE.chainFirst(registerLocalSlug),
 	SRTE.chain(setServerMD5),
@@ -236,8 +255,8 @@ export const processPost: SRTE.StateReaderTaskEither<
 	SRTE.chain(setMarkdownContentAndMD5),
 	SRTE.chain(checkMD5),
 	SRTE.chain(setEmbeddedAssets),
-	SRTE.chainFirst(registerEmbeddedAssets)
+	SRTE.chainFirst(registerEmbeddedAssets),
+	SRTE.chainFirst(pushPostToState)
+	// SRTE.mapLeft(pushErroredPostToState)
 	// SRTE.chainEitherK((e) => E.fold(e => E.right(e), r => E.right(r))(e))
 );
-
-const be = setSlug(initialState);

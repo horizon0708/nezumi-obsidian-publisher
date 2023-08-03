@@ -8,7 +8,7 @@ import { App, TFile } from "obsidian";
 import { flow, pipe } from "fp-ts/function";
 import { getFiles_RTE } from "./obsidian-fp";
 import { Blog, ServerFile } from "./types";
-import { FileProcessingState, Post, processPost } from "./sync-fs";
+import { ErroredPost, FileProcessingState, Post, processPost } from "./sync-fs";
 
 type ServerFileState = {
 	md5: string;
@@ -44,18 +44,20 @@ export const getSyncCandidateFiles = pipe(
 
 const emptyFileProcessingState = {
 	serverPosts: new Map<string, ServerFileState>(),
-	localPosts: new Map<string, Record<string, string>>(),
+	localPosts: new Map<string, Post>(),
 	localSlugs: new Map<string, string>(),
 	embeddedAssets: new Set<string>(),
 };
 
-const resultMonoid: Monoid<[Post[], FileProcessingState]> = {
+type Result = [Post[], ErroredPost[], FileProcessingState | "noop"];
+const resultMonoid: Monoid<Result> = {
 	concat: (x, y) => {
-		const [xPosts] = x;
-		const [yPosts, yState] = y;
-		return [xPosts.concat(yPosts), yState];
+		const [xPosts, xErrors, xState] = x;
+		const [yPosts, yErrors, yState] = y;
+		const newState = yState === "noop" ? xState : yState;
+		return [xPosts.concat(yPosts), xErrors.concat(yErrors), newState];
 	},
-	empty: [[], emptyFileProcessingState],
+	empty: [[], [], emptyFileProcessingState],
 };
 
 const buildServerFiles = (files: ServerFile[]) => {
@@ -79,16 +81,16 @@ const processFileToPost = (file: TFile) =>
 			pipe(
 				processPost({
 					serverPosts,
-					localPosts: new Map<string, Record<string, string>>(),
+					localPosts: new Map<string, Post>(),
 					localSlugs: new Map<string, string>(),
 					embeddedAssets: new Set<string>(),
 				})({ app, blog, file }),
 				// Hmm I really don't like this
 				// I wonder if I was doing something wrong before
-				TE.fold(
-					(e) => TE.of([e, {}] as [Post, FileProcessingState]),
-					TE.of
-				),
+				// TE.fold(
+				// 	(e) => TE.of([[], [e], "noop"]),
+				// 	(r) => TE.of([r, [], "noop"])
+				// ),
 				RTE.fromTaskEither
 			)
 		)
