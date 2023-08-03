@@ -1,8 +1,7 @@
 import * as RTE from "fp-ts/ReaderTaskEither";
 import * as TE from "fp-ts/TaskEither";
 import * as A from "fp-ts/Array";
-import * as tuples from "fp-ts/Tuple";
-import { Semigroup } from "fp-ts/Semigroup";
+
 import { Monoid } from "fp-ts/Monoid";
 import { App, TFile } from "obsidian";
 import { flow, pipe } from "fp-ts/function";
@@ -80,17 +79,15 @@ const processFileToPost = (file: TFile) =>
 		RTE.chainW(({ serverPosts, app, blog }) =>
 			pipe(
 				processPost({
+					...emptyFileProcessingState,
 					serverPosts,
-					localPosts: new Map<string, Post>(),
-					localSlugs: new Map<string, string>(),
-					embeddedAssets: new Set<string>(),
 				})({ app, blog, file }),
 				// Hmm I really don't like this
 				// I wonder if I was doing something wrong before
-				// TE.fold(
-				// 	(e) => TE.of([[], [e], "noop"]),
-				// 	(r) => TE.of([r, [], "noop"])
-				// ),
+				TE.fold(
+					(e) => TE.of([[], [e], "noop"] as Result),
+					([r, s]) => TE.of([[r], [], s] as Result)
+				),
 				RTE.fromTaskEither
 			)
 		)
@@ -106,7 +103,7 @@ export const processManifest = (serverFilesArr: ServerFile[]) =>
 			)(context);
 			return RTE.fromTaskEither(processFileTE);
 		}),
-		RTE.map(A.foldMap(resultMonoid)(([post, state]) => [[post], state]))
+		RTE.map(A.foldMap(resultMonoid)((e) => e))
 	);
 
 // equivalent to above - leaving it for posterity/ study later

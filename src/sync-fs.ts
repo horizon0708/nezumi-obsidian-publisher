@@ -64,30 +64,6 @@ type ServerPosts = Map<string, ServerFileState>;
 type LocalPosts = Map<string, Post | ErroredPost>;
 type LocalSlugs = Map<string, string>;
 
-type SS = { n: Map<number, number> };
-
-const t2: (
-	num: number
-) => SRTE.StateReaderTaskEither<SS, {}, unknown, number> = (num) =>
-	pipe(
-		SRTE.of(num * 2),
-		SRTE.tap((n) =>
-			SRTE.modify((s: SS) => {
-				s.n.set(n, n * 2);
-				return s;
-			})
-		)
-	);
-
-export const tester = (nums: number[]) =>
-	pipe(A.map(t2)(nums), SRTE.sequenceArray);
-
-const a = <T>(p: T) => SRTE.of({ ...p, a: "a" });
-const b = <T>(p: T) => SRTE.of({ ...p, b: "b" });
-const c = <T extends { b: string }>(p: T) => SRTE.of({ ...p, c: "c" });
-
-const example1 = pipe(a({}), SRTE.chain(b), SRTE.chain(c));
-
 const createBasePost = pipe(
 	SRTE.ask<FileProcessingState, FileContext>(),
 	SRTE.map(({ file }) => ({
@@ -107,6 +83,7 @@ const setSlug = <T>(params: T) =>
 		}))
 	);
 
+// NEXT: kinda want to define liftEither
 const checkLocalSlug = <T extends { slug: string }>(params: T) =>
 	pipe(
 		// annoying I have to specify types each time :/
@@ -123,7 +100,6 @@ const checkLocalSlug = <T extends { slug: string }>(params: T) =>
 		})
 	);
 
-// I want this to be Effect...
 const registerLocalSlug = <T extends { slug: string }>(params: T) =>
 	pipe(
 		SRTE.ask<FileProcessingState, FileContext>(),
@@ -233,13 +209,6 @@ const pushPostToState = (post: Post) =>
 		return state;
 	});
 
-const pushErroredPostToState = (post: ErroredPost) =>
-	SRTE.modify<FileProcessingState, FileContext, ErroredPost>((state) => {
-		state.localPosts.set(post.path, post);
-		return state;
-	});
-
-// TODO: test this and clean up
 export const processPost: SRTE.StateReaderTaskEither<
 	FileProcessingState,
 	FileContext,
@@ -257,6 +226,4 @@ export const processPost: SRTE.StateReaderTaskEither<
 	SRTE.chain(setEmbeddedAssets),
 	SRTE.chainFirst(registerEmbeddedAssets),
 	SRTE.chainFirst(pushPostToState)
-	// SRTE.mapLeft(pushErroredPostToState)
-	// SRTE.chainEitherK((e) => E.fold(e => E.right(e), r => E.right(r))(e))
 );

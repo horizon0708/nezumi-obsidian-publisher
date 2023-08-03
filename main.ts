@@ -2,7 +2,6 @@ import { App, Plugin, TFile } from "obsidian";
 import { SyncManager } from "src/sync-manager";
 import Logger from "js-logger";
 import { SettingTab } from "src/setting-tab";
-import { processPost, tester } from "src/sync-fs";
 import { getSyncCandidateFiles, processManifest } from "src/manifest-fp";
 import { getFileList } from "src/server-client";
 
