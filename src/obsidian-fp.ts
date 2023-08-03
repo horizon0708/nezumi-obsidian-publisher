@@ -6,7 +6,7 @@ import { pluginConfig } from "./plugin-config";
 import * as A from "fp-ts/Array";
 import * as R from "fp-ts/Record";
 
-type AppContext = {
+export type AppContext = {
 	app: App;
 };
 
@@ -85,9 +85,9 @@ export const readAsset = (file: TFile) =>
 		)
 	);
 
-export const getEmbeddedAssets = (file: TFile) =>
+export const getEmbeddedAssets = <R extends AppContext>(file: TFile) =>
 	flow(
-		RTE.ask<AppContext>(),
+		RTE.ask<R>(),
 		TE.map(
 			flow(
 				({ app }) => app.metadataCache.resolvedLinks[file.path],

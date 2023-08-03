@@ -1,34 +1,19 @@
-import * as SRTE from "fp-ts/StateReaderTaskEither";
 import * as RTE from "fp-ts/ReaderTaskEither";
 import * as A from "fp-ts/Array";
-import * as TE from "fp-ts/TaskEither";
 import { App, TFile } from "obsidian";
 import { flow, pipe } from "fp-ts/function";
 import { getFiles_RTE } from "./obsidian-fp";
-import { Blog } from "./types";
+import { Blog, ServerFile } from "./types";
 import { processPost } from "./sync-fs";
-import { sequenceT } from "fp-ts/lib/Apply";
-import { Semigroup } from "fp-ts/Semigroup";
-
-type Post = Record<string, any>;
-
-type ProcessedPost = {
-	data: Post;
-};
+import { get } from "http";
 
 type ServerFileState = {
 	md5: string;
 	hasLocalCopy: boolean;
 };
 
-type State = {
-	serverPosts: Map<string, ServerFileState>;
-	localPosts: Map<string, Record<string, string>>;
-	localSlugs: Map<string, string>;
-	embeddedAssets: Set<string>;
-};
-
 type BlogContext = {
+	app: App;
 	blog: Blog;
 };
 
@@ -38,12 +23,9 @@ type ManifestContext = {
 	serverPosts: Map<string, ServerFileState>;
 };
 
-const re = pipe(SRTE.modify((state: State) => ({ ...state })));
-(window as any).tee = () => console.log("hi");
-
 export const getFilesToBeSynced_RTE = pipe(
-	RTE.asks((deps: BlogContext) => deps.blog.syncFolder),
-	RTE.chainW((syncFolder) =>
+	RTE.ask<{ blog: Blog }>(),
+	RTE.chainW(({ blog: { syncFolder } }) =>
 		pipe(
 			getFiles_RTE,
 			RTE.map(
@@ -57,74 +39,57 @@ export const getFilesToBeSynced_RTE = pipe(
 	)
 );
 
-const getServerPath = (file: TFile) => (syncFolder: string) =>
-	syncFolder === "/" ? file.path : file.path.slice(syncFolder.length + 1);
-
-const checkServerPosts = (file: TFile) =>
-	pipe(
-		RTE.asks((deps: ManifestContext) => deps),
-		RTE.chainW(({ serverPosts, app, blog }) => {
-			return RTE.of({
-				app,
-				blog,
-				file,
-			});
-		})
-	);
-
-const addFilesToServerPosts_RTE = (file: TFile) =>
-	pipe(
-		RTE.asks((deps: ManifestContext) => deps),
-		RTE.chainW(({ serverPosts, app, blog }) =>
-			pipe(processPost({ app, blog, file }), RTE.fromTaskEither)
-		)
-	);
-
-const addFilesToServerPosts = (file: TFile) => {
-	return pipe(
-		SRTE.gets((state: State) => state.serverPosts),
-		SRTE.chain((serverPosts) =>
-			pipe(
-				SRTE.asks((deps: BlogContext) => deps.blog.syncFolder),
-				SRTE.chain(flow(getServerPath(file), SRTE.of)),
-				SRTE.chain((serverKey) => {
-					const serverMd5 = serverPosts.get(serverKey);
-					if (serverMd5) {
-						// mutation
-						serverMd5.hasLocalCopy = true;
-					}
-					return SRTE.of(serverMd5?.md5 ?? "");
-				})
-			)
-		),
-		SRTE.map((serverMd5) => ({ file, serverMd5 }))
-	);
+const buildServerFiles = (files: ServerFile[]) => {
+	const serverPosts = new Map<string, ServerFileState>();
+	files.forEach(({ path, md5 }) => {
+		serverPosts.set(path, { md5, hasLocalCopy: false });
+	});
+	return serverPosts;
 };
 
-export const processManifest = pipe(
-	RTE.asks((deps: ManifestContext) => deps),
-	RTE.chain(({ serverPosts, blog }) =>
-		pipe(
-			getFilesToBeSynced_RTE,
-			RTE.map(
-				flow(
-					A.map((file) => processPost({ app, blog, file })),
-					A.reduce(
-						TE.of<never, Record<string, any>[]>([]),
-						sequenceT(TE.ApplySeq)
-					)
-				)
+const processFileToPost = (file: TFile) =>
+	pipe(
+		RTE.ask<ManifestContext>(),
+		RTE.chainW(({ serverPosts, app, blog }) =>
+			pipe(
+				processPost({
+					serverPosts,
+					localPosts: new Map<string, Record<string, string>>(),
+					localSlugs: new Map<string, string>(),
+					embeddedAssets: new Set<string>(),
+				})({ app, blog, file }),
+				RTE.fromTaskEither
 			)
 		)
-	)
-);
+	);
+
+const buildManifestContext = (serverFilesArr: ServerFile[]) =>
+	RTE.asks<BlogContext, ManifestContext>((context) => ({
+		...context,
+		serverPosts: buildServerFiles(serverFilesArr),
+	}));
+
+export const processManifest = (serverFilesArr: ServerFile[]) =>
+	pipe(
+		buildManifestContext(serverFilesArr),
+		RTE.chain((context) => {
+			const processFileTE = pipe(
+				getFilesToBeSynced_RTE,
+				RTE.chain(flow(A.map(processFileToPost), RTE.sequenceArray))
+			)(context);
+			return RTE.fromTaskEither(processFileTE);
+		})
+
+		// getFilesToBeSynced_RTE,
+		// RTE.chainW(flow(A.map(processFileToPost), RTE.sequenceArray))
+	);
 
 // equivalent to above - leaving it for posterity/ study later
 const getFiles_SRTE_flipped = pipe(
 	getFiles_RTE,
 	RTE.chainW((files) =>
 		pipe(
-			RTE.asks((deps: BlogContext) => deps.blog.syncFolder),
+			RTE.asks((deps: ManifestContext) => deps.blog.syncFolder),
 			RTE.map(
 				flow(
 					(syncFolder) =>
@@ -137,14 +102,3 @@ const getFiles_SRTE_flipped = pipe(
 		)
 	)
 );
-
-// const postManifest = (serverFiles: ServerFileState[]) =>
-// 	pipe(
-// 		SRTE.put({
-// 			serverFiles,
-// 			localPosts: new Map<string, Record<string, string>>(),
-// 			localSlugs: new Map<string, string>(),
-// 			embeddedAssets: new Set<string>(),
-// 		}),
-//         SRTE.
-// 	);
