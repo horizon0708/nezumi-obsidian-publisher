@@ -1,31 +1,54 @@
 import { App, TFile } from "obsidian";
 import * as RTE from "fp-ts/ReaderTaskEither";
 import * as TE from "fp-ts/TaskEither";
+import * as s from "fp-ts/struct";
 import { flow, pipe } from "fp-ts/function";
 import { pluginConfig } from "./plugin-config";
 import * as A from "fp-ts/Array";
 import * as R from "fp-ts/Record";
+import * as RIO from "fp-ts/ReaderIO";
 
 export type AppContext = {
 	app: App;
 };
 
-export const getSlugFromFrontmatter = (file: TFile) =>
-	pipe(
-		RTE.ask<AppContext>(),
-		RTE.chain(
-			flow(
-				({ app }) =>
-					(app.metadataCache.getFileCache(file)?.frontmatter?.[
-						pluginConfig.slugKey
-					] ?? "") as string,
-				RTE.of
-			)
+type FileContext = {
+	app: App;
+	file: TFile;
+};
+
+export const getSlugFromFrontmatter = RTE.asks(
+	({ app, file }: FileContext) =>
+		(app.metadataCache.getFileCache(file)?.frontmatter?.[
+			pluginConfig.slugKey
+		] ?? "") as string
+);
+
+export const getDefaultSlugFromFile = RTE.asks(
+	({ file }: FileContext) =>
+		file.basename.toLowerCase().replace(/[^a-z0-9]+/, "-") as string
+);
+
+// can't I use this to widen the types?
+export const maybeUpdateSlugInFrontmatter = (
+	fmSlug: string,
+	defaultSlug: string
+) => RTE.asksReaderTaskEitherW((r: FileContext) => (r) => TE.of(""));
+
+export const updateSlug2 = (slug: string) =>
+	RTE.asksReaderTaskEither(({ file }: FileContext) =>
+		pipe(
+			TE.tryCatch(
+				() =>
+					// note: This can't throw
+					app.fileManager.processFrontMatter(file, (frontmatter) => {
+						frontmatter[pluginConfig.slugKey] = slug;
+					}),
+				(e) => e
+			),
+			RTE.fromTaskEither
 		)
 	);
-
-export const getDefaultSlugFromFile = (file: TFile) =>
-	RTE.of(file.basename.toLowerCase().replace(/[^a-z0-9]+/, "-"));
 
 export const updateSlug = (file: TFile, slug: string) =>
 	flow(
@@ -33,30 +56,38 @@ export const updateSlug = (file: TFile, slug: string) =>
 		TE.chain(({ app }) =>
 			TE.tryCatch(
 				() =>
+					// note: This can't throw
 					app.fileManager.processFrontMatter(file, (frontmatter) => {
 						frontmatter[pluginConfig.slugKey] = slug;
 					}),
 				(e) => e
 			)
-		)
+		),
+		TE.fold(TE.of, TE.of)
 	);
+
 /**
  * Gets slug for the TFile, and updates TFile's frontmatter if necessary
  */
-export const getAndMaybeUpdateSlug = (file: TFile) =>
+export const getSlugAndMaybeUpdateFrontmatter = (file: TFile) =>
 	pipe(
-		[getSlugFromFrontmatter, getDefaultSlugFromFile],
-		A.map((f) => f(file)),
-		RTE.sequenceArray,
-		RTE.tap(([fmSlug, defaultSlug]) => {
+		RTE.Do,
+		RTE.apS("fmSlug", getSlugFromFrontmatter),
+		RTE.apS("defaultSlug", getDefaultSlugFromFile),
+		RTE.tap(({ fmSlug, defaultSlug }) => {
 			if (fmSlug === "") {
 				return updateSlug(file, defaultSlug);
 			}
-			return RTE.of(undefined);
 		}),
-		RTE.map(([fmSlug, defaultSlug]) => {
-			return fmSlug === "" ? defaultSlug : fmSlug;
-		})
+		RTE.map(({ fmSlug, defaultSlug }) =>
+			fmSlug === "" ? defaultSlug : fmSlug
+		)
+	);
+
+export const readPost = ({ app, file }: FileContext) =>
+	TE.tryCatch(
+		() => app.vault.cachedRead(file),
+		() => "error"
 	);
 
 export const readPostRTE = (file: TFile) =>
@@ -83,6 +114,16 @@ export const readAsset = (file: TFile) =>
 				)
 			)
 		)
+	);
+
+export const getEmbeddedAssets2 = ({ app, file }: FileContext) =>
+	pipe(
+		app.metadataCache.resolvedLinks[file.path],
+		R.toArray,
+		A.filter(([path, n]) => path.endsWith(".md")),
+		A.map(([path, n]) => path),
+		(paths) => new Set<string>(paths),
+		TE.of
 	);
 
 export const getEmbeddedAssets = <R extends AppContext>(file: TFile) =>

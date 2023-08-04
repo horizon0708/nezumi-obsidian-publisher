@@ -4,6 +4,7 @@ import Logger from "js-logger";
 import { SettingTab } from "src/setting-tab";
 import { getSyncCandidateFiles, processManifest } from "src/manifest-fp";
 import { getFileList } from "src/server-client";
+import { readerInjection, readerInjection2, sampleRte } from "src/archive";
 
 export default class BlogSync extends Plugin {
 	settingTab: SettingTab;
@@ -40,6 +41,17 @@ export default class BlogSync extends Plugin {
 					const result = await network.push();
 					console.log(result);
 					Logger.info(result);
+				},
+			});
+
+			this.addCommand({
+				id: `test-debug-${id}`,
+				name: `xdebug ${name}`,
+				callback: async () => {
+					// const b = await readerInjection2({ b: "b" })(sampleRte)({
+					// 	a: "a",
+					// })();
+					// console.log(b);
 				},
 			});
 

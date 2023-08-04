@@ -7,7 +7,13 @@ import { App, TFile } from "obsidian";
 import { flow, pipe } from "fp-ts/function";
 import { getFiles_RTE } from "./obsidian-fp";
 import { Blog, ServerFile } from "./types";
-import { ErroredPost, FileProcessingState, Post, processPost } from "./sync-fs";
+import {
+	ErroredPost,
+	FileProcessingState,
+	Post,
+	processPost,
+	testFn,
+} from "./sync-fs";
 
 type ServerFileState = {
 	md5: string;
@@ -103,6 +109,7 @@ export const processManifest = (serverFilesArr: ServerFile[]) =>
 			)(context);
 			return RTE.fromTaskEither(processFileTE);
 		}),
+		// Can't this be fold?
 		RTE.map(A.foldMap(resultMonoid)((e) => e))
 	);
 

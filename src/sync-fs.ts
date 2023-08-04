@@ -6,13 +6,20 @@ import * as A from "fp-ts/Array";
 import * as S from "fp-ts/State";
 import { flow, pipe } from "fp-ts/function";
 import {
-	getAndMaybeUpdateSlug,
+	getSlugAndMaybeUpdateFrontmatter,
 	getEmbeddedAssets,
 	readPostRTE,
+	getSlugFromFrontmatter,
+	getDefaultSlugFromFile,
+	updateSlug,
+	updateSlug2,
+	readPost,
+	getEmbeddedAssets2,
 } from "./obsidian-fp";
 import SparkMD5 from "spark-md5";
 import { App, TFile } from "obsidian";
 import { Blog } from "./types";
+import { sequenceT } from "fp-ts/lib/Apply";
 
 type FileContext = {
 	app: App;
@@ -75,7 +82,9 @@ const createBasePost = pipe(
 const setSlug = <T>(params: T) =>
 	pipe(
 		SRTE.ask<FileProcessingState, FileContext, any>(),
-		SRTE.flatMapReaderTaskEither(({ file }) => getAndMaybeUpdateSlug(file)),
+		SRTE.flatMapReaderTaskEither(({ file }) =>
+			getSlugAndMaybeUpdateFrontmatter(file)
+		),
 		SRTE.map((slug) => ({ ...params, slug })),
 		SRTE.mapLeft(() => ({
 			...params,
@@ -182,6 +191,23 @@ const setServerMD5 = <T>(params: T) =>
 		SRTE.mapLeft(() => ({ ...params, status: FileStatus.READ_ERROR }))
 	);
 
+const mark2 =
+	({ serverPath }: { serverPath: string }) =>
+	(state: FileProcessingState) => {
+		const sp = state.serverPosts.get(serverPath);
+		if (sp) {
+			sp.hasLocalCopy = true;
+		}
+		return state;
+	};
+
+const liftA =
+	<T, K>(fn: (params: T) => (state: K) => K) =>
+	(params: T) =>
+		SRTE.modify<K, unknown, unknown>(fn(params));
+
+const rr = liftA(mark2);
+
 // start from here to write lift function
 const markServerPostAsHavingLocalCopy = <T extends { serverPath: string }>(
 	params: T
@@ -259,11 +285,104 @@ export const processPost: SRTE.StateReaderTaskEither<
 	SRTE.chain(setMarkdownContentAndMD5),
 	SRTE.chain(checkMD5),
 	SRTE.chain(setEmbeddedAssets),
-	SRTE.chainFirst(registerEmbeddedAssets),
-	SRTE.chainFirst(pushPostToState)
+	SRTE.chainFirst(registerEmbeddedAssets)
 );
 
-const a1 = SRTE.of(1);
-const a2 = SRTE.of(2);
+const getSlug = pipe(
+	RTE.Do,
+	RTE.apS("fmSlug", getSlugFromFrontmatter),
+	RTE.apS("defaultSlug", getDefaultSlugFromFile),
+	RTE.map(({ fmSlug, defaultSlug }) => fmSlug || defaultSlug)
+);
 
-const ar = pipe(a1, SRTE.bindTo("a1"));
+const maybeUpdateSlugInFrontmatter = (slug: string) =>
+	pipe(
+		RTE.Do,
+		RTE.apS("fmSlug", getSlugFromFrontmatter),
+		RTE.tap(({ fmSlug }) => {
+			if (!fmSlug) {
+				return;
+			}
+			return updateSlug2(slug);
+		}),
+		RTE.mapLeft(() => "error")
+	);
+
+//
+// const setSlugT3 = RTE.asks(({ file, app }: FileContext) =>
+// );
+
+// i'm not sure if it is okay to mutate states like this
+
+const getServerMd5 = (state: FileProcessingState) =>
+	RTE.asks((deps: FileContext) => {
+		const serverPath = getServerPath(deps.file)(deps.blog.syncFolder);
+		return state.serverPosts.get(serverPath)?.md5 ?? "";
+	});
+
+const updateState = (arg: { slug: string }) => (s: FileProcessingState) => {
+	s.localSlugs.set("a", "d");
+	return s;
+};
+
+const registerLocalSlug2 =
+	(slug: string, path: string) => (s: FileProcessingState) => {
+		s.localSlugs.set(slug, path);
+		return s;
+	};
+
+const markServerPostAsHavingLocalCopy2 =
+	(serverPath: string) => (state: FileProcessingState) => {
+		const sp = state.serverPosts.get(serverPath);
+		if (sp) {
+			sp.hasLocalCopy = true;
+		}
+		return state;
+	};
+
+const registerEmbeddedAssets2 =
+	(embeddedAssets: Set<string>) => (state: FileProcessingState) => {
+		embeddedAssets.forEach((path) => {
+			state.embeddedAssets.add(path);
+		});
+		return state;
+	};
+
+const getPath = RTE.asks((deps: FileContext) => deps.file.path);
+
+export const testFn = pipe(
+	SRTE.get<FileProcessingState, FileContext>(),
+	SRTE.chainReaderTaskEitherK((state) =>
+		pipe(
+			RTE.Do,
+			RTE.apSW("path", getPath),
+			RTE.apSW("slug", getSlug),
+			RTE.tap(({ slug }) => maybeUpdateSlugInFrontmatter(slug)),
+			RTE.chainW((params) => {
+				return state.localSlugs.has(params.slug)
+					? RTE.left("slug collision")
+					: RTE.right(params);
+			}),
+			RTE.apSW("serverMd5", getServerMd5(state)),
+			RTE.apSW("content", readPost),
+			RTE.bindW("md5", (params) => RTE.of(SparkMD5.hash(params.content))),
+			RTE.apSW("embeddedAssets", getEmbeddedAssets2)
+		)
+	),
+	// side effects that modify state
+	SRTE.tap((args) =>
+		pipe(
+			[
+				registerLocalSlug2(args.slug, args.path),
+				markServerPostAsHavingLocalCopy2(args.serverMd5),
+				registerEmbeddedAssets2(args.embeddedAssets),
+			],
+			A.map(SRTE.modify),
+			SRTE.sequenceArray
+		)
+	)
+	// SRTE.get<FileProcessingState, FileContext>(),
+	// SRTE.modify(updateState({ slug: "a" }))
+	// NEXT: have a list of task and map over the args
+	// SRTE.chain(e => )
+);
