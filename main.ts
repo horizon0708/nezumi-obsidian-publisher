@@ -2,7 +2,7 @@ import { App, Plugin, TFile } from "obsidian";
 import { SyncManager } from "src/sync-manager";
 import Logger from "js-logger";
 import { SettingTab } from "src/setting-tab";
-import { getSyncCandidateFiles, processManifest } from "src/manifest-fp";
+import { buildServerFiles, processManifest } from "src/manifest-fp";
 import { getFileList } from "src/server-client";
 import { readerInjection, readerInjection2, sampleRte } from "src/archive";
 
@@ -74,9 +74,14 @@ export default class BlogSync extends Plugin {
 						...filesResponse.json.assets,
 					];
 					console.log(filesResponse, files);
-					const res = await processManifest(files)({
+					// const res = await processManifest(files)({
+					// 	blog,
+					// 	app: this.app,
+					// })();
+					const res = await processManifest({
 						blog,
 						app: this.app,
+						serverPosts: buildServerFiles(files),
 					})();
 					if (res._tag === "Right") {
 						console.log(res.right);
