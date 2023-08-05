@@ -1,12 +1,14 @@
 import * as RTE from "fp-ts/ReaderTaskEither";
 import * as TE from "fp-ts/TaskEither";
 import * as A from "fp-ts/Array";
+import * as O from "fp-ts/Option";
 import { Monoid } from "fp-ts/Monoid";
 import { App, TFile } from "obsidian";
 import { flow, pipe } from "fp-ts/function";
 import { getFile, getFiles_RTE } from "./obsidian-fp";
 import { Blog, ServerFile } from "./types";
 import {
+	Asset,
 	ErroredFile,
 	FileProcessingState,
 	Post,
@@ -63,8 +65,8 @@ const processFileToPost = (file: TFile) =>
 					path: file.path,
 				})),
 				TE.fold(
-					(e) => TE.of([[], [e], "noop"] as Result),
-					([r, s]) => TE.of([[r], [], s] as Result)
+					(e) => TE.of([[], [e], "noop"] as Result<Post>),
+					([r, s]) => TE.of([[r], [], s] as Result<Post>)
 				),
 				RTE.fromTaskEither
 			)
@@ -85,10 +87,8 @@ const processAssetToPost = (file: TFile) =>
 					path: file.path,
 				})),
 				TE.fold(
-					(e) => TE.of([[], [e], "noop"] as Result),
-					// NEXT: do I need a new monoid???
-					// make result monoid into function so I can pass generic?
-					([r, s]) => TE.of([[r], [], s] as Result)
+					(e) => TE.of([[], [e], "noop"] as Result<Asset>),
+					([r, s]) => TE.of([[r], [], s] as Result<Asset>)
 				),
 				RTE.fromTaskEither
 			)
@@ -102,35 +102,58 @@ const emptyFileProcessingState = {
 	embeddedAssets: new Set<string>(),
 };
 
-type Result = [Post[], ErroredFile[], FileProcessingState | "noop"];
-const resultMonoid: Monoid<Result> = {
+type Result<T> = [T[], ErroredFile[], FileProcessingState | "noop"];
+const resultMonoid = <T>(): Monoid<Result<T>> => ({
 	concat: (x, y) => {
-		const [xPosts, xErrors, xState] = x;
-		const [yPosts, yErrors, yState] = y;
+		const [xPending, xErrors, xState] = x;
+		const [yPending, yErrors, yState] = y;
 		const newState = yState === "noop" ? xState : yState;
-		return [xPosts.concat(yPosts), xErrors.concat(yErrors), newState];
+		return [xPending.concat(yPending), xErrors.concat(yErrors), newState];
 	},
 	empty: [[], [], emptyFileProcessingState],
-};
+});
 
 const processFilesToPosts = pipe(
 	getSyncCandidateFiles,
 	RTE.chain(flow(A.map(processFileToPost), RTE.sequenceArray)),
-	RTE.map(A.foldMap(resultMonoid)((e) => e)),
-	RTE.map(([posts, errors, state]) => ({
-		pendingPosts: posts,
-		skippedPosts: errors,
+	RTE.map(A.foldMap(resultMonoid<Post>())((e) => e)),
+	RTE.map(([pending, skipped, state]) => ({
+		pending,
+		skipped,
 		state: state as FileProcessingState,
 	}))
 );
 
+// convert to Either<never, Option> so that we can filter out None values
+const getFileOption = flow(
+	getFile,
+	RTE.fold(
+		() => RTE.right(O.none),
+		(e) => RTE.right(O.some(e))
+	)
+);
+
 export const processManifest = pipe(
 	processFilesToPosts,
-	RTE.chain((params) =>
+	RTE.chain((posts) =>
 		pipe(
-			Array.from(params.state.embeddedAssets),
-			A.map(getFile),
-			RTE.sequenceArray
+			Array.from(posts.state.embeddedAssets),
+			A.map(getFileOption),
+			RTE.sequenceArray,
+			RTE.map(A.compact),
+			RTE.chain(flow(A.map(processAssetToPost), RTE.sequenceArray)),
+			RTE.map(A.foldMap(resultMonoid<Asset>())((e) => e)),
+			RTE.map(([pendingAssets, skippedAssets, state]) => ({
+				assets: {
+					pending: pendingAssets,
+					skipped: skippedAssets,
+				},
+				posts: {
+					pending: posts.pending,
+					skipped: posts.skipped,
+				},
+				state: state as FileProcessingState,
+			}))
 		)
 	)
 );
