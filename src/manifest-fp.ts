@@ -52,7 +52,7 @@ export const buildServerFiles = (files: ServerFile[]) => {
 	return serverPosts;
 };
 
-const processFileToPost2 =
+const processFileToPost =
 	(state: FileProcessingState, deps: ManifestContext) => (file: TFile) =>
 		pipe(
 			processPost(state)({ ...deps, file }),
@@ -67,29 +67,7 @@ const processFileToPost2 =
 			RTE.fromTaskEither
 		);
 
-const processFileToPost = (file: TFile) =>
-	pipe(
-		RTE.ask<ManifestContext>(),
-		RTE.chainW(({ serverPosts, app, blog }) =>
-			pipe(
-				processPost({
-					...emptyFileProcessingState,
-					serverPosts,
-				})({ app, blog, file }),
-				TE.mapLeft((e) => ({
-					...e,
-					path: file.path,
-				})),
-				TE.fold(
-					(e) => TE.of([[], [e], "noop"] as Result<Post>),
-					([r, s]) => TE.of([[r], [], s] as Result<Post>)
-				),
-				RTE.fromTaskEither
-			)
-		)
-	);
-
-const processAssetToPost2 =
+const processAssetToPost =
 	(state: FileProcessingState, deps: ManifestContext) => (file: TFile) =>
 		pipe(
 			processAsset(state)({ ...deps, file }),
@@ -103,28 +81,6 @@ const processAssetToPost2 =
 			),
 			RTE.fromTaskEither
 		);
-
-const processAssetToPost = (file: TFile) =>
-	pipe(
-		RTE.ask<ManifestContext>(),
-		RTE.chainW(({ serverPosts, app, blog }) =>
-			pipe(
-				processAsset({
-					...emptyFileProcessingState,
-					serverPosts,
-				})({ app, blog, file }),
-				TE.mapLeft((e) => ({
-					...e,
-					path: file.path,
-				})),
-				TE.fold(
-					(e) => TE.of([[], [e], "noop"] as Result<Asset>),
-					([r, s]) => TE.of([[r], [], s] as Result<Asset>)
-				),
-				RTE.fromTaskEither
-			)
-		)
-	);
 
 const emptyFileProcessingState = {
 	serverPosts: new Map<string, ServerFileState>(),
@@ -144,12 +100,6 @@ const resultMonoid = <T>(): Monoid<Result<T>> => ({
 	empty: [[], [], emptyFileProcessingState],
 });
 
-const processFilesToPosts = pipe(
-	getSyncCandidateFiles,
-	RTE.chain(flow(A.map(processFileToPost), RTE.sequenceArray)),
-	RTE.map(A.foldMap(resultMonoid<Post>())((e) => e))
-);
-
 // convert to Either<never, Option> so that we can filter out None values
 const getFileOption = flow(
 	getFile,
@@ -166,10 +116,10 @@ export const processManifest = pipe(
 		RTE.of({ ...emptyFileProcessingState, serverPosts })
 	),
 	RTE.chain(({ deps, state }) => {
-		const process = processFileToPost2(state, deps);
+		const processFile = processFileToPost(state, deps);
 		return pipe(
 			getSyncCandidateFiles,
-			RTE.chain(flow(A.map(process), RTE.sequenceArray)),
+			RTE.chain(flow(A.map(processFile), RTE.sequenceArray)),
 			RTE.map(A.foldMap(resultMonoid<Post>())((e) => e)),
 			RTE.map(([pending, skipped, state]) => ({
 				deps,
@@ -182,10 +132,13 @@ export const processManifest = pipe(
 		);
 	}),
 	RTE.chain(({ posts, deps, state }) => {
-		const process = processAssetToPost2(state, deps);
+		const processFile = processAssetToPost(state, deps);
 		return pipe(
-			getSyncCandidateFiles,
-			RTE.chain(flow(A.map(process), RTE.sequenceArray)),
+			Array.from(state.embeddedAssets),
+			A.map(getFileOption),
+			RTE.sequenceArray,
+			RTE.map(A.compact),
+			RTE.chain(flow(A.map(processFile), RTE.sequenceArray)),
 			RTE.map(A.foldMap(resultMonoid<Asset>())((e) => e)),
 			RTE.map(([pending, skipped, state]) => ({
 				posts,
@@ -197,34 +150,4 @@ export const processManifest = pipe(
 			}))
 		);
 	})
-);
-
-export const processManifest2 = pipe(
-	processFilesToPosts,
-	RTE.map(([pending, skipped, state]) => ({
-		posts: {
-			pending,
-			skipped,
-		},
-		state: state as FileProcessingState,
-	})),
-	// need to update the state we give to asset to post
-	RTE.chain(({ posts, state }) =>
-		pipe(
-			Array.from(state.embeddedAssets),
-			A.map(getFileOption),
-			RTE.sequenceArray,
-			RTE.map(A.compact),
-			RTE.chain(flow(A.map(processAssetToPost), RTE.sequenceArray)),
-			RTE.map(A.foldMap(resultMonoid<Asset>())((e) => e)),
-			RTE.map(([pending, skipped, newState]) => ({
-				assets: {
-					pending,
-					skipped,
-				},
-				posts,
-				state: newState as FileProcessingState,
-			}))
-		)
-	)
 );

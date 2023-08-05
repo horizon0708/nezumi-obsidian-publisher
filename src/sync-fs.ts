@@ -214,6 +214,12 @@ export const processAsset: SRTE.StateReaderTaskEither<
 			RTE.apSW("status", RTE.of(FileStatus.PENDING)),
 			RTE.apSW("path", getPath),
 			RTE.apSW("serverMd5", getServerMd5ForPost(state)),
+			RTE.tap((param) =>
+				pipe(
+					markServerPostAsHavingLocalCopy(param.serverMd5)(state),
+					RTE.of
+				)
+			),
 			RTE.apSW(
 				"content",
 				pipe(
@@ -225,13 +231,6 @@ export const processAsset: SRTE.StateReaderTaskEither<
 				RTE.of(SparkMD5.ArrayBuffer.hash(params.content))
 			),
 			RTE.tap((params) => checkMd5Collision(params.serverMd5, params.md5))
-		)
-	),
-	SRTE.tap((args) =>
-		pipe(
-			[markServerPostAsHavingLocalCopy(args.path)],
-			A.map(SRTE.modify),
-			SRTE.sequenceArray
 		)
 	)
 );
