@@ -136,7 +136,7 @@ export const processManifest = pipe(
 			skipped,
 		},
 		state: state as FileProcessingState,
-	})),
+	}))
 	RTE.chain(({ posts, state }) =>
 		pipe(
 			Array.from(state.embeddedAssets),

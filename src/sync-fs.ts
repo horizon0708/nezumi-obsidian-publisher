@@ -160,7 +160,16 @@ export const processPost: SRTE.StateReaderTaskEither<
 					  })
 					: RTE.right(params);
 			}),
+			RTE.tap((param) =>
+				pipe(registerLocalSlug(param.slug, param.path)(state), RTE.of)
+			),
 			RTE.apSW("serverMd5", getServerMd5ForPost(state)),
+			RTE.tap((param) =>
+				pipe(
+					markServerPostAsHavingLocalCopy(param.serverMd5)(state),
+					RTE.of
+				)
+			),
 			RTE.apSW(
 				"content",
 				pipe(
@@ -175,18 +184,21 @@ export const processPost: SRTE.StateReaderTaskEither<
 			RTE.apSW("embeddedAssets", getEmbeddedAssets)
 		)
 	),
-	// side effects that modify state
 	SRTE.tap((args) =>
-		pipe(
-			[
-				registerLocalSlug(args.slug, args.path),
-				markServerPostAsHavingLocalCopy(args.serverMd5),
-				registerEmbeddedAssets(args.embeddedAssets),
-			],
-			A.map(SRTE.modify),
-			SRTE.sequenceArray
-		)
+		pipe(registerEmbeddedAssets(args.embeddedAssets), SRTE.modify)
 	)
+	// side effects that modify state
+	// SRTE.tap((args) =>
+	// 	pipe(
+	// 		[
+	// 			// registerLocalSlug(args.slug, args.path),
+	// 			markServerPostAsHavingLocalCopy(args.serverMd5),
+	// 			registerEmbeddedAssets(args.embeddedAssets),
+	// 		],
+	// 		A.map(SRTE.modify),
+	// 		SRTE.sequenceArray
+	// 	)
+	// )
 );
 
 export const processAsset: SRTE.StateReaderTaskEither<
