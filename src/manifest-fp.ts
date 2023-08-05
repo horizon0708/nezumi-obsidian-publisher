@@ -116,12 +116,7 @@ const resultMonoid = <T>(): Monoid<Result<T>> => ({
 const processFilesToPosts = pipe(
 	getSyncCandidateFiles,
 	RTE.chain(flow(A.map(processFileToPost), RTE.sequenceArray)),
-	RTE.map(A.foldMap(resultMonoid<Post>())((e) => e)),
-	RTE.map(([pending, skipped, state]) => ({
-		pending,
-		skipped,
-		state: state as FileProcessingState,
-	}))
+	RTE.map(A.foldMap(resultMonoid<Post>())((e) => e))
 );
 
 // convert to Either<never, Option> so that we can filter out None values
@@ -135,24 +130,28 @@ const getFileOption = flow(
 
 export const processManifest = pipe(
 	processFilesToPosts,
-	RTE.chain((posts) =>
+	RTE.map(([pending, skipped, state]) => ({
+		posts: {
+			pending,
+			skipped,
+		},
+		state: state as FileProcessingState,
+	})),
+	RTE.chain(({ posts, state }) =>
 		pipe(
-			Array.from(posts.state.embeddedAssets),
+			Array.from(state.embeddedAssets),
 			A.map(getFileOption),
 			RTE.sequenceArray,
 			RTE.map(A.compact),
 			RTE.chain(flow(A.map(processAssetToPost), RTE.sequenceArray)),
 			RTE.map(A.foldMap(resultMonoid<Asset>())((e) => e)),
-			RTE.map(([pendingAssets, skippedAssets, state]) => ({
+			RTE.map(([pending, skipped, newState]) => ({
 				assets: {
-					pending: pendingAssets,
-					skipped: skippedAssets,
+					pending,
+					skipped,
 				},
-				posts: {
-					pending: posts.pending,
-					skipped: posts.skipped,
-				},
-				state: state as FileProcessingState,
+				posts,
+				state: newState as FileProcessingState,
 			}))
 		)
 	)

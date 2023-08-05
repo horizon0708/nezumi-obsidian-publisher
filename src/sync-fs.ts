@@ -70,8 +70,14 @@ type ServerFileState = {
 	hasLocalCopy: boolean;
 };
 
-const getServerPath = (file: TFile) => (syncFolder: string) =>
-	syncFolder === "/" ? file.path : file.path.slice(syncFolder.length + 1);
+// Post paths are saved without the sync folder in server
+// Assets paths are full paths, so we can't strip out the sync folder
+const getServerPath = (path: string) => (syncFolder: string) => {
+	if (!path.endsWith(".md")) {
+		return path;
+	}
+	return syncFolder === "/" ? path : path.slice(syncFolder.length + 1);
+};
 
 const getSlug = pipe(
 	RTE.Do,
@@ -93,9 +99,9 @@ const maybeUpdateSlugInFrontmatter = (slug: string) =>
 		RTE.mapLeft(() => ({ status: FileStatus.SLUG_UPDATE_ERROR }))
 	);
 
-const getServerMd5 = (state: FileProcessingState) =>
+const getServerMd5ForPost = (state: FileProcessingState) =>
 	RTE.asks((deps: FileContext) => {
-		const serverPath = getServerPath(deps.file)(deps.blog.syncFolder);
+		const serverPath = getServerPath(deps.file.path)(deps.blog.syncFolder);
 		return state.serverPosts.get(serverPath)?.md5 ?? "";
 	});
 
@@ -154,7 +160,7 @@ export const processPost: SRTE.StateReaderTaskEither<
 					  })
 					: RTE.right(params);
 			}),
-			RTE.apSW("serverMd5", getServerMd5(state)),
+			RTE.apSW("serverMd5", getServerMd5ForPost(state)),
 			RTE.apSW(
 				"content",
 				pipe(
@@ -195,7 +201,7 @@ export const processAsset: SRTE.StateReaderTaskEither<
 			RTE.Do,
 			RTE.apSW("status", RTE.of(FileStatus.PENDING)),
 			RTE.apSW("path", getPath),
-			RTE.apSW("serverMd5", getServerMd5(state)),
+			RTE.apSW("serverMd5", getServerMd5ForPost(state)),
 			RTE.apSW(
 				"content",
 				pipe(
