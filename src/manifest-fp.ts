@@ -1,3 +1,4 @@
+import * as SRTE from "fp-ts/StateReaderTaskEither";
 import * as RTE from "fp-ts/ReaderTaskEither";
 import * as TE from "fp-ts/TaskEither";
 import * as A from "fp-ts/Array";
@@ -51,6 +52,21 @@ export const buildServerFiles = (files: ServerFile[]) => {
 	return serverPosts;
 };
 
+const processFileToPost2 =
+	(state: FileProcessingState, deps: ManifestContext) => (file: TFile) =>
+		pipe(
+			processPost(state)({ ...deps, file }),
+			TE.mapLeft((e) => ({
+				...e,
+				path: file.path,
+			})),
+			TE.fold(
+				(e) => TE.of([[], [e], "noop"] as Result<Post>),
+				([r, s]) => TE.of([[r], [], s] as Result<Post>)
+			),
+			RTE.fromTaskEither
+		);
+
 const processFileToPost = (file: TFile) =>
 	pipe(
 		RTE.ask<ManifestContext>(),
@@ -72,6 +88,21 @@ const processFileToPost = (file: TFile) =>
 			)
 		)
 	);
+
+const processAssetToPost2 =
+	(state: FileProcessingState, deps: ManifestContext) => (file: TFile) =>
+		pipe(
+			processAsset(state)({ ...deps, file }),
+			TE.mapLeft((e) => ({
+				...e,
+				path: file.path,
+			})),
+			TE.fold(
+				(e) => TE.of([[], [e], "noop"] as Result<Asset>),
+				([r, s]) => TE.of([[r], [], s] as Result<Asset>)
+			),
+			RTE.fromTaskEither
+		);
 
 const processAssetToPost = (file: TFile) =>
 	pipe(
@@ -129,6 +160,46 @@ const getFileOption = flow(
 );
 
 export const processManifest = pipe(
+	RTE.Do,
+	RTE.bind("deps", () => RTE.ask<ManifestContext>()),
+	RTE.bind("state", ({ deps: { serverPosts } }) =>
+		RTE.of({ ...emptyFileProcessingState, serverPosts })
+	),
+	RTE.chain(({ deps, state }) => {
+		const process = processFileToPost2(state, deps);
+		return pipe(
+			getSyncCandidateFiles,
+			RTE.chain(flow(A.map(process), RTE.sequenceArray)),
+			RTE.map(A.foldMap(resultMonoid<Post>())((e) => e)),
+			RTE.map(([pending, skipped, state]) => ({
+				deps,
+				posts: {
+					pending,
+					skipped,
+				},
+				state: state as FileProcessingState,
+			}))
+		);
+	}),
+	RTE.chain(({ posts, deps, state }) => {
+		const process = processAssetToPost2(state, deps);
+		return pipe(
+			getSyncCandidateFiles,
+			RTE.chain(flow(A.map(process), RTE.sequenceArray)),
+			RTE.map(A.foldMap(resultMonoid<Asset>())((e) => e)),
+			RTE.map(([pending, skipped, state]) => ({
+				posts,
+				assets: {
+					pending,
+					skipped,
+				},
+				state: state as FileProcessingState,
+			}))
+		);
+	})
+);
+
+export const processManifest2 = pipe(
 	processFilesToPosts,
 	RTE.map(([pending, skipped, state]) => ({
 		posts: {
@@ -136,7 +207,8 @@ export const processManifest = pipe(
 			skipped,
 		},
 		state: state as FileProcessingState,
-	}))
+	})),
+	// need to update the state we give to asset to post
 	RTE.chain(({ posts, state }) =>
 		pipe(
 			Array.from(state.embeddedAssets),
