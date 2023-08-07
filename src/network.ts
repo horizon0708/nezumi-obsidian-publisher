@@ -7,6 +7,7 @@ import { Semigroup } from "fp-ts/lib/string";
 import { concatAll } from "fp-ts/lib/Monoid";
 import { buildFormDataBodyTE, fetchUrl } from "./obsidian-fp";
 import { buildPluginConfig } from "./plugin-config";
+import { successResultM, errorResultM, resultM } from "./utils";
 
 type Dependencies = {
 	blog: Blog;
@@ -133,6 +134,7 @@ export const getFileListFp = pipe(
  *  Upload post
  *
  */
+
 type UploadPostPayload = {
 	type: "post";
 	path: string;
@@ -157,6 +159,26 @@ export const uploadPost = (p: UploadPostPayload) =>
 		RTE.apSW("method", RTE.of(HttpMethod.POST)),
 		RTE.chainW(sendRequest(uploadPostResponse))
 	);
+
+const buildUploadMany =
+	<T, R, A>(rte: (t: T) => RTE.ReaderTaskEither<R, unknown, A>) =>
+	(items: T[]) =>
+		pipe(
+			items,
+			A.map((p) =>
+				pipe(
+					rte(p),
+					RTE.chain(() => RTE.of(successResultM(p))),
+					RTE.orElse(() => RTE.of(errorResultM(p)))
+				)
+			),
+			// sequentially for now. Look into batching later
+			RTE.sequenceSeqArray,
+			RTE.map(concatAll(resultM())),
+			RTE.map(([uploaded, errored]) => ({ uploaded, errored }))
+		);
+
+export const uploadPosts = buildUploadMany(uploadPost);
 
 /**
  *
@@ -184,10 +206,6 @@ const buildAssetBody = (p: UploadAssetPayload) =>
 		)
 	);
 
-const uploadAssetResponse = t.type({
-	slug: t.string,
-});
-
 export const uploadAsset = (p: UploadAssetPayload) =>
 	pipe(
 		RTE.Do,
@@ -205,6 +223,8 @@ export const uploadAsset = (p: UploadAssetPayload) =>
 		RTE.apSW("method", RTE.of(HttpMethod.POST)),
 		RTE.chainW(flow(fetchUrl, RTE.fromTaskEither))
 	);
+
+export const uploadAssets = buildUploadMany(uploadAsset);
 
 /**
  *
