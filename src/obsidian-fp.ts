@@ -82,7 +82,7 @@ export const getFiles_RTE = pipe(
 
 export const fetchUrl = TE.tryCatchK(requestUrl, (e) => e);
 
-async function encodeFormDataBody(
+export async function encodeFormDataBody(
 	payload: ArrayBuffer,
 	randomBoundryString: string,
 	mimeType: string = "application/octet-stream"

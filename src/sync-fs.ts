@@ -12,11 +12,10 @@ import {
 } from "./obsidian-fp";
 import SparkMD5 from "spark-md5";
 import { App, TFile } from "obsidian";
-import { Blog } from "./types";
 import { buildPluginConfig } from "./plugin-config";
+import { Blog } from "./network";
 
 type ServerPosts = Map<string, ServerFileState>;
-type LocalPosts = Map<string, Post | ErroredFile>;
 type LocalSlugs = Map<string, string>;
 
 type FileContext = {

@@ -6,7 +6,7 @@ import { Monoid, concatAll } from "fp-ts/Monoid";
 import { App, TFile } from "obsidian";
 import { flow, pipe } from "fp-ts/function";
 import { getFile, getFiles_RTE } from "./obsidian-fp";
-import { Blog, ServerFile } from "./types";
+import { ServerFile } from "./types";
 import {
 	ErroredFile,
 	FileProcessingState,
@@ -16,6 +16,7 @@ import {
 	processPost,
 } from "./sync-fs";
 import { buildPluginConfig } from "./plugin-config";
+import { Blog } from "./network";
 
 type ServerFileState = {
 	md5: string;

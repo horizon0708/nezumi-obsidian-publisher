@@ -6,7 +6,6 @@ import * as t from "io-ts";
 import { Semigroup } from "fp-ts/lib/string";
 import { concatAll } from "fp-ts/lib/Monoid";
 import { buildFormDataBodyTE, fetchUrl } from "./obsidian-fp";
-import { Blog } from "./types";
 import { buildPluginConfig } from "./plugin-config";
 
 type Dependencies = {
@@ -20,14 +19,6 @@ enum HttpMethod {
 	PUT = "PUT",
 	DELETE = "DELETE",
 }
-
-const pingBlogResponse = t.type({
-	blog: t.type({
-		id: t.string,
-		name: t.string,
-		subdomain: t.string,
-	}),
-});
 
 const headers = pipe(
 	{
@@ -77,6 +68,21 @@ const sendRequest = <T extends t.Props>(r: t.TypeC<T>) =>
  *  Ping Blog (Get Blog Info)
  *
  */
+const blog = t.type({
+	id: t.string,
+	name: t.string,
+	subdomain: t.string,
+	syncFolder: t.string,
+	endpoint: t.string,
+	apiKey: t.string,
+});
+
+const pingBlogResponse = t.type({
+	blog,
+});
+
+export type Blog = t.TypeOf<typeof blog>;
+
 export const pingBlogFP = pipe(
 	RTE.Do,
 	RTE.apSW(

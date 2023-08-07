@@ -1,5 +1,4 @@
 import { App, Plugin, TFile } from "obsidian";
-import { SyncManager } from "src/sync-manager";
 import Logger from "js-logger";
 import { SettingTab } from "src/setting-tab";
 import {
@@ -44,13 +43,13 @@ export default class BlogSync extends Plugin {
 				name: `Push updates to ${name}`,
 				callback: async () => {
 					Logger.setLevel(Logger.DEBUG);
-					const network = new SyncManager(
-						this.app,
-						this.settingTab.blogs[i]
-					);
-					const result = await network.push();
-					console.log(result);
-					Logger.info(result);
+					const blog = this.settingTab.blogs[i];
+					const e = await syncFiles({ app: this.app, blog });
+					if (e._tag === "Left") {
+						console.log(e.left);
+						return;
+					}
+					console.log(e.right);
 				},
 			});
 

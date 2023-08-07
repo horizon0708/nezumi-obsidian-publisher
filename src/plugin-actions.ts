@@ -1,7 +1,12 @@
 import { App } from "obsidian";
-import { Blog, UploadPostPayload } from "./types";
 import { buildPluginConfig } from "./plugin-config";
-import { deleteFiles, getFileListFp, uploadAsset, uploadPost } from "./network";
+import {
+	Blog,
+	deleteFiles,
+	getFileListFp,
+	uploadAsset,
+	uploadPost,
+} from "./network";
 import * as RTE from "fp-ts/ReaderTaskEither";
 import * as TE from "fp-ts/TaskEither";
 import { pipe } from "fp-ts/lib/function";
@@ -9,11 +14,6 @@ import { prepareFiles } from "./manifest-fp";
 import { Asset, Post } from "./sync-fs";
 import * as A from "fp-ts/Array";
 import { Monoid, concatAll } from "fp-ts/lib/Monoid";
-
-type syncFilesParams = {
-	blog: Blog;
-	app: App;
-};
 
 type UploadResult<K> = [K[], K[]];
 
@@ -85,6 +85,10 @@ const uploadAssets = (assets: Asset[]) =>
 		RTE.map(([uploaded, errored]) => ({ uploaded, errored }))
 	);
 
+type syncFilesParams = {
+	blog: Blog;
+	app: App;
+};
 export const syncFiles = (params: syncFilesParams) => {
 	const pluginConfig = buildPluginConfig();
 	const fetchDeps = { ...params, pluginConfig };
