@@ -10,27 +10,11 @@ import {
 import * as RTE from "fp-ts/ReaderTaskEither";
 import * as TE from "fp-ts/TaskEither";
 import { pipe } from "fp-ts/lib/function";
-import { prepareFiles } from "./manifest-fp";
-import { Asset, Post } from "./sync-fs";
+import { buildManifest } from "./build-manifest";
+import { Asset, Post } from "./process-files";
 import * as A from "fp-ts/Array";
 import { Monoid, concatAll } from "fp-ts/lib/Monoid";
-
-type UploadResult<K> = [K[], K[]];
-
-const successResult = <K>(result: K): UploadResult<K> => [[result], []];
-const errorResult = <K>(result: K): UploadResult<K> => [[], [result]];
-// There must be a existing monoid similar to this
-const resultMonad = <T>(): Monoid<UploadResult<T>> => ({
-	concat: (x, y) => {
-		const [xSuccess, xError] = x;
-		const [ySuccess, yError] = y;
-		return [
-			[...xSuccess, ...ySuccess],
-			[...xError, ...yError],
-		];
-	},
-	empty: [[], []],
-});
+import { errorResultM, resultM, successResultM } from "./utils";
 
 const callDeleteFiles = (files: string[]) =>
 	pipe(
@@ -53,13 +37,13 @@ const uploadPosts = (posts: Post[]) =>
 		A.map((p) =>
 			pipe(
 				uploadPost(p),
-				RTE.chain(() => RTE.of(successResult(p))),
-				RTE.orElse(() => RTE.of(errorResult(p)))
+				RTE.chain(() => RTE.of(successResultM(p))),
+				RTE.orElse(() => RTE.of(errorResultM(p)))
 			)
 		),
 		// sequentially for now. Look into batching later
 		RTE.sequenceSeqArray,
-		RTE.map(concatAll(resultMonad())),
+		RTE.map(concatAll(resultM())),
 		RTE.map(([uploaded, errored]) => ({ uploaded, errored }))
 	);
 
@@ -75,13 +59,13 @@ const uploadAssets = (assets: Asset[]) =>
 		A.map((p) =>
 			pipe(
 				uploadAsset(p),
-				RTE.chain(() => RTE.of(successResult(p))),
-				RTE.orElse(() => RTE.of(errorResult(p)))
+				RTE.chain(() => RTE.of(successResultM(p))),
+				RTE.orElse(() => RTE.of(errorResultM(p)))
 			)
 		),
 		// sequentially for now. Look into batching later
 		RTE.sequenceSeqArray,
-		RTE.map(concatAll(resultMonad())),
+		RTE.map(concatAll(resultM())),
 		RTE.map(([uploaded, errored]) => ({ uploaded, errored }))
 	);
 
@@ -96,7 +80,7 @@ export const syncFiles = (params: syncFilesParams) => {
 	return pipe(
 		getFileListFp(fetchDeps),
 		TE.map(({ posts, assets }) => [...posts, ...assets]),
-		TE.chain((files) => prepareFiles({ ...params, pluginConfig, files })),
+		TE.chain((files) => buildManifest({ ...params, pluginConfig, files })),
 		TE.bind("deleteSuccess", ({ toDelete }) =>
 			callDeleteFiles(toDelete)(fetchDeps)
 		),

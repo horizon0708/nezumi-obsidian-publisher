@@ -109,6 +109,8 @@ const serverFile = t.intersection([
 	}),
 ]);
 
+export type ServerFile = t.TypeOf<typeof serverFile>;
+
 const getFilesResponse = t.type({
 	blog: t.type({ id: t.string }),
 	posts: t.array(serverFile),

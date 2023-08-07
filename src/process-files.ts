@@ -1,5 +1,6 @@
 import * as SRTE from "fp-ts/StateReaderTaskEither";
 import * as RTE from "fp-ts/ReaderTaskEither";
+import * as TE from "fp-ts/TaskEither";
 import * as A from "fp-ts/Array";
 import { flow, pipe } from "fp-ts/function";
 import {
@@ -14,6 +15,7 @@ import SparkMD5 from "spark-md5";
 import { App, TFile } from "obsidian";
 import { buildPluginConfig } from "./plugin-config";
 import { Blog } from "./network";
+import { Monoid, concatAll } from "fp-ts/lib/Monoid";
 
 type ServerPosts = Map<string, ServerFileState>;
 type LocalSlugs = Map<string, string>;
@@ -22,7 +24,6 @@ type FileProcessingContext = {
 	app: App;
 	blog: Blog;
 	file: TFile;
-	serverMd5?: string;
 	pluginConfig: ReturnType<typeof buildPluginConfig>;
 };
 
@@ -60,17 +61,23 @@ export type ErroredFile = {
 	file?: TFile;
 };
 
+type ServerFileState = {
+	md5: string;
+	hasLocalCopy: boolean;
+};
+
 export type FileProcessingState = {
 	serverPosts: ServerPosts;
 	// localPosts: LocalPosts;
 	localSlugs: LocalSlugs;
 	embeddedAssets: Set<string>;
 };
-
-type ServerFileState = {
-	md5: string;
-	hasLocalCopy: boolean;
-};
+export const emptyFileProcessingState = (): FileProcessingState => ({
+	serverPosts: new Map<string, ServerFileState>(),
+	// localPosts: new Map<string, Post>(),
+	localSlugs: new Map<string, string>(),
+	embeddedAssets: new Set<string>(),
+});
 
 // Post paths are saved without the sync folder in server
 // Assets paths are full paths, so we can't strip out the sync folder
@@ -210,3 +217,45 @@ export const processAsset: FileSRTE<Asset> = pipe(
 		)
 	)
 );
+
+type FileProcessResult<T> = [T[], ErroredFile[], FileProcessingState | "noop"];
+const resultMonoid = <T>(
+	emptyState = emptyFileProcessingState()
+): Monoid<FileProcessResult<T>> => ({
+	concat: (x, y) => {
+		const [xPending, xErrors, xState] = x;
+		const [yPending, yErrors, yState] = y;
+		const newState = yState === "noop" ? xState : yState;
+		return [xPending.concat(yPending), xErrors.concat(yErrors), newState];
+	},
+	empty: [[], [], emptyState],
+});
+
+export const buildProcessor =
+	<T>(
+		state: FileProcessingState,
+		deps: Omit<FileProcessingContext, "file">,
+		srte: FileSRTE<T>
+	) =>
+	(files: TFile[]) => {
+		const process = (file: TFile) =>
+			pipe(
+				srte(state)({ ...deps, file }),
+				TE.mapLeft((e) => ({
+					...e,
+					file,
+				})),
+				TE.fold(
+					(e) => TE.of([[], [e], "noop"] as FileProcessResult<T>),
+					([r, s]) => TE.of([[r], [], s] as FileProcessResult<T>)
+				),
+				RTE.fromTaskEither
+			);
+
+		return pipe(
+			files,
+			A.map(process),
+			RTE.sequenceArray,
+			RTE.map(concatAll(resultMonoid<T>(state)))
+		);
+	};

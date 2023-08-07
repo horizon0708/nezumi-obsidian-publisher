@@ -1,21 +1,18 @@
 import * as RTE from "fp-ts/ReaderTaskEither";
-import * as TE from "fp-ts/TaskEither";
 import * as A from "fp-ts/Array";
 import * as O from "fp-ts/Option";
-import { Monoid, concatAll } from "fp-ts/Monoid";
-import { App, TFile } from "obsidian";
+import { App } from "obsidian";
 import { flow, pipe } from "fp-ts/function";
 import { getFile, getFiles_RTE } from "./obsidian-fp";
-import { ServerFile } from "./types";
 import {
-	ErroredFile,
 	FileProcessingState,
-	FileSRTE,
+	buildProcessor,
+	emptyFileProcessingState,
 	processAsset,
 	processPost,
-} from "./sync-fs";
+} from "./process-files";
 import { buildPluginConfig } from "./plugin-config";
-import { Blog } from "./network";
+import { Blog, ServerFile } from "./network";
 
 type ServerFileState = {
 	md5: string;
@@ -29,7 +26,7 @@ type ManifestContext = {
 	pluginConfig: ReturnType<typeof buildPluginConfig>;
 };
 
-export const getSyncCandidateFiles = pipe(
+const getSyncCandidateFiles = pipe(
 	RTE.ask<{ blog: Blog }>(),
 	RTE.chainW(({ blog: { syncFolder } }) =>
 		pipe(
@@ -44,58 +41,13 @@ export const getSyncCandidateFiles = pipe(
 	)
 );
 
-export const buildServerFiles = (files: ServerFile[]) => {
+const buildServerFiles = (files: ServerFile[]) => {
 	const serverPosts = new Map<string, ServerFileState>();
 	files.forEach(({ path, md5 }) => {
 		serverPosts.set(path, { md5, hasLocalCopy: false });
 	});
 	return serverPosts;
 };
-
-const buildProcessor =
-	<T>(state: FileProcessingState, deps: ManifestContext, srte: FileSRTE<T>) =>
-	(files: TFile[]) => {
-		const process = (file: TFile) =>
-			pipe(
-				srte(state)({ ...deps, file }),
-				TE.mapLeft((e) => ({
-					...e,
-					file,
-				})),
-				TE.fold(
-					(e) => TE.of([[], [e], "noop"] as FileProcessResult<T>),
-					([r, s]) => TE.of([[r], [], s] as FileProcessResult<T>)
-				),
-				RTE.fromTaskEither
-			);
-
-		return pipe(
-			files,
-			A.map(process),
-			RTE.sequenceArray,
-			RTE.map(concatAll(resultMonoid<T>(state)))
-		);
-	};
-
-export const emptyFileProcessingState = () => ({
-	serverPosts: new Map<string, ServerFileState>(),
-	// localPosts: new Map<string, Post>(),
-	localSlugs: new Map<string, string>(),
-	embeddedAssets: new Set<string>(),
-});
-
-type FileProcessResult<T> = [T[], ErroredFile[], FileProcessingState | "noop"];
-const resultMonoid = <T>(
-	emptyState = emptyFileProcessingState()
-): Monoid<FileProcessResult<T>> => ({
-	concat: (x, y) => {
-		const [xPending, xErrors, xState] = x;
-		const [yPending, yErrors, yState] = y;
-		const newState = yState === "noop" ? xState : yState;
-		return [xPending.concat(yPending), xErrors.concat(yErrors), newState];
-	},
-	empty: [[], [], emptyState],
-});
 
 // convert to Either<never, Option> so that we can filter out None values
 const getFileOption = flow(
@@ -106,7 +58,7 @@ const getFileOption = flow(
 	)
 );
 
-export const prepareFiles = pipe(
+export const buildManifest = pipe(
 	RTE.Do,
 	RTE.bind("deps", () => RTE.ask<ManifestContext>()),
 	RTE.bind("state", ({ deps }) =>

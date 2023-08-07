@@ -1,17 +1,8 @@
 import { App, Plugin, TFile } from "obsidian";
 import Logger from "js-logger";
 import { SettingTab } from "src/settings/setting-tab";
-import {
-	buildServerFiles,
-	emptyFileProcessingState,
-	prepareFiles,
-} from "src/manifest-fp";
-import { getFileListFp, uploadAsset } from "src/network";
 import { buildPluginConfig } from "src/plugin-config";
 import { syncFiles } from "src/plugin-actions";
-import { pipe } from "fp-ts/lib/function";
-import { processAsset } from "src/sync-fs";
-import * as TE from "fp-ts/TaskEither";
 
 export default class BlogSync extends Plugin {
 	settingTab: SettingTab;
