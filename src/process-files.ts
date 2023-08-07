@@ -231,7 +231,7 @@ const resultMonoid = <T>(
 	empty: [[], [], emptyState],
 });
 
-export const buildProcessor =
+export const buildProcessMany =
 	<T>(
 		state: FileProcessingState,
 		deps: Omit<FileProcessingContext, "file">,

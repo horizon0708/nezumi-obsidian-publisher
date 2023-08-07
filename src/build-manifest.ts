@@ -6,7 +6,7 @@ import { flow, pipe } from "fp-ts/function";
 import { getFile, getFiles_RTE } from "./obsidian-fp";
 import {
 	FileProcessingState,
-	buildProcessor,
+	buildProcessMany,
 	emptyFileProcessingState,
 	processAsset,
 	processPost,
@@ -68,7 +68,7 @@ export const buildManifest = pipe(
 		})
 	),
 	RTE.chainW(({ deps, state }) => {
-		const processToPosts = buildProcessor(state, deps, processPost);
+		const processToPosts = buildProcessMany(state, deps, processPost);
 		return pipe(
 			getSyncCandidateFiles,
 			RTE.chain(processToPosts),
@@ -83,7 +83,7 @@ export const buildManifest = pipe(
 		);
 	}),
 	RTE.chainW(({ posts, deps, state }) => {
-		const processToAssets = buildProcessor(state, deps, processAsset);
+		const processToAssets = buildProcessMany(state, deps, processAsset);
 		return pipe(
 			Array.from(state.embeddedAssets),
 			A.map(getFileOption),
