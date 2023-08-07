@@ -1,10 +1,8 @@
 import BlogSync from "main";
 import { App, PluginSettingTab, Setting, TFile, normalizePath } from "obsidian";
-import { pingBlog } from "./server-client";
 import { BlogModal } from "./blog-modal";
-import { buildPluginConfig } from "./plugin-config";
-import { pingBlogFP } from "./network";
-import { Blog } from "./types";
+import { buildPluginConfig } from "../plugin-config";
+import { Blog, pingBlogFP } from "../network";
 
 type BlogFieldState = Blog & {
 	errorEl: HTMLElement | null;
@@ -88,10 +86,10 @@ export class SettingTab extends PluginSettingTab {
 		console.log("---");
 		console.log(b);
 		console.log("---");
-		const pingResponse = await pingBlog({ apiKey, endpoint });
+		const pingResponse = await pingBlogFP({ apiKey, endpoint })();
 		let message = "";
-		if ("json" in pingResponse) {
-			const { id, name, subdomain } = pingResponse.json.blog;
+		if (pingResponse._tag === "Right") {
+			const { id, name, subdomain } = pingResponse.right.blog;
 			const ind = this.blogs.findIndex((b) => b.id === id);
 			const blogParams: BlogFieldState = {
 				id,
@@ -113,8 +111,9 @@ export class SettingTab extends PluginSettingTab {
 			await this.saveSettings();
 			this.display();
 		} else {
-			const { status, error } = pingResponse;
-			message = `Error: ${status} ${error}`;
+			// const { status, error } = pingResponse;
+			// message = `Error: ${status} ${error}`;
+			message = "error getting blog info";
 		}
 		return message;
 	};

@@ -11,7 +11,6 @@ import {
 	ErroredFile,
 	FileProcessingState,
 	FileSRTE,
-	Post,
 	processAsset,
 	processPost,
 } from "./sync-fs";

@@ -18,7 +18,7 @@ import { Blog } from "./network";
 type ServerPosts = Map<string, ServerFileState>;
 type LocalSlugs = Map<string, string>;
 
-type FileContext = {
+type FileProcessingContext = {
 	app: App;
 	blog: Blog;
 	file: TFile;
@@ -102,7 +102,7 @@ const maybeUpdateSlugInFrontmatter = (slug: string) =>
 	);
 
 const getServerMd5ForPost = (state: FileProcessingState) =>
-	RTE.asks((deps: FileContext) => {
+	RTE.asks((deps: FileProcessingContext) => {
 		const serverPath = getServerPath(deps.file.path)(deps.blog.syncFolder);
 		return state.serverPosts.get(serverPath)?.md5 ?? "";
 	});
@@ -122,7 +122,7 @@ const markServerPostAsHavingLocalCopy =
 		return state;
 	};
 
-const getPath = RTE.asks((deps: FileContext) =>
+const getPath = RTE.asks((deps: FileProcessingContext) =>
 	getServerPath(deps.file.path)(deps.blog.syncFolder)
 );
 
@@ -133,13 +133,15 @@ const checkMd5Collision = (serverMd5: string, md5: string) => {
 	return RTE.right("noop");
 };
 
-export const processPost: SRTE.StateReaderTaskEither<
+export type FileSRTE<T> = SRTE.StateReaderTaskEither<
 	FileProcessingState,
-	FileContext,
+	FileProcessingContext,
 	ErroredFile,
-	Post
-> = pipe(
-	SRTE.get<FileProcessingState, FileContext>(),
+	T
+>;
+
+export const processPost: FileSRTE<Post> = pipe(
+	SRTE.get<FileProcessingState, FileProcessingContext>(),
 	SRTE.chainReaderTaskEitherK((state) =>
 		pipe(
 			RTE.Do,
@@ -183,20 +185,8 @@ export const processPost: SRTE.StateReaderTaskEither<
 	)
 );
 
-export type FileSRTE<T> = SRTE.StateReaderTaskEither<
-	FileProcessingState,
-	FileContext,
-	ErroredFile,
-	T
->;
-
-export const processAsset: SRTE.StateReaderTaskEither<
-	FileProcessingState,
-	FileContext,
-	ErroredFile,
-	Asset
-> = pipe(
-	SRTE.get<FileProcessingState, FileContext>(),
+export const processAsset: FileSRTE<Asset> = pipe(
+	SRTE.get<FileProcessingState, FileProcessingContext>(),
 	SRTE.chainReaderTaskEitherK((state) =>
 		pipe(
 			RTE.Do,
