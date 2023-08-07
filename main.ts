@@ -64,7 +64,6 @@ export default class BlogSync extends Plugin {
 					// console.log(b);
 					const file =
 						this.app.vault.getAbstractFileByPath("md5-test.png");
-					console.log(file);
 					const pluginConfig = buildPluginConfig();
 					const blog = this.settingTab.blogs[i];
 					if (file instanceof TFile) {
@@ -78,7 +77,7 @@ export default class BlogSync extends Plugin {
 						});
 
 						await pipe(
-							processAsset(emptyFileProcessingState)({
+							processAsset(emptyFileProcessingState())({
 								app: this.app,
 								file,
 								blog: this.settingTab.blogs[i],

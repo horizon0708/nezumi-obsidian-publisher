@@ -77,16 +77,16 @@ const buildProcessor =
 		);
 	};
 
-export const emptyFileProcessingState = {
+export const emptyFileProcessingState = () => ({
 	serverPosts: new Map<string, ServerFileState>(),
 	// localPosts: new Map<string, Post>(),
 	localSlugs: new Map<string, string>(),
 	embeddedAssets: new Set<string>(),
-};
+});
 
 type FileProcessResult<T> = [T[], ErroredFile[], FileProcessingState | "noop"];
 const resultMonoid = <T>(
-	emptyState = emptyFileProcessingState
+	emptyState = emptyFileProcessingState()
 ): Monoid<FileProcessResult<T>> => ({
 	concat: (x, y) => {
 		const [xPending, xErrors, xState] = x;
@@ -111,7 +111,7 @@ export const prepareFiles = pipe(
 	RTE.bind("deps", () => RTE.ask<ManifestContext>()),
 	RTE.bind("state", ({ deps }) =>
 		RTE.of({
-			...emptyFileProcessingState,
+			...emptyFileProcessingState(),
 			serverPosts: buildServerFiles(deps.files),
 		})
 	),

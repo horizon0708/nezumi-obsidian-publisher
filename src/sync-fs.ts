@@ -123,14 +123,6 @@ const markServerPostAsHavingLocalCopy =
 		return state;
 	};
 
-const registerEmbeddedAssets =
-	(embeddedAssets: Set<string>) => (state: FileProcessingState) => {
-		embeddedAssets.forEach((path) => {
-			state.embeddedAssets.add(path);
-		});
-		return state;
-	};
-
 const getPath = RTE.asks((deps: FileContext) =>
 	getServerPath(deps.file.path)(deps.blog.syncFolder)
 );
@@ -154,6 +146,13 @@ export const processPost: SRTE.StateReaderTaskEither<
 			RTE.Do,
 			RTE.apSW("status", RTE.of(FileStatus.PENDING)),
 			RTE.apSW("path", getPath),
+			RTE.apSW("embeddedAssets", getEmbeddedAssets),
+			RTE.tap(({ embeddedAssets }) => {
+				embeddedAssets.forEach((path) => {
+					state.embeddedAssets.add(path);
+				});
+				return RTE.of("");
+			}),
 			RTE.apSW("slug", getSlug),
 			RTE.tap(({ slug }) => maybeUpdateSlugInFrontmatter(slug)),
 			RTE.chain((params) => {
@@ -180,14 +179,8 @@ export const processPost: SRTE.StateReaderTaskEither<
 				)
 			),
 			RTE.bindW("md5", (params) => RTE.of(SparkMD5.hash(params.content))),
-			RTE.tap((params) =>
-				checkMd5Collision(params.serverMd5, params.md5)
-			),
-			RTE.apSW("embeddedAssets", getEmbeddedAssets)
+			RTE.tap((params) => checkMd5Collision(params.serverMd5, params.md5))
 		)
-	),
-	SRTE.tap((args) =>
-		pipe(registerEmbeddedAssets(args.embeddedAssets), SRTE.modify)
 	)
 );
 

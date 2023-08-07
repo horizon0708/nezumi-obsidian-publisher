@@ -105,16 +105,16 @@ export const syncFiles = (params: syncFilesParams) => {
 				...postUploadResult,
 			},
 			...rest,
+		})),
+		TE.bind("assetUploadResult", ({ assets }) =>
+			uploadAssets(assets.pending)(fetchDeps)
+		),
+		TE.map(({ assetUploadResult, assets, ...rest }) => ({
+			assets: {
+				...assets,
+				...assetUploadResult,
+			},
+			...rest,
 		}))
-		// TE.bind("assetUploadResult", ({ assets }) =>
-		// 	uploadAssets(assets.pending)(fetchDeps)
-		// ),
-		// TE.map(({ assetUploadResult, assets, ...rest }) => ({
-		// 	assets: {
-		// 		...assets,
-		// 		...assetUploadResult,
-		// 	},
-		// 	...rest,
-		// }))
 	)();
 };

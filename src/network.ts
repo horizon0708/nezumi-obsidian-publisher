@@ -195,7 +195,7 @@ export const uploadAsset = (p: UploadAssetPayload) =>
 			])
 		),
 		RTE.apSW("method", RTE.of(HttpMethod.POST)),
-		RTE.chainW(sendRequest(uploadAssetResponse))
+		RTE.chainW(flow(fetchUrl, RTE.fromTaskEither))
 	);
 
 /**
