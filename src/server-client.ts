@@ -11,7 +11,7 @@ import {
 	UploadResponse,
 } from "./types";
 import Logger from "js-logger";
-import { pluginConfig } from "./plugin-config";
+import { buildPluginConfig } from "./plugin-config";
 
 enum HttpMethod {
 	GET = "GET",
@@ -21,11 +21,13 @@ enum HttpMethod {
 }
 
 const jsonContentType = { ["Content-Type"]: "application/json" };
-const siteKeyHeader = (key: string) => ({ [pluginConfig.apiKeyHeader]: key });
+const siteKeyHeader = (key: string) => ({
+	[buildPluginConfig().apiKeyHeader]: key,
+});
 
 export const pingBlog = async (params: PingRequest): Promise<PingResponse> => {
 	try {
-		const baseUrl = params.endpoint ?? pluginConfig.baseUrl;
+		const baseUrl = params.endpoint ?? buildPluginConfig().baseUrl;
 		return await requestUrl({
 			url: `${baseUrl}/ping`,
 			method: HttpMethod.GET,
@@ -47,7 +49,7 @@ export const getFileList = async (
 	params: BasePayload
 ): Promise<GetFileListResponse> => {
 	try {
-		const baseUrl = params.endpoint ?? pluginConfig.baseUrl;
+		const baseUrl = params.endpoint ?? buildPluginConfig().baseUrl;
 
 		return await requestUrl({
 			url: `${baseUrl}/files`,
@@ -71,7 +73,7 @@ export const uploadPost = async (
 ): Promise<UploadResponse> => {
 	try {
 		const { endpoint, apiKey } = params;
-		const baseUrl = endpoint ?? pluginConfig.baseUrl;
+		const baseUrl = endpoint ?? buildPluginConfig().baseUrl;
 		return await requestUrl({
 			url: `${baseUrl}/posts`,
 			method: HttpMethod.POST,
@@ -90,12 +92,12 @@ export const uploadPost = async (
 	}
 };
 
-export const uploadAsset = async (
+export const uploadAssetDe = async (
 	params: UploadAssetPayload
 ): Promise<UploadResponse> => {
 	try {
 		const { endpoint, apiKey, content, path, md5 } = params;
-		const baseUrl = endpoint ?? pluginConfig.baseUrl;
+		const baseUrl = endpoint ?? buildPluginConfig().baseUrl;
 		const boundaryString = buildRandomBoundaryString();
 		return await requestUrl({
 			url: `${baseUrl}/assets`,
@@ -122,7 +124,7 @@ export const deleteFiles = async (
 ): Promise<DeleteResponse> => {
 	try {
 		const { endpoint, apiKey } = params;
-		const baseUrl = endpoint ?? pluginConfig.baseUrl;
+		const baseUrl = endpoint ?? buildPluginConfig().baseUrl;
 		return await requestUrl({
 			url: `${baseUrl}/files`,
 			method: HttpMethod.DELETE,
@@ -144,7 +146,7 @@ export const deleteFiles = async (
 function buildRandomBoundaryString() {
 	const N = 16; // The length of our random boundry string
 	return (
-		pluginConfig.formDataBoundaryString +
+		buildPluginConfig().formDataBoundaryString +
 		Array(N + 1)
 			.join(
 				(Math.random().toString(36) + "00000000000000000").slice(2, 18)

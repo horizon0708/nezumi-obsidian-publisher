@@ -13,6 +13,7 @@ import {
 import SparkMD5 from "spark-md5";
 import { App, TFile } from "obsidian";
 import { Blog } from "./types";
+import { buildPluginConfig } from "./plugin-config";
 
 type ServerPosts = Map<string, ServerFileState>;
 type LocalPosts = Map<string, Post | ErroredFile>;
@@ -23,6 +24,7 @@ type FileContext = {
 	blog: Blog;
 	file: TFile;
 	serverMd5?: string;
+	pluginConfig: ReturnType<typeof buildPluginConfig>;
 };
 
 enum FileStatus {
@@ -56,11 +58,12 @@ export type Asset = {
 export type ErroredFile = {
 	status: FileStatus;
 	conflictsWith?: string;
+	file?: TFile;
 };
 
 export type FileProcessingState = {
 	serverPosts: ServerPosts;
-	localPosts: LocalPosts;
+	// localPosts: LocalPosts;
 	localSlugs: LocalSlugs;
 	embeddedAssets: Set<string>;
 };
@@ -128,7 +131,9 @@ const registerEmbeddedAssets =
 		return state;
 	};
 
-const getPath = RTE.asks((deps: FileContext) => deps.file.path);
+const getPath = RTE.asks((deps: FileContext) =>
+	getServerPath(deps.file.path)(deps.blog.syncFolder)
+);
 
 const checkMd5Collision = (serverMd5: string, md5: string) => {
 	if (serverMd5 && serverMd5 === md5) {
@@ -165,10 +170,7 @@ export const processPost: SRTE.StateReaderTaskEither<
 			),
 			RTE.apSW("serverMd5", getServerMd5ForPost(state)),
 			RTE.tap((param) =>
-				pipe(
-					markServerPostAsHavingLocalCopy(param.serverMd5)(state),
-					RTE.of
-				)
+				pipe(markServerPostAsHavingLocalCopy(param.path)(state), RTE.of)
 			),
 			RTE.apSW(
 				"content",
@@ -187,19 +189,14 @@ export const processPost: SRTE.StateReaderTaskEither<
 	SRTE.tap((args) =>
 		pipe(registerEmbeddedAssets(args.embeddedAssets), SRTE.modify)
 	)
-	// side effects that modify state
-	// SRTE.tap((args) =>
-	// 	pipe(
-	// 		[
-	// 			// registerLocalSlug(args.slug, args.path),
-	// 			markServerPostAsHavingLocalCopy(args.serverMd5),
-	// 			registerEmbeddedAssets(args.embeddedAssets),
-	// 		],
-	// 		A.map(SRTE.modify),
-	// 		SRTE.sequenceArray
-	// 	)
-	// )
 );
+
+export type FileSRTE<T> = SRTE.StateReaderTaskEither<
+	FileProcessingState,
+	FileContext,
+	ErroredFile,
+	T
+>;
 
 export const processAsset: SRTE.StateReaderTaskEither<
 	FileProcessingState,
@@ -215,10 +212,7 @@ export const processAsset: SRTE.StateReaderTaskEither<
 			RTE.apSW("path", getPath),
 			RTE.apSW("serverMd5", getServerMd5ForPost(state)),
 			RTE.tap((param) =>
-				pipe(
-					markServerPostAsHavingLocalCopy(param.serverMd5)(state),
-					RTE.of
-				)
+				pipe(markServerPostAsHavingLocalCopy(param.path)(state), RTE.of)
 			),
 			RTE.apSW(
 				"content",

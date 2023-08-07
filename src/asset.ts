@@ -1,7 +1,7 @@
 import { App, TFile } from "obsidian";
 import { Blog, FileUploadState } from "./types";
 import SparkMD5 from "spark-md5";
-import { uploadAsset } from "./server-client";
+import { uploadAssetDe } from "./server-client";
 
 type AssetParams = {
 	blog: Blog;
@@ -34,7 +34,7 @@ export class Asset {
 				this.setStatus("skipped", "MD5 matches");
 				return;
 			}
-			const res = await uploadAsset({
+			const res = await uploadAssetDe({
 				path: this.file.path,
 				apiKey,
 				endpoint,

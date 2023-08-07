@@ -7,7 +7,7 @@ import * as RIO from "fp-ts/ReaderIO";
 import * as IO from "fp-ts/IO";
 import { sequence, traverse } from "fp-ts/Traversable";
 import { Blog } from "./types";
-import { pluginConfig } from "./plugin-config";
+import { buildPluginConfig } from "./plugin-config";
 import { sequenceT } from "fp-ts/Apply";
 
 type Deps = {
@@ -38,7 +38,7 @@ const getSlugFromFrontmatter = flow(
 		flow(
 			({ file, app }) =>
 				app.metadataCache.getFileCache(file)?.frontmatter?.[
-					pluginConfig.slugKey
+					buildPluginConfig.slugKey
 				] ?? "",
 			TE.of
 		)
@@ -85,7 +85,7 @@ const putSlug: FileParamBuilder = (params) => {
 	return RTE.asks(({ file, app }) => {
 		const frontMatterSlug =
 			app.metadataCache.getFileCache(file)?.frontmatter?.[
-				pluginConfig.slugKey
+				buildPluginConfig.slugKey
 			];
 		return {
 			...params,
@@ -110,7 +110,7 @@ const maybeAppendSlugToFrontmatter: FileParamBuilder = (params) =>
 			TE.tryCatch(
 				() =>
 					app.fileManager.processFrontMatter(file, (frontmatter) => {
-						frontmatter[pluginConfig.slugKey] = params.slug;
+						frontmatter[buildPluginConfig.slugKey] = params.slug;
 					}),
 				(e) => e
 			)

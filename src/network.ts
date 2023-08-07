@@ -1,86 +1,25 @@
-import * as R from "fp-ts/Reader";
-import * as RS from "fp-ts/State";
-import { flow } from "fp-ts/function";
-import { pluginConfig } from "./plugin-config";
-import * as TE from "fp-ts/TaskEither";
-import * as E from "fp-ts/Either";
-import { requestUrl } from "obsidian";
-import Logger from "js-logger";
+import * as r from "fp-ts/Record";
+import * as A from "fp-ts/Array";
+import * as RTE from "fp-ts/ReaderTaskEither";
+import { flow, pipe } from "fp-ts/function";
 import * as t from "io-ts";
+import { Semigroup } from "fp-ts/lib/string";
+import { concatAll } from "fp-ts/lib/Monoid";
+import { buildFormDataBodyTE, fetchUrl } from "./obsidian-fp";
+import { Blog } from "./types";
+import { buildPluginConfig } from "./plugin-config";
 
 type Dependencies = {
-	baseUrl: string;
-	apiKeyHeader: string;
-	apiKeyValue: string;
+	blog: Blog;
+	pluginConfig: ReturnType<typeof buildPluginConfig>;
 };
 
-type RequestParams = {
-	url: string;
-	headers: Record<string, string>;
-	method: HttpMethod;
-};
 enum HttpMethod {
 	GET = "GET",
 	POST = "POST",
 	PUT = "PUT",
 	DELETE = "DELETE",
 }
-
-type ParamBuilder = (
-	params: RequestParams
-) => R.Reader<Dependencies, RequestParams>;
-
-const baseParams: RequestParams = {
-	url: "",
-	headers: {},
-	method: HttpMethod.GET,
-};
-
-const putUrl =
-	(endpoint: string): ParamBuilder =>
-	(params) => {
-		return R.asks((d) => ({
-			...params,
-			url: d.baseUrl + "/" + endpoint,
-		}));
-	};
-
-const putJsonContentType: ParamBuilder = (params) => {
-	return R.of({
-		...params,
-		headers: {
-			["Content-Type"]: "application/json",
-		},
-	});
-};
-
-const putMethod =
-	(method: HttpMethod): ParamBuilder =>
-	(params: RequestParams) => {
-		return R.of({
-			...params,
-			method,
-		});
-	};
-
-const putApiKey: ParamBuilder = (params) => {
-	return R.asks((d) => ({
-		...params,
-		headers: {
-			...params.headers,
-			[d.apiKeyHeader]: d.apiKeyValue,
-		},
-	}));
-};
-
-const fetchTE = TE.tryCatchK(requestUrl, (err: any) => {
-	Logger.debug(err);
-	// TODO: this should be better
-	return {
-		status: 500,
-		error: err?.message,
-	} as any;
-});
 
 const pingBlogResponse = t.type({
 	blog: t.type({
@@ -90,15 +29,194 @@ const pingBlogResponse = t.type({
 	}),
 });
 
-const b = pingBlogResponse.decode;
-
-export const pingBlogFP = flow(
-	flow(
-		putUrl("ping"),
-		R.chain(putJsonContentType),
-		R.chain(putMethod(HttpMethod.GET)),
-		R.chain(putApiKey)
-	)(baseParams),
-	fetchTE,
-	TE.chain((e) => TE.fromEither(pingBlogResponse.decode(e?.json)))
+const headers = pipe(
+	{
+		jsonContentType: (d: Dependencies) => ({
+			["Content-Type"]: "application/json",
+		}),
+		formDataContentType: (d: Dependencies) => ({
+			["Content-Type"]: `multipart/form-data; boundary=----${d.pluginConfig.formDataBoundaryString}`,
+		}),
+		apiKey: (d: Dependencies) => ({
+			[d.pluginConfig.apiKeyHeader]: d.blog.apiKey,
+		}),
+	},
+	r.map(RTE.asks)
 );
+
+const headersFromPayload = ({ path, md5 }: { path: string; md5: string }) =>
+	pipe(
+		{
+			path: { ["x-file-path"]: path },
+			md5: { ["x-file-md5"]: md5 },
+		},
+		r.map(RTE.of)
+	);
+
+const buildHeaders = <T>(
+	builders: RTE.ReaderTaskEither<T, never, Record<string, string>>[]
+) =>
+	pipe(
+		builders,
+		RTE.sequenceArray,
+		RTE.map(concatAll(r.getMonoid(Semigroup)))
+	);
+
+const buildUrl = (ep: string) =>
+	RTE.asks((d: Dependencies) => d.blog.endpoint + "/" + ep);
+
+const sendRequest = <T extends t.Props>(r: t.TypeC<T>) =>
+	flow(
+		fetchUrl,
+		RTE.fromTaskEither,
+		RTE.chainW((response) => pipe(response.json, r.decode, RTE.fromEither))
+	);
+
+/**
+ *
+ *  Ping Blog (Get Blog Info)
+ *
+ */
+export const pingBlogFP = pipe(
+	RTE.Do,
+	RTE.apSW(
+		"headers",
+		buildHeaders([headers.jsonContentType, headers.apiKey])
+	),
+	RTE.apSW("url", buildUrl("ping")),
+	RTE.apSW("method", RTE.of(HttpMethod.GET)),
+	RTE.chain(sendRequest(pingBlogResponse))
+);
+
+/**
+ *
+ *  Get File List
+ *
+ */
+const serverFile = t.intersection([
+	t.type({
+		md5: t.string,
+	}),
+	t.partial({
+		path: t.string,
+		slug: t.string,
+	}),
+]);
+
+const getFilesResponse = t.type({
+	blog: t.type({ id: t.string }),
+	posts: t.array(serverFile),
+	assets: t.array(serverFile),
+});
+
+export const getFileListFp = pipe(
+	RTE.Do,
+	RTE.apSW("url", buildUrl("files")),
+	RTE.apSW(
+		"headers",
+		buildHeaders([headers.jsonContentType, headers.apiKey])
+	),
+	RTE.apSW("method", RTE.of(HttpMethod.GET)),
+	RTE.chainW(sendRequest(getFilesResponse))
+);
+
+/**
+ *
+ *  Upload post
+ *
+ */
+type UploadPostPayload = {
+	type: "post";
+	path: string;
+	slug: string;
+	content: string;
+	md5: string;
+};
+
+const uploadPostResponse = t.type({
+	slug: t.string,
+});
+
+export const uploadPost = (p: UploadPostPayload) =>
+	pipe(
+		RTE.Do,
+		RTE.apSW("body", RTE.of(JSON.stringify(p))),
+		RTE.apSW("url", buildUrl("posts")),
+		RTE.apSW(
+			"headers",
+			buildHeaders([headers.jsonContentType, headers.apiKey])
+		),
+		RTE.apSW("method", RTE.of(HttpMethod.POST)),
+		RTE.chainW(sendRequest(uploadPostResponse))
+	);
+
+/**
+ *
+ *  Upload asset
+ *
+ */
+type UploadAssetPayload = {
+	type: "asset";
+	path: string;
+	content: ArrayBuffer;
+	md5: string;
+};
+
+const buildAssetBody = (p: UploadAssetPayload) =>
+	pipe(
+		RTE.ask<Dependencies>(),
+		RTE.chain((d) =>
+			pipe(
+				buildFormDataBodyTE(
+					p.content,
+					d.pluginConfig.formDataBoundaryString
+				),
+				RTE.fromTaskEither
+			)
+		)
+	);
+
+const uploadAssetResponse = t.type({
+	slug: t.string,
+});
+
+export const uploadAsset = (p: UploadAssetPayload) =>
+	pipe(
+		RTE.Do,
+		RTE.apSW("body", buildAssetBody(p)),
+		RTE.apSW("url", buildUrl("assets")),
+		RTE.apSW(
+			"headers",
+			buildHeaders([
+				headers.formDataContentType,
+				headers.apiKey,
+				headersFromPayload(p).path,
+				headersFromPayload(p).md5,
+			])
+		),
+		RTE.apSW("method", RTE.of(HttpMethod.POST)),
+		RTE.chainW(sendRequest(uploadAssetResponse))
+	);
+
+/**
+ *
+ *  Delete files
+ *
+ */
+
+type DeletePayload = {
+	keys: string[];
+};
+
+export const deleteFiles = (p: DeletePayload) =>
+	pipe(
+		RTE.Do,
+		RTE.apSW("body", RTE.of(JSON.stringify(p))),
+		RTE.apSW("url", buildUrl("files")),
+		RTE.apSW(
+			"headers",
+			buildHeaders([headers.jsonContentType, headers.apiKey])
+		),
+		RTE.apSW("method", RTE.of(HttpMethod.DELETE)),
+		RTE.chainW(flow(fetchUrl, RTE.fromTaskEither))
+	);

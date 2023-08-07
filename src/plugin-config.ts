@@ -1,17 +1,30 @@
 const DOMAIN = "tuhua.io";
 
-export const pluginConfig = {
-	name: "Nezumi",
-	slugKey: "nezumi_slug",
-	domain: DOMAIN,
-	baseUrl: `https://${DOMAIN}/api`,
-	apiKeyHeader: "x-blog-api-Key",
-	endpoints: {
-		getBlog: "ping",
-		getFileList: "files",
-		uploadPost: "files",
-		uploadAsset: "files",
-		deleteFiles: "files",
-	},
-	formDataBoundaryString: "NezumiBoundary",
+export const buildPluginConfig = () => {
+	const N = 16;
+	const baseFormDataDelimiter = "NezumiBoundary";
+	const formDataBoundaryString =
+		baseFormDataDelimiter +
+		Array(N + 1)
+			.join(
+				(Math.random().toString(36) + "00000000000000000").slice(2, 18)
+			)
+			.slice(0, N);
+
+	return {
+		name: "Nezumi",
+		slugKey: "nezumi_slug",
+		domain: DOMAIN,
+		baseUrl: `https://${DOMAIN}/api`,
+		apiKeyHeader: "x-blog-api-Key",
+		endpoints: {
+			getBlog: "ping",
+			getFileList: "files",
+			uploadPost: "files",
+			uploadAsset: "files",
+			deleteFiles: "files",
+		},
+		baseFormDataDelimiter,
+		formDataBoundaryString,
+	};
 };

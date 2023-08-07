@@ -3,7 +3,7 @@ import { App, PluginSettingTab, Setting, TFile, normalizePath } from "obsidian";
 import { Blog } from "./types";
 import { pingBlog } from "./server-client";
 import { BlogModal } from "./blog-modal";
-import { pluginConfig } from "./plugin-config";
+import { buildPluginConfig } from "./plugin-config";
 import { pingBlogFP } from "./network";
 
 type BlogFieldState = Blog & {
@@ -58,8 +58,8 @@ export class SettingTab extends PluginSettingTab {
 						transformCb: this.syncFolderTransform,
 					},
 					endpoint: {
-						value: pluginConfig.baseUrl,
-						initialValue: pluginConfig.baseUrl,
+						value: buildPluginConfig().baseUrl,
+						initialValue: buildPluginConfig().baseUrl,
 						isHidden: true,
 						showRestoreButton: true,
 					},
@@ -81,9 +81,9 @@ export class SettingTab extends PluginSettingTab {
 	private saveBlog = async (values: Record<string, string>) => {
 		const { apiKey, syncFolder, endpoint, name: customName } = values;
 		const b = await pingBlogFP({
-			apiKeyHeader: pluginConfig.apiKeyHeader,
+			apiKeyHeader: buildPluginConfig().apiKeyHeader,
 			apiKeyValue: apiKey,
-			baseUrl: endpoint ?? pluginConfig.baseUrl,
+			baseUrl: endpoint ?? buildPluginConfig().baseUrl,
 		})();
 		console.log("---");
 		console.log(b);
@@ -198,7 +198,9 @@ export class SettingTab extends PluginSettingTab {
 			);
 			const el = new DocumentFragment();
 			const anchor = el.createEl("a");
-			anchor.href = `https://${this.blogs[i].subdomain}.${pluginConfig.domain}`;
+			anchor.href = `https://${this.blogs[i].subdomain}.${
+				buildPluginConfig().domain
+			}`;
 			anchor.innerText = anchor.href;
 			el.appendChild(anchor);
 

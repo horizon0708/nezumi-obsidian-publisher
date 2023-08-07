@@ -1,5 +1,5 @@
 import { App, TFile } from "obsidian";
-import { pluginConfig } from "./plugin-config";
+import { buildPluginConfig } from "./plugin-config";
 import { Blog, FileUploadState } from "./types";
 import SparkMD5 from "spark-md5";
 import { uploadPost } from "./server-client";
@@ -84,7 +84,7 @@ export class Post {
 	private get slugFromFrontmatter() {
 		const { app, file } = this;
 		return app.metadataCache.getFileCache(file)?.frontmatter?.[
-			pluginConfig.slugKey
+			buildPluginConfig().slugKey
 		];
 	}
 
@@ -96,7 +96,7 @@ export class Post {
 			await this.app.fileManager.processFrontMatter(
 				file,
 				(frontmatter) => {
-					frontmatter[pluginConfig.slugKey] = slug;
+					frontmatter[buildPluginConfig().slugKey] = slug;
 				}
 			);
 		} catch (e) {}

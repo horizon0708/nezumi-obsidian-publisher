@@ -2,7 +2,7 @@ import * as RTE from "fp-ts/ReaderTaskEither";
 import * as TE from "fp-ts/TaskEither";
 import * as s from "fp-ts/struct";
 import { flow, pipe } from "fp-ts/function";
-import { pluginConfig } from "./plugin-config";
+import { buildPluginConfig } from "./plugin-config";
 import * as A from "fp-ts/Array";
 import * as R from "fp-ts/Record";
 import * as RIO from "fp-ts/ReaderIO";
@@ -75,7 +75,7 @@ const getSlugFromFrontmatter2 = <T extends WithFile>({ file }: T) =>
 	RTE.asks(
 		({ app }) =>
 			(app.metadataCache.getFileCache(file)?.frontmatter?.[
-				pluginConfig.slugKey
+				buildPluginConfig.slugKey
 			] ?? "") as string
 	);
 
@@ -83,7 +83,7 @@ const getDefaultSlugFromFile2 = <T extends WithFile>({ file }: T) =>
 	RTE.asks(
 		({ app }) =>
 			(app.metadataCache.getFileCache(file)?.frontmatter?.[
-				pluginConfig.slugKey
+				buildPluginConfig.slugKey
 			] ?? "") as string
 	);
 
