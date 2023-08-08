@@ -5,6 +5,7 @@ import { flow, pipe } from "fp-ts/function";
 import { buildPluginConfig } from "./plugin-config";
 import * as A from "fp-ts/Array";
 import * as R from "fp-ts/Record";
+import SparkMD5 from "spark-md5";
 
 export type AppContext = {
 	app: App;
@@ -42,6 +43,26 @@ export const updateSlug = (slug: string) =>
 			RTE.fromTaskEither
 		)
 	);
+
+export const getMd5 = ({ app, file }: FileContext) => {
+	const path = file.path;
+	if (path.endsWith(".md")) {
+		return pipe(
+			TE.tryCatch(
+				() => app.vault.cachedRead(file),
+				() => file
+			),
+			TE.map((content) => SparkMD5.hash(content))
+		);
+	}
+	return pipe(
+		TE.tryCatch(
+			() => app.vault.readBinary(file),
+			() => file
+		),
+		TE.map((content) => SparkMD5.ArrayBuffer.hash(content))
+	);
+};
 
 export const readPost = ({ app, file }: FileContext) =>
 	TE.tryCatch(

@@ -2,7 +2,7 @@ import * as SRTE from "fp-ts/StateReaderTaskEither";
 import * as RTE from "fp-ts/ReaderTaskEither";
 import * as TE from "fp-ts/TaskEither";
 import * as A from "fp-ts/Array";
-import { flow, pipe } from "fp-ts/function";
+import { flip, flow, pipe } from "fp-ts/function";
 import {
 	getSlugFromFrontmatter,
 	getDefaultSlugFromFile,
@@ -10,6 +10,7 @@ import {
 	readPost,
 	getEmbeddedAssets,
 	readAsset,
+	getMd5,
 } from "./obsidian-fp";
 import SparkMD5 from "spark-md5";
 import { App, TFile } from "obsidian";
@@ -39,6 +40,7 @@ enum FileStatus {
 
 export type Post = {
 	slug: string;
+	file: TFile;
 	path: string;
 	content: string;
 	md5: string;
@@ -49,6 +51,7 @@ export type Post = {
 
 export type Asset = {
 	path: string;
+	file: TFile;
 	content: ArrayBuffer;
 	md5: string;
 	serverMd5: string;
@@ -87,6 +90,8 @@ const getServerPath = (path: string) => (syncFolder: string) => {
 	}
 	return syncFolder === "/" ? path : path.slice(syncFolder.length + 1);
 };
+
+const getServerPath2 = flip(getServerPath);
 
 const getSlug = pipe(
 	RTE.Do,
@@ -133,6 +138,11 @@ const getPath = RTE.asks((deps: FileProcessingContext) =>
 	getServerPath(deps.file.path)(deps.blog.syncFolder)
 );
 
+const getPath2 = (path: string) =>
+	RTE.asks((deps: FileProcessingContext) =>
+		flip(getServerPath)(deps.blog.syncFolder)(path)
+	);
+
 const checkMd5Collision = (serverMd5: string, md5: string) => {
 	if (serverMd5 && serverMd5 === md5) {
 		return RTE.left({ status: FileStatus.MD5_COLLISION });
@@ -147,11 +157,30 @@ export type FileSRTE<T> = SRTE.StateReaderTaskEither<
 	T
 >;
 
+const buildBase = (file: TFile) =>
+	pipe(
+		SRTE.get<FileProcessingState, FileProcessingContext>(),
+		SRTE.chainReaderTaskEitherK((state) =>
+			pipe(
+				RTE.Do,
+				RTE.apSW("file", RTE.of(file)),
+				RTE.apSW("status", RTE.of(FileStatus.PENDING)),
+				RTE.apSW("path", getPath2(file.path)),
+				RTE.apSW("md5", getMd5),
+				RTE.apSW("serverMd5", getServerMd5ForPost(state))
+			)
+		)
+	);
+
 export const processPost: FileSRTE<Post> = pipe(
 	SRTE.get<FileProcessingState, FileProcessingContext>(),
 	SRTE.chainReaderTaskEitherK((state) =>
 		pipe(
 			RTE.Do,
+			RTE.apSW(
+				"file",
+				RTE.asks((deps: FileProcessingContext) => deps.file)
+			),
 			RTE.apSW("status", RTE.of(FileStatus.PENDING)),
 			RTE.apSW("path", getPath),
 			RTE.apSW("embeddedAssets", getEmbeddedAssets),
@@ -197,6 +226,10 @@ export const processAsset: FileSRTE<Asset> = pipe(
 	SRTE.chainReaderTaskEitherK((state) =>
 		pipe(
 			RTE.Do,
+			RTE.apSW(
+				"file",
+				RTE.asks((deps: FileProcessingContext) => deps.file)
+			),
 			RTE.apSW("status", RTE.of(FileStatus.PENDING)),
 			RTE.apSW("path", getPath),
 			RTE.apSW("serverMd5", getServerMd5ForPost(state)),
