@@ -131,7 +131,7 @@ const markServerPostAsHavingLocalCopy =
 		if (sp) {
 			sp.hasLocalCopy = true;
 		}
-		return state;
+		// return state;
 	};
 
 const getPath = RTE.asks((deps: FileProcessingContext) =>
@@ -157,6 +157,18 @@ export type FileSRTE<T> = SRTE.StateReaderTaskEither<
 	T
 >;
 
+/**
+ * Base File type that is common to all file types regardless of success or failure
+ * @param file
+ * @returns
+ */
+type BaseFile = {
+	file: TFile;
+	status: FileStatus;
+	path: string;
+	conflictsWith?: string;
+};
+
 const buildBase = (file: TFile) =>
 	pipe(
 		SRTE.get<FileProcessingState, FileProcessingContext>(),
@@ -165,12 +177,88 @@ const buildBase = (file: TFile) =>
 				RTE.Do,
 				RTE.apSW("file", RTE.of(file)),
 				RTE.apSW("status", RTE.of(FileStatus.PENDING)),
-				RTE.apSW("path", getPath2(file.path)),
-				RTE.apSW("md5", getMd5),
-				RTE.apSW("serverMd5", getServerMd5ForPost(state))
+				RTE.apSW("path", getPath2(file.path))
 			)
 		)
 	);
+
+const performCommonChecks = (base: BaseFile) =>
+	pipe(
+		SRTE.get<FileProcessingState, FileProcessingContext>(),
+		SRTE.chainReaderTaskEitherK((state) =>
+			pipe(
+				RTE.Do,
+				RTE.tapIO(
+					() => () =>
+						markServerPostAsHavingLocalCopy(base.path)(state)
+				)
+			)
+		)
+	);
+
+const processPost2 = flow(
+	buildBase,
+	SRTE.chain((base) =>
+		pipe(
+			SRTE.get<FileProcessingState, FileProcessingContext>(),
+			SRTE.chainReaderTaskEitherK((state) =>
+				pipe(
+					RTE.Do,
+					RTE.tap((param) =>
+						pipe(
+							markServerPostAsHavingLocalCopy(base.path)(state),
+							RTE.of
+						)
+					),
+					RTE.apSW("embeddedAssets", getEmbeddedAssets),
+					RTE.tap(({ embeddedAssets }) => {
+						embeddedAssets.forEach((path) => {
+							state.embeddedAssets.add(path);
+						});
+						return RTE.of("");
+					}),
+					RTE.apSW(
+						"md5",
+						pipe(
+							getMd5,
+							RTE.mapLeft(() => ({
+								status: FileStatus.READ_ERROR,
+							}))
+						)
+					),
+					RTE.apSW("serverMd5", getServerMd5ForPost(state)),
+					RTE.apSW("slug", getSlug),
+					RTE.tap(({ slug }) => maybeUpdateSlugInFrontmatter(slug)),
+					RTE.chainW((params) => {
+						const anotherPath = state.localSlugs.get(params.slug);
+						return anotherPath
+							? RTE.left({
+									status: FileStatus.SLUG_COLLISION,
+									conflictsWith: anotherPath,
+							  })
+							: RTE.right(params);
+					}),
+					RTE.tap((param) =>
+						pipe(
+							registerLocalSlug(param.slug, base.path)(state),
+							RTE.of
+						)
+					),
+					RTE.bimap(
+						(e) => ({
+							...base,
+							...e,
+						}),
+						(params) => ({
+							...base,
+							...params,
+						})
+					)
+				)
+			)
+		)
+	)
+);
 
 export const processPost: FileSRTE<Post> = pipe(
 	SRTE.get<FileProcessingState, FileProcessingContext>(),
