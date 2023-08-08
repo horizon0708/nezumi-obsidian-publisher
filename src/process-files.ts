@@ -1,6 +1,9 @@
 import * as SRTE from "fp-ts/StateReaderTaskEither";
 import * as RTE from "fp-ts/ReaderTaskEither";
+import * as r from "fp-ts/Record";
 import * as TE from "fp-ts/TaskEither";
+import * as T from "fp-ts/Task";
+import * as O from "fp-ts/Option";
 import * as A from "fp-ts/Array";
 import { flip, flow, pipe } from "fp-ts/function";
 import {
@@ -11,12 +14,15 @@ import {
 	getEmbeddedAssets,
 	readAsset,
 	getMd5,
+	getSlugFromFrontmatter2,
 } from "./obsidian-fp";
 import SparkMD5 from "spark-md5";
 import { App, TFile } from "obsidian";
 import { buildPluginConfig } from "./plugin-config";
 import { Blog } from "./network";
 import { Monoid, concatAll } from "fp-ts/lib/Monoid";
+import { FileProcessingStateImpl } from "./file-processing-state";
+import { sequenceS } from "fp-ts/lib/Apply";
 
 type ServerPosts = Map<string, ServerFileState>;
 type LocalSlugs = Map<string, string>;
@@ -75,6 +81,7 @@ export type FileProcessingState = {
 	localSlugs: LocalSlugs;
 	embeddedAssets: Set<string>;
 };
+
 export const emptyFileProcessingState = (): FileProcessingState => ({
 	serverPosts: new Map<string, ServerFileState>(),
 	// localPosts: new Map<string, Post>(),
@@ -138,11 +145,6 @@ const getPath = RTE.asks((deps: FileProcessingContext) =>
 	getServerPath(deps.file.path)(deps.blog.syncFolder)
 );
 
-const getPath2 = (path: string) =>
-	RTE.asks((deps: FileProcessingContext) =>
-		flip(getServerPath)(deps.blog.syncFolder)(path)
-	);
-
 const checkMd5Collision = (serverMd5: string, md5: string) => {
 	if (serverMd5 && serverMd5 === md5) {
 		return RTE.left({ status: FileStatus.MD5_COLLISION });
@@ -156,109 +158,6 @@ export type FileSRTE<T> = SRTE.StateReaderTaskEither<
 	ErroredFile,
 	T
 >;
-
-/**
- * Base File type that is common to all file types regardless of success or failure
- * @param file
- * @returns
- */
-type BaseFile = {
-	file: TFile;
-	status: FileStatus;
-	path: string;
-	conflictsWith?: string;
-};
-
-const buildBase = (file: TFile) =>
-	pipe(
-		SRTE.get<FileProcessingState, FileProcessingContext>(),
-		SRTE.chainReaderTaskEitherK((state) =>
-			pipe(
-				RTE.Do,
-				RTE.apSW("file", RTE.of(file)),
-				RTE.apSW("status", RTE.of(FileStatus.PENDING)),
-				RTE.apSW("path", getPath2(file.path))
-			)
-		)
-	);
-
-const performCommonChecks = (base: BaseFile) =>
-	pipe(
-		SRTE.get<FileProcessingState, FileProcessingContext>(),
-		SRTE.chainReaderTaskEitherK((state) =>
-			pipe(
-				RTE.Do,
-				RTE.tapIO(
-					() => () =>
-						markServerPostAsHavingLocalCopy(base.path)(state)
-				)
-			)
-		)
-	);
-
-const processPost2 = flow(
-	buildBase,
-	SRTE.chain((base) =>
-		pipe(
-			SRTE.get<FileProcessingState, FileProcessingContext>(),
-			SRTE.chainReaderTaskEitherK((state) =>
-				pipe(
-					RTE.Do,
-					RTE.tap((param) =>
-						pipe(
-							markServerPostAsHavingLocalCopy(base.path)(state),
-							RTE.of
-						)
-					),
-					RTE.apSW("embeddedAssets", getEmbeddedAssets),
-					RTE.tap(({ embeddedAssets }) => {
-						embeddedAssets.forEach((path) => {
-							state.embeddedAssets.add(path);
-						});
-						return RTE.of("");
-					}),
-					RTE.apSW(
-						"md5",
-						pipe(
-							getMd5,
-							RTE.mapLeft(() => ({
-								status: FileStatus.READ_ERROR,
-							}))
-						)
-					),
-					RTE.apSW("serverMd5", getServerMd5ForPost(state)),
-					RTE.apSW("slug", getSlug),
-					RTE.tap(({ slug }) => maybeUpdateSlugInFrontmatter(slug)),
-					RTE.chainW((params) => {
-						const anotherPath = state.localSlugs.get(params.slug);
-						return anotherPath
-							? RTE.left({
-									status: FileStatus.SLUG_COLLISION,
-									conflictsWith: anotherPath,
-							  })
-							: RTE.right(params);
-					}),
-					RTE.tap((param) =>
-						pipe(
-							registerLocalSlug(param.slug, base.path)(state),
-							RTE.of
-						)
-					),
-					RTE.bimap(
-						(e) => ({
-							...base,
-							...e,
-						}),
-						(params) => ({
-							...base,
-							...params,
-						})
-					)
-				)
-			)
-		)
-	)
-);
 
 export const processPost: FileSRTE<Post> = pipe(
 	SRTE.get<FileProcessingState, FileProcessingContext>(),

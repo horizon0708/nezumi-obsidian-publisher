@@ -5,6 +5,7 @@ import { flow, pipe } from "fp-ts/function";
 import { buildPluginConfig } from "./plugin-config";
 import * as A from "fp-ts/Array";
 import * as R from "fp-ts/Record";
+import * as O from "fp-ts/Option";
 import SparkMD5 from "spark-md5";
 
 export type AppContext = {
@@ -24,9 +25,22 @@ export const getSlugFromFrontmatter = RTE.asks(
 		] ?? "") as string
 );
 
-export const getDefaultSlugFromFile = RTE.asks(
-	({ file }: FileContext) =>
-		file.basename.toLowerCase().replace(/[^a-z0-9]+/, "-") as string
+export const getSlugFromFrontmatter2 = RTE.asks(
+	({ app, file, pluginConfig }: FileContext) =>
+		pipe(
+			app.metadataCache.getFileCache(file)?.frontmatter?.[
+				pluginConfig.slugKey
+			],
+			O.fromNullable<string>
+		)
+);
+
+export const getDefaultSlugFromFile = RTE.asks(({ file }: FileContext) =>
+	file.basename.toLowerCase().replace(/[^a-z0-9]+/, "-")
+);
+
+export const getDefaultSlugFromFile2 = RTE.asks(({ file }: FileContext) =>
+	file.basename.toLowerCase().replace(/[^a-z0-9]+/, "-")
 );
 
 export const updateSlug = (slug: string) =>
@@ -94,6 +108,15 @@ export const getEmbeddedAssets = ({ app, file }: FileContext) =>
 		A.map(([path, n]) => path),
 		(paths) => new Set<string>(paths),
 		TE.of
+	);
+
+export const getEmbeddedAssets2 = ({ app, file }: FileContext) =>
+	pipe(
+		app.metadataCache.resolvedLinks[file.path],
+		R.toArray,
+		A.filter(([path, n]) => !path.endsWith(".md")),
+		A.map(([path, n]) => path),
+		(paths) => new Set<string>(paths)
 	);
 
 export const getFiles_RTE = pipe(
