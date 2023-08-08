@@ -1,25 +1,25 @@
 import { flow } from "fp-ts/lib/function";
-import { BaseFile, buildBaseFile } from "./base-file";
+import { buildBaseFile } from "./base-file";
 import SRTE from "fp-ts/StateReaderTaskEither";
 import { checkSlugCollision } from "./check-slug-collision";
 import { checkMd5Collision } from "./check-md5";
 import { FileProcessingStateImpl } from "src/file-processing-state";
 
-const registerEmbeddedAssets = (post: BaseFile) =>
+const registerEmbeddedAssets = (post: { embeddedAssets: Set<string> }) =>
 	SRTE.modify((s: FileProcessingStateImpl) => {
 		return s.registerEmbeddedAssets(post.embeddedAssets);
 	});
 
-const markLocalCopy = (post: BaseFile) =>
+const markLocalCopy = (post: { serverPath: string }) =>
 	SRTE.modify((s: FileProcessingStateImpl) => {
 		return s.markLocalCopy(post.serverPath);
 	});
 
 const buildFile = flow(
 	buildBaseFile,
-	SRTE.fromReader,
-	SRTE.tap(registerEmbeddedAssets),
-	SRTE.tap(markLocalCopy),
+	SRTE.fromReaderTaskEither,
+	SRTE.tap((item) => registerEmbeddedAssets(item)),
+	SRTE.tap((item) => markLocalCopy(item)),
 	SRTE.chain(checkSlugCollision),
 	SRTE.chain(checkMd5Collision)
 );

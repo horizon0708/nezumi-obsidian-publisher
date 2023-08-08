@@ -3,25 +3,57 @@ import * as SRTE from "fp-ts/StateReaderTaskEither";
 import * as RTE from "fp-ts/ReaderTaskEither";
 import * as TE from "fp-ts/TaskEither";
 import * as O from "fp-ts/Option";
-import { BaseContext, BaseFile, FileStatus, Post } from "./base-file";
+import {
+	Asset,
+	BaseContext,
+	BaseFile,
+	FileStatus,
+	FileType,
+	Item,
+	Post,
+	SRTEFileBuilder,
+} from "./base-file";
 import { FileProcessingStateImpl } from "src/file-processing-state";
 
-const isPost = (base: BaseFile): base is Post => base.type === "post";
+const isPost = (base: Item): base is Post => base.file.path.endsWith(".md");
 
-type PostContext = BaseContext & { base: Post };
+type LL = {
+	_tag: "LL";
+	data: "a";
+};
+
+type RR = {
+	_tag: "RR";
+	data: "b";
+};
+
+type EE = LL | RR;
+
+const e = (e: EE) => {
+	if (e._tag === "LL") {
+		e.data;
+	}
+};
+
+type PostContext = BaseContext & { base: Item };
 
 /**
  * Updates Slug if the file is a post
  * - ignored if the file is an asset
  * - also may update slug in the frontmatter
+ *
+ * This works but not sure if it is any good.
+ * - typing is weird, I have to coerce it.
  */
-export const checkSlugCollision = (base: BaseFile) =>
-	pipe(
-		base,
-		SRTE.fromPredicate(isPost, () => base),
-		SRTE.chain((post) =>
-			SRTE.asks((deps: BaseContext) => ({ ...deps, base: post }))
-		),
+export const checkSlugCollision = (
+	base: Item
+): SRTEFileBuilder<Post | Asset> => {
+	if (!isPost(base)) {
+		return SRTE.of({ ...base, type: FileType.ASSET as const });
+	}
+
+	return pipe(
+		SRTE.asks((deps: BaseContext) => ({ ...deps, base })),
 		SRTE.chainTaskEitherKW((deps) =>
 			pipe(
 				RTE.Do,
@@ -31,19 +63,20 @@ export const checkSlugCollision = (base: BaseFile) =>
 					RTE.of(getSlug(slugFromFm, defaultSlug))
 				),
 				RTE.tap(({ slug }) => maybeUpdateSlugInFrontmatter(slug)),
-				RTE.map(({ slug }) => ({ ...deps.base, slug: O.some(slug) })),
-				RTE.orElse(() =>
-					RTE.of({
-						...deps.base,
-						status: FileStatus.SLUG_UPDATE_ERROR,
-					})
-				)
+				RTE.map(({ slug }) => ({
+					...deps.base,
+					type: FileType.POST as const,
+					slug: slug,
+					conflictsWith: O.none,
+				}))
 			)(deps)
 		),
 		//  stateful functions, so order matters here!
-		SRTE.tap(checkForSlugCollision),
-		SRTE.tap(registerLocalSlug)
+		SRTE.chain((e) => checkForSlugCollision(e)),
+		// I don't understand why `tap` widens to Post | Asset here
+		SRTE.tap((e: Post) => registerLocalSlug(e))
 	);
+};
 
 const getSlugFromFm = (d: PostContext) =>
 	pipe(
@@ -78,32 +111,29 @@ const maybeUpdateSlugInFrontmatter = (slug: string) =>
 							frontmatter[deps.pluginConfig.slugKey] = slug;
 						}
 					),
-				() => deps.base
+				() => ({
+					status: FileStatus.SLUG_UPDATE_ERROR,
+					file: deps.base.file,
+				})
 			),
 			RTE.fromTaskEither
 		)
 	);
 
-const checkForSlugCollision = <R>(base: BaseFile) =>
+const checkForSlugCollision = <R, E>(base: Post) =>
 	pipe(
-		SRTE.get<FileProcessingStateImpl, R, BaseFile>(),
-		SRTE.chain((s) => {
-			if (O.isNone(base.slug)) {
-				return SRTE.right(base);
-			}
-			const slug = s.getLocalPath(base.slug.value);
-			return SRTE.left({
+		SRTE.get<FileProcessingStateImpl, R, E>(),
+		SRTE.map((s) => {
+			const slug = s.getLocalPath(base.slug);
+			return {
 				...base,
 				status: FileStatus.SLUG_COLLISION,
 				conflictsWith: O.some(slug),
-			});
+			};
 		})
 	);
 
-const registerLocalSlug = (post: BaseFile) =>
+const registerLocalSlug = (post: Post) =>
 	SRTE.modify((s: FileProcessingStateImpl) => {
-		if (O.isNone(post.slug)) {
-			return s;
-		}
-		return s.registerLocalSlug(post.slug.value, post.serverPath);
+		return s.registerLocalSlug(post.slug, post.serverPath);
 	});

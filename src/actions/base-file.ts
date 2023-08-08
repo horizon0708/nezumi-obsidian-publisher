@@ -1,11 +1,17 @@
 import { App, TFile } from "obsidian";
 import * as O from "fp-ts/Option";
 import * as R from "fp-ts/Reader";
+import * as RE from "fp-ts/ReaderEither";
+import * as RTE from "fp-ts/ReaderTaskEither";
+import * as SRTE from "fp-ts/StateReaderTaskEither";
 import * as r from "fp-ts/Record";
 import * as A from "fp-ts/Array";
 import { pipe } from "fp-ts/lib/function";
 import { Blog } from "src/network";
 import { buildPluginConfig } from "src/plugin-config";
+import { liftRightRE, liftRightE } from "src/utils";
+import { getMd5, getMd52 } from "src/obsidian-fp";
+import { FileProcessingStateImpl } from "src/file-processing-state";
 
 export enum FileStatus {
 	NOOP = "NOOP",
@@ -27,15 +33,18 @@ export enum FileType {
  * @param file
  * @returns
  */
-export type Base = {
+export type Item = {
 	file: TFile;
 	status: FileStatus;
 	serverPath: string;
-	slug: O.Option<string>;
-	conflictsWith: O.Option<string>;
-	md5: O.Option<string>;
-	serverMd5: O.Option<string>;
+	md5: string;
 	embeddedAssets: Set<string>;
+	serverMd5: O.Option<string>;
+};
+
+export type ErroredItem = {
+	file: TFile;
+	status: FileStatus;
 };
 
 // type Base = {
@@ -47,10 +56,19 @@ export type Base = {
 // 	embeddedAssets: Set<string>;
 // };
 
-export type Post = Base & {
+export type SRTEFileBuilder<T> = SRTE.StateReaderTaskEither<
+	FileProcessingStateImpl,
+	BaseContext,
+	ErroredItem,
+	T
+>;
+
+export type Post = Item & {
 	type: FileType.POST;
+	slug: string;
+	conflictsWith: O.Option<string>;
 };
-export type Asset = Base & {
+export type Asset = Item & {
 	type: FileType.ASSET;
 };
 
@@ -61,18 +79,6 @@ export type BaseContext = {
 	blog: Blog;
 	pluginConfig: ReturnType<typeof buildPluginConfig>;
 };
-
-export type ProcessError = [FileStatus, O.Option<string>];
-
-export const updateBaseFileFromError =
-	(base: BaseFile) =>
-	([status, conflictsWith]: ProcessError): BaseFile => {
-		return {
-			...base,
-			status,
-			conflictsWith,
-		};
-	};
 
 // Post paths are saved without the sync folder in server
 // Assets paths are full paths, so we can't strip out the sync folder
@@ -94,21 +100,30 @@ const getEmbeddedAssets =
 			(paths) => new Set<string>(paths)
 		);
 
-export const buildBaseFile = (file: TFile): R.Reader<BaseContext, BaseFile> =>
+const getMd5RTE = (file: TFile) =>
+	pipe(
+		file,
+		getMd52,
+		RTE.mapLeft(() => ({ file, status: FileStatus.READ_ERROR }))
+	);
+
+export const buildBaseFile = (
+	file: TFile
+): RTE.ReaderTaskEither<BaseContext, ErroredItem, Item> =>
+	// ) =>
 	pipe(
 		R.asks((deps: BaseContext) => {
 			return {
 				file,
-				type: file.path.endsWith(".md")
-					? FileType.POST
-					: FileType.ASSET,
 				status: FileStatus.PENDING,
 				serverPath: getServerPath(file.path)(deps.blog.syncFolder),
-				slug: O.none,
-				conflictsWith: O.none,
-				md5: O.none,
 				serverMd5: O.none,
 			};
 		}),
-		R.apS("embeddedAssets", getEmbeddedAssets(file))
+		RE.fromReader,
+		RE.apS("embeddedAssets", pipe(file, getEmbeddedAssets, liftRightE)),
+		RTE.fromReaderEither,
+		RTE.apS("md5", getMd5RTE(file))
 	);
+
+const e = (file: TFile) => pipe(file, getMd52);

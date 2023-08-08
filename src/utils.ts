@@ -1,5 +1,7 @@
 import { Monoid } from "fp-ts/lib/Monoid";
 import * as RTE from "fp-ts/ReaderTaskEither";
+import * as RE from "fp-ts/ReaderEither";
+import * as E from "fp-ts/Either";
 
 type ResultMonoid<E, A> = [A[], E[]];
 
@@ -28,4 +30,16 @@ export const liftRightRTE = <R, A, B>(
 	f: (a: A) => B
 ): ((a: A) => RTE.ReaderTaskEither<R, never, B>) => {
 	return (a: A) => RTE.right(f(a));
+};
+
+export const liftRightRE = <R, A, B>(
+	f: (a: A) => B
+): ((a: A) => RE.ReaderEither<R, never, B>) => {
+	return (a: A) => RE.right(f(a));
+};
+
+export const liftRightE = <A, B>(
+	f: (a: A) => B
+): ((a: A) => E.Either<never, B>) => {
+	return (a: A) => E.right(f(a));
 };

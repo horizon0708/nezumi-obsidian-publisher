@@ -27,9 +27,9 @@ const checkForCollision = (
 	BaseFile
 > => {
 	if (
-		O.isSome(base.md5) &&
+		base.md5 &&
 		O.isSome(base.serverMd5) &&
-		base.md5.value === base.serverMd5.value
+		base.md5 === base.serverMd5.value
 	) {
 		return SRTE.of({
 			...base,

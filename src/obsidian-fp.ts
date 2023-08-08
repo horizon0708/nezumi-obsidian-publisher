@@ -58,6 +58,28 @@ export const updateSlug = (slug: string) =>
 		)
 	);
 
+export const getMd52 =
+	(file: TFile) =>
+	({ app }: { app: App }) => {
+		const path = file.path;
+		if (path.endsWith(".md")) {
+			return pipe(
+				TE.tryCatch(
+					() => app.vault.cachedRead(file),
+					() => file
+				),
+				TE.map((content) => SparkMD5.hash(content))
+			);
+		}
+		return pipe(
+			TE.tryCatch(
+				() => app.vault.readBinary(file),
+				() => file
+			),
+			TE.map((content) => SparkMD5.ArrayBuffer.hash(content))
+		);
+	};
+
 export const getMd5 = ({ app, file }: FileContext) => {
 	const path = file.path;
 	if (path.endsWith(".md")) {
