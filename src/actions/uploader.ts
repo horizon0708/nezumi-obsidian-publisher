@@ -70,6 +70,6 @@ export const uploadItems = (items: Item[]) =>
 				// sequential for now. Look into batching later.
 				// I don't want to run 100s of uploads at once
 				RTE.sequenceSeqArray,
-				RTE.map((uploaded) => [...uploaded, ...skipped])
+				RTE.map((uploaded) => [uploaded, skipped])
 			)
 	);

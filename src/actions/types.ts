@@ -71,4 +71,6 @@ export type ItemsBuilder = (
 	files: TFile[]
 ) => SRTEBuilder<ErroredItem[], Item[]>;
 
-export type ItemsFetcher = (item: Item[]) => SRTEBuilder<ErroredItem[], Item[]>;
+export type ItemsFetcher = (
+	item: Item[]
+) => SRTEBuilder<ErroredItem[], [Item[], Item[]]>;

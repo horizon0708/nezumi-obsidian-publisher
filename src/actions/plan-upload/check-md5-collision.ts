@@ -1,11 +1,11 @@
-import { flow, pipe } from "fp-ts/lib/function";
+import { pipe } from "fp-ts/lib/function";
 import * as SRTE from "fp-ts/StateReaderTaskEither";
 import * as O from "fp-ts/Option";
 import { FPState, getServerMd5 } from "src/file-processing-state";
 import { BaseContext, FileStatus, Item } from "../types";
 
 export const checkMd5Collision = (base: Item) =>
-	pipe(base, callGetServerMd5, SRTE.tap(checkForCollision));
+	pipe(base, callGetServerMd5, SRTE.chain(checkForCollision));
 
 const callGetServerMd5 = (base: Item) =>
 	pipe(

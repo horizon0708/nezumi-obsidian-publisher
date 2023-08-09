@@ -106,11 +106,14 @@ const checkForSlugCollision = <R, E>(base: Post) =>
 		SRTE.get<FPState, R, E>(),
 		SRTE.map((s) => {
 			const slug = getLocalPath(s, base.slug);
-			return {
-				...base,
-				status: FileStatus.SLUG_COLLISION,
-				conflictsWith: O.some(slug),
-			};
+			if (slug) {
+				return {
+					...base,
+					status: FileStatus.SLUG_COLLISION,
+					conflictsWith: O.some(slug),
+				};
+			}
+			return base;
 		})
 	);
 

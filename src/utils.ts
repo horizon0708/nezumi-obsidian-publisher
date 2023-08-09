@@ -58,5 +58,5 @@ export const liftRT = <R, A, B>(
 
 // IMPROVE: Loses the context in browser console
 export const teeRTE = RTE.tapIO((e) => {
-	return () => console.log(e);
+	return () => console.log(JSON.stringify(e));
 });

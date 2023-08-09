@@ -24,7 +24,7 @@ import {
 import { checkSlugCollision } from "./check-slug-collision";
 import { checkMd5Collision } from "./check-md5-collision";
 import { Monoid, concatAll } from "fp-ts/lib/Monoid";
-import { ServerFile, getFileListFp } from "src/io/network";
+import { getFileListFp } from "src/io/network";
 import { teeRTE } from "src/utils";
 
 const getServerPath = (path: string) => (syncFolder: string) => {
@@ -160,7 +160,6 @@ export const planUpload = () =>
 				}))
 			)
 		),
-		teeRTE,
 		RTE.chain(({ state, errors, items }) =>
 			pipe(
 				Array.from(state.embeddedAssets),
