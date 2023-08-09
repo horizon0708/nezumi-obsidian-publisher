@@ -1,9 +1,7 @@
 import { App, TFile } from "obsidian";
-import { Blog } from "src/network";
+import { Blog } from "src/io/network";
 import { buildPluginConfig } from "src/plugin-config";
 import * as O from "fp-ts/Option";
-import * as R from "fp-ts/Reader";
-import * as RE from "fp-ts/ReaderEither";
 import * as RTE from "fp-ts/ReaderTaskEither";
 import * as SRTE from "fp-ts/StateReaderTaskEither";
 import { FileProcessingStateImpl } from "src/file-processing-state";
@@ -21,9 +19,8 @@ export enum FileStatus {
 	SLUG_COLLISION = "SKIP/SLUG_COLLISION",
 	MD5_COLLISION = "SKIP/MD5_COLLISION",
 	READ_ERROR = "SKIP/READ_ERROR",
-	UPLOAD_PENDING = "UPLOAD/PENDING",
 	UPLOAD_SUCCESS = "UPLOAD/SUCCESS",
-	UPLOAD_FAILURE = "UPLOAD/FAILURE",
+	UPLOAD_ERROR = "UPLOAD/FAILURE",
 }
 
 export enum FileType {
@@ -31,43 +28,47 @@ export enum FileType {
 	ASSET = "asset",
 }
 
-type ErroredItem = {
+export type ErroredItem = {
 	file: TFile;
 	status: FileStatus;
-	message: O.None;
+	message: O.Option<string>;
 };
 
-type BaseItem = {
-	file: TFile;
-	status: FileStatus;
+export type BaseItem = ErroredItem & {
 	serverPath: string;
 	md5: string;
 	embeddedAssets: Set<string>;
 	serverMd5: O.Option<string>;
 };
 
-type Post = BaseItem & {
+export type Post = BaseItem & {
 	type: FileType.POST;
 	slug: string;
 };
 
-type Asset = BaseItem & {
+export type Asset = BaseItem & {
 	type: FileType.ASSET;
 };
 
-type Item = Post | Asset;
+export type Item = Post | Asset;
 
-declare const test: Item;
-
-type SRTEBuilder<E, A> = SRTE.StateReaderTaskEither<
+export type SRTEBuilder<E, A> = SRTE.StateReaderTaskEither<
 	FileProcessingStateImpl,
 	BaseContext,
 	E,
 	A
 >;
 
-type ItemBuilder = (file: TFile) => SRTEBuilder<ErroredItem, Item>;
+export type RTEBuilder<E, A> = RTE.ReaderTaskEither<BaseContext, E, A>;
 
-type ItemsBuilder = (files: TFile[]) => SRTEBuilder<ErroredItem[], Item[]>;
+export type BaseItemBuilder = (
+	file: TFile
+) => RTEBuilder<ErroredItem, BaseItem>;
 
-type ItemsFetcher = (item: Item[]) => SRTEBuilder<ErroredItem[], Item[]>;
+export type ItemBuilder = (file: BaseItem) => SRTEBuilder<ErroredItem, Item>;
+
+export type ItemsBuilder = (
+	files: TFile[]
+) => SRTEBuilder<ErroredItem[], Item[]>;
+
+export type ItemsFetcher = (item: Item[]) => SRTEBuilder<ErroredItem[], Item[]>;

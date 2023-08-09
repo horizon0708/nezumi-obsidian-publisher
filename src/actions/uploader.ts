@@ -1,0 +1,71 @@
+import { pipe } from "fp-ts/lib/function";
+import RTE from "fp-ts/ReaderTaskEither";
+import A from "fp-ts/Array";
+import { Asset, FileStatus, FileType, Item, Post } from "./plan-upload/types";
+import { readAssetC, readPostC } from "src/io/obsidian-fp";
+import { uploadAsset, uploadPost } from "src/io/network";
+
+/**
+ * Calls uploadPost with the payload ,
+ * updates FileStatus on Failure
+ */
+const callUploadPost = (post: Post) =>
+	pipe(
+		post,
+		(p: Post) => ({
+			type: p.type,
+			path: p.serverPath,
+			slug: p.slug,
+			md5: p.md5,
+		}),
+		RTE.of,
+		RTE.bind("content", () => readPostC(post.file)),
+		RTE.chainW(uploadPost),
+		RTE.bimap(
+			// TODO: add message depending on error from server
+			() => ({ ...post, status: FileStatus.UPLOAD_ERROR } as Item),
+			() => ({ ...post, status: FileStatus.UPLOAD_SUCCESS } as Item)
+		),
+		RTE.orElse((e) => RTE.of(e))
+	);
+
+const callUploadAsset = (asset: Asset) =>
+	pipe(
+		asset,
+		(a: Asset) => ({
+			type: a.type,
+			path: a.serverPath,
+			md5: a.md5,
+		}),
+		RTE.of,
+		RTE.bind("content", () => readAssetC(asset.file)),
+		RTE.chainW(uploadAsset),
+		RTE.bimap(
+			// TODO: add message depending on error from server
+			() => ({ ...asset, status: FileStatus.UPLOAD_ERROR } as Item),
+			() => ({ ...asset, status: FileStatus.UPLOAD_SUCCESS } as Item)
+		),
+		RTE.orElse((e) => RTE.of(e))
+	);
+
+const uploadItem = (item: Item) => {
+	if (item.type === FileType.POST) {
+		return callUploadPost(item);
+	}
+	return callUploadAsset(item);
+};
+
+export const uploadPosts = (items: Item[]) =>
+	pipe(
+		items,
+		A.partition((item) => item.status === FileStatus.PENDING),
+		({ left: pending, right: skipped }) =>
+			pipe(
+				// Is it worth prioitising post uploads over asset uploads?
+				A.map(uploadItem)(pending),
+				// sequential for now. Look into batching later.
+				// I don't want to run 100s of uploads at once
+				RTE.sequenceSeqArray,
+				RTE.map((uploaded) => [...uploaded, ...skipped])
+			)
+	);

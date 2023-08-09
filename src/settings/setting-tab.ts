@@ -2,7 +2,7 @@ import BlogSync from "main";
 import { App, PluginSettingTab, Setting, TFile, normalizePath } from "obsidian";
 import { BlogModal } from "./blog-modal";
 import { buildPluginConfig } from "../plugin-config";
-import { Blog, pingBlogFP } from "../network";
+import { Blog, pingBlogFP } from "../io/network";
 
 type BlogFieldState = Blog & {
 	errorEl: HTMLElement | null;

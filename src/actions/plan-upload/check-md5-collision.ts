@@ -1,30 +1,30 @@
 import { flow, pipe } from "fp-ts/lib/function";
 import * as SRTE from "fp-ts/StateReaderTaskEither";
 import * as O from "fp-ts/Option";
-import { BaseContext, BaseFile, FileStatus } from "./base-file";
 import { FileProcessingStateImpl } from "src/file-processing-state";
+import { BaseContext, FileStatus, Item } from "./types";
 
-export const checkMd5Collision = (base: BaseFile) =>
+export const checkMd5Collision = (base: Item) =>
 	pipe(base, getServerMd5, SRTE.tap(checkForCollision));
 
-const getServerMd5 = (base: BaseFile) =>
+const getServerMd5 = (base: Item) =>
 	pipe(
 		SRTE.get<FileProcessingStateImpl, BaseContext>(),
 		SRTE.chain((state) =>
 			SRTE.of({
 				...base,
 				serverMd5: state.getServerMd5(base.serverPath),
-			} as BaseFile)
+			})
 		)
 	);
 
 const checkForCollision = (
-	base: BaseFile
+	base: Item
 ): SRTE.StateReaderTaskEither<
 	FileProcessingStateImpl,
 	BaseContext,
 	never,
-	BaseFile
+	Item
 > => {
 	if (
 		base.md5 &&
@@ -34,7 +34,7 @@ const checkForCollision = (
 		return SRTE.of({
 			...base,
 			status: FileStatus.MD5_COLLISION,
-		} as BaseFile);
+		});
 	}
 	return SRTE.of(base);
 };

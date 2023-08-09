@@ -3,39 +3,17 @@ import * as SRTE from "fp-ts/StateReaderTaskEither";
 import * as RTE from "fp-ts/ReaderTaskEither";
 import * as TE from "fp-ts/TaskEither";
 import * as O from "fp-ts/Option";
+import { FileProcessingStateImpl } from "src/file-processing-state";
 import {
-	Asset,
 	BaseContext,
-	BaseFile,
+	BaseItem,
 	FileStatus,
 	FileType,
-	Item,
+	ItemBuilder,
 	Post,
-	SRTEFileBuilder,
-} from "./base-file";
-import { FileProcessingStateImpl } from "src/file-processing-state";
+} from "./types";
 
-const isPost = (base: Item): base is Post => base.file.path.endsWith(".md");
-
-type LL = {
-	_tag: "LL";
-	data: "a";
-};
-
-type RR = {
-	_tag: "RR";
-	data: "b";
-};
-
-type EE = LL | RR;
-
-const e = (e: EE) => {
-	if (e._tag === "LL") {
-		e.data;
-	}
-};
-
-type PostContext = BaseContext & { base: Item };
+type PostContext = BaseContext & { base: BaseItem };
 
 /**
  * Updates Slug if the file is a post
@@ -45,11 +23,9 @@ type PostContext = BaseContext & { base: Item };
  * This works but not sure if it is any good.
  * - typing is weird, I have to coerce it.
  */
-export const checkSlugCollision = (
-	base: Item
-): SRTEFileBuilder<Post | Asset> => {
-	if (!isPost(base)) {
-		return SRTE.of({ ...base, type: FileType.ASSET as const });
+export const checkSlugCollision: ItemBuilder = (base: BaseItem) => {
+	if (!base.file.path.endsWith(".md")) {
+		return SRTE.right({ ...base, type: FileType.ASSET });
 	}
 
 	return pipe(
@@ -114,6 +90,7 @@ const maybeUpdateSlugInFrontmatter = (slug: string) =>
 				() => ({
 					status: FileStatus.SLUG_UPDATE_ERROR,
 					file: deps.base.file,
+					message: O.none,
 				})
 			),
 			RTE.fromTaskEither

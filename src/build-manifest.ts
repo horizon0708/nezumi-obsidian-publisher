@@ -3,7 +3,7 @@ import * as A from "fp-ts/Array";
 import * as O from "fp-ts/Option";
 import { App } from "obsidian";
 import { flow, pipe } from "fp-ts/function";
-import { getFile, getFiles_RTE } from "./obsidian-fp";
+import { getFile, getFiles_RTE } from "./io/obsidian-fp";
 import {
 	FileProcessingState,
 	buildProcessMany,
@@ -12,7 +12,7 @@ import {
 	processPost,
 } from "./process-files";
 import { buildPluginConfig } from "./plugin-config";
-import { Blog, ServerFile } from "./network";
+import { Blog, ServerFile } from "./io/network";
 
 type ServerFileState = {
 	md5: string;

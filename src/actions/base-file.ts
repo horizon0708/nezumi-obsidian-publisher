@@ -7,10 +7,10 @@ import * as SRTE from "fp-ts/StateReaderTaskEither";
 import * as r from "fp-ts/Record";
 import * as A from "fp-ts/Array";
 import { pipe } from "fp-ts/lib/function";
-import { Blog } from "src/network";
+import { Blog } from "src/io/network";
 import { buildPluginConfig } from "src/plugin-config";
 import { liftRightRE, liftRightE } from "src/utils";
-import { getMd5, getMd52 } from "src/obsidian-fp";
+import { getMd5, getMd52 } from "src/io/obsidian-fp";
 import { FileProcessingStateImpl } from "src/file-processing-state";
 
 export enum FileStatus {

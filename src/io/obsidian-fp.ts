@@ -1,8 +1,10 @@
 import { App, TFile, getBlobArrayBuffer, requestUrl } from "obsidian";
 import * as RTE from "fp-ts/ReaderTaskEither";
+import RT from "fp-ts/ReaderTask";
 import * as TE from "fp-ts/TaskEither";
+import * as T from "fp-ts/Task";
 import { flow, pipe } from "fp-ts/function";
-import { buildPluginConfig } from "./plugin-config";
+import { buildPluginConfig } from "../plugin-config";
 import * as A from "fp-ts/Array";
 import * as R from "fp-ts/Record";
 import * as O from "fp-ts/Option";
@@ -59,8 +61,8 @@ export const updateSlug = (slug: string) =>
 	);
 
 export const getMd52 =
-	(file: TFile) =>
-	({ app }: { app: App }) => {
+	<T extends { app: App }>(file: TFile) =>
+	({ app }: T) => {
 		const path = file.path;
 		if (path.endsWith(".md")) {
 			return pipe(
@@ -106,11 +108,39 @@ export const readPost = ({ app, file }: FileContext) =>
 		() => file.path
 	);
 
+export const readPostC =
+	<T extends { app: App }>(
+		file: TFile
+	): RTE.ReaderTaskEither<T, string, string> =>
+	({ app }: { app: App }) =>
+		TE.tryCatch(
+			() => app.vault.cachedRead(file),
+			() => file.path
+		);
+
 export const readAsset = ({ app, file }: FileContext) =>
 	TE.tryCatch(
 		() => app.vault.readBinary(file),
 		() => file.path
 	);
+
+export const readAssetC =
+	<T extends { app: App }>(file: TFile) =>
+	({ app }: T) =>
+		TE.tryCatch(
+			() => app.vault.readBinary(file),
+			() => file.path
+		);
+
+export const getFileRT =
+	(path: string) =>
+	({ app }: AppContext) => {
+		const file = app.vault.getAbstractFileByPath(path);
+		if (file instanceof TFile) {
+			return T.of(O.some(file));
+		}
+		return T.of(O.none);
+	};
 
 export const getFile =
 	(path: string) =>
@@ -144,6 +174,11 @@ export const getEmbeddedAssets2 = ({ app, file }: FileContext) =>
 export const getFiles_RTE = pipe(
 	RTE.ask<AppContext>(),
 	RTE.map(({ app }) => app.vault.getFiles())
+);
+
+export const getFiles_RT = pipe(
+	RT.ask<AppContext>(),
+	RT.map(({ app }) => app.vault.getFiles())
 );
 
 export const fetchUrl = TE.tryCatchK(requestUrl, (e) => e);

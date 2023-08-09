@@ -15,11 +15,11 @@ import {
 	readAsset,
 	getMd5,
 	getSlugFromFrontmatter2,
-} from "./obsidian-fp";
+} from "./io/obsidian-fp";
 import SparkMD5 from "spark-md5";
 import { App, TFile } from "obsidian";
 import { buildPluginConfig } from "./plugin-config";
-import { Blog } from "./network";
+import { Blog } from "./io/network";
 import { Monoid, concatAll } from "fp-ts/lib/Monoid";
 import { FileProcessingStateImpl } from "./file-processing-state";
 import { sequenceS } from "fp-ts/lib/Apply";

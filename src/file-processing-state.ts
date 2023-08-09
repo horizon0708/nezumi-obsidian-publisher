@@ -1,4 +1,5 @@
 import * as O from "fp-ts/Option";
+import { ServerFile } from "./io/network";
 type ServerFileState = {
 	md5: string;
 	hasLocalCopy: boolean;
@@ -9,8 +10,12 @@ export class FileProcessingStateImpl {
 	localSlugs: Map<string, string>;
 	embeddedAssets: Set<string>;
 
-	constructor() {
+	constructor(files: ServerFile[] = []) {
 		this.serverPosts = new Map<string, ServerFileState>();
+		files.forEach(({ path, md5 }) => {
+			this.serverPosts.set(path, { md5, hasLocalCopy: false });
+		});
+
 		this.localSlugs = new Map<string, string>();
 		this.embeddedAssets = new Set<string>();
 	}
@@ -24,7 +29,6 @@ export class FileProcessingStateImpl {
 	};
 
 	getServerMd5 = (path: string) => {
-		// IDK why it types to only ServerFileState
 		const sp = this.serverPosts.get(path);
 		return O.fromNullable(sp?.md5);
 	};

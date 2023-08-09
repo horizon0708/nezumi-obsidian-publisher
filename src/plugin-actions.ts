@@ -6,7 +6,7 @@ import {
 	getFileListFp,
 	uploadAssets,
 	uploadPosts,
-} from "./network";
+} from "./io/network";
 import * as RTE from "fp-ts/ReaderTaskEither";
 import * as TE from "fp-ts/TaskEither";
 import { pipe } from "fp-ts/lib/function";
