@@ -27,6 +27,54 @@ import { Monoid, concatAll } from "fp-ts/lib/Monoid";
 import { getFileListFp } from "src/io/network";
 import { teeRTE } from "src/utils";
 
+export const planUpload = () =>
+	pipe(
+		RTE.Do,
+		RTE.apS(
+			"files",
+			pipe(
+				getFileListFp,
+				RTE.map(({ posts, assets }) => [...posts, ...assets])
+			)
+		),
+		RTE.bind("state", ({ files }) => RTE.of(newProcessingState(files))),
+		teeRTE,
+		RTE.chainW(({ state }) =>
+			pipe(
+				getSyncCandidateFiles,
+				RTE.chain(buildItems(state)),
+				RTE.map(([errors, items, newState]) => ({
+					errors,
+					items,
+					state: newState as FPState,
+				}))
+			)
+		),
+		RTE.chain(({ state, errors, items }) =>
+			pipe(
+				Array.from(state.embeddedAssets),
+				A.map(getFileRTE),
+				RTE.sequenceArray,
+				RTE.map(A.compact),
+				RTE.chain(buildItems(state)),
+				RTE.map(([assetErrors, assetItems, newState]) => ({
+					errors: errors.concat(assetErrors),
+					items: items.concat(assetItems),
+					state: newState as FPState,
+				}))
+			)
+		),
+		RTE.map((args) => {
+			const toDelete: string[] = [];
+			args.state.serverPosts.forEach((value, key) => {
+				if (!value.hasLocalCopy) {
+					toDelete.push(key);
+				}
+			});
+			return { ...args, toDelete };
+		})
+	);
+
 const getServerPath = (path: string) => (syncFolder: string) => {
 	if (!path.endsWith(".md")) {
 		return path;
@@ -89,7 +137,6 @@ const buildItem = (file: TFile) =>
 		SRTE.chainW(checkMd5Collision)
 	);
 
-// type FileProcessResult<E, A> = [E[], [], "noop"] | [[], A[], FPState]
 type FileProcessResult<E, A> = [E[], A[], "noop" | FPState];
 type FPResult = FileProcessResult<ErroredItem, Item>;
 
@@ -136,51 +183,3 @@ const getSyncCandidateFiles = pipe(
 		)
 	)
 );
-
-export const planUpload = () =>
-	pipe(
-		RTE.Do,
-		RTE.apS(
-			"files",
-			pipe(
-				getFileListFp,
-				RTE.map(({ posts, assets }) => [...posts, ...assets])
-			)
-		),
-		RTE.bind("state", ({ files }) => RTE.of(newProcessingState(files))),
-		teeRTE,
-		RTE.chainW(({ state }) =>
-			pipe(
-				getSyncCandidateFiles,
-				RTE.chain(buildItems(state)),
-				RTE.map(([errors, items, newState]) => ({
-					errors,
-					items,
-					state: newState as FPState,
-				}))
-			)
-		),
-		RTE.chain(({ state, errors, items }) =>
-			pipe(
-				Array.from(state.embeddedAssets),
-				A.map(getFileRTE),
-				RTE.sequenceArray,
-				RTE.map(A.compact),
-				RTE.chain(buildItems(state)),
-				RTE.map(([assetErrors, assetItems, newState]) => ({
-					errors: errors.concat(assetErrors),
-					items: items.concat(assetItems),
-					state: newState as FPState,
-				}))
-			)
-		),
-		RTE.map((args) => {
-			const toDelete: string[] = [];
-			args.state.serverPosts.forEach((value, key) => {
-				if (!value.hasLocalCopy) {
-					toDelete.push(key);
-				}
-			});
-			return { ...args, toDelete };
-		})
-	);

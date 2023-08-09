@@ -1,4 +1,4 @@
-import { App, TFile, getBlobArrayBuffer, requestUrl } from "obsidian";
+import { App, Notice, TFile, getBlobArrayBuffer, requestUrl } from "obsidian";
 import * as RTE from "fp-ts/ReaderTaskEither";
 import * as RT from "fp-ts/ReaderTask";
 import * as TE from "fp-ts/TaskEither";
@@ -18,6 +18,10 @@ type FileContext = {
 	app: App;
 	file: TFile;
 	pluginConfig: ReturnType<typeof buildPluginConfig>;
+};
+
+export const showNotice = (message: string) => {
+	new Notice(message);
 };
 
 export const getSlugFromFrontmatter = RTE.asks(
