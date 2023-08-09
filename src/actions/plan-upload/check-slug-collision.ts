@@ -3,7 +3,11 @@ import * as SRTE from "fp-ts/StateReaderTaskEither";
 import * as RTE from "fp-ts/ReaderTaskEither";
 import * as TE from "fp-ts/TaskEither";
 import * as O from "fp-ts/Option";
-import { FileProcessingStateImpl } from "src/file-processing-state";
+import {
+	FPState,
+	getLocalPath,
+	registerLocalSlug,
+} from "src/file-processing-state";
 import {
 	BaseContext,
 	BaseItem,
@@ -50,7 +54,7 @@ export const checkSlugCollision: ItemBuilder = (base: BaseItem) => {
 		//  stateful functions, so order matters here!
 		SRTE.chain((e) => checkForSlugCollision(e)),
 		// I don't understand why `tap` widens to Post | Asset here
-		SRTE.tap((e: Post) => registerLocalSlug(e))
+		SRTE.tap((e: Post) => callRegisterLocalSlug(e))
 	);
 };
 
@@ -58,8 +62,8 @@ const getSlugFromFm = (d: PostContext) =>
 	pipe(
 		d.app.metadataCache.getFileCache(d.base.file)?.frontmatter?.[
 			d.pluginConfig.slugKey
-		],
-		O.fromNullable<string>,
+		] as string,
+		O.fromNullable,
 		O.fold(
 			() => TE.right(O.none),
 			(slug) => TE.right(O.some(slug))
@@ -99,9 +103,9 @@ const maybeUpdateSlugInFrontmatter = (slug: string) =>
 
 const checkForSlugCollision = <R, E>(base: Post) =>
 	pipe(
-		SRTE.get<FileProcessingStateImpl, R, E>(),
+		SRTE.get<FPState, R, E>(),
 		SRTE.map((s) => {
-			const slug = s.getLocalPath(base.slug);
+			const slug = getLocalPath(s, base.slug);
 			return {
 				...base,
 				status: FileStatus.SLUG_COLLISION,
@@ -110,7 +114,7 @@ const checkForSlugCollision = <R, E>(base: Post) =>
 		})
 	);
 
-const registerLocalSlug = (post: Post) =>
-	SRTE.modify((s: FileProcessingStateImpl) => {
-		return s.registerLocalSlug(post.slug, post.serverPath);
+const callRegisterLocalSlug = (post: Post) =>
+	SRTE.modify((s: FPState) => {
+		return registerLocalSlug(s, post.slug, post.serverPath);
 	});

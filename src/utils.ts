@@ -55,3 +55,8 @@ export const liftRT = <R, A, B>(
 ): ((a: A) => RT.ReaderTask<R, B>) => {
 	return (a: A) => RT.of(f(a));
 };
+
+// IMPROVE: Loses the context in browser console
+export const teeRTE = RTE.tapIO((e) => {
+	return () => console.log(e);
+});

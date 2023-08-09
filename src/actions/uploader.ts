@@ -1,6 +1,6 @@
 import { pipe } from "fp-ts/lib/function";
-import RTE from "fp-ts/ReaderTaskEither";
-import A from "fp-ts/Array";
+import * as RTE from "fp-ts/ReaderTaskEither";
+import * as A from "fp-ts/Array";
 import { Asset, FileStatus, FileType, Item, Post } from "./types";
 import { readAssetC, readPostC } from "src/io/obsidian-fp";
 import { uploadAsset, uploadPost } from "src/io/network";
@@ -55,11 +55,15 @@ const uploadItem = (item: Item) => {
 	return callUploadAsset(item);
 };
 
-export const uploadPosts = (items: Item[]) =>
+export const uploadItems = (items: Item[]) =>
 	pipe(
 		items,
 		A.partition((item) => item.status === FileStatus.PENDING),
-		({ left: pending, right: skipped }) =>
+		(e) => {
+			console.log(e);
+			return e;
+		},
+		({ left: skipped, right: pending }) =>
 			pipe(
 				// Is it worth prioitising post uploads over asset uploads?
 				A.map(uploadItem)(pending),

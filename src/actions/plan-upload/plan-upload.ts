@@ -5,8 +5,9 @@ import * as RT from "fp-ts/ReaderTask";
 import * as A from "fp-ts/Array";
 import * as r from "fp-ts/Record";
 import * as O from "fp-ts/Option";
+import * as E from "fp-ts/Either";
 import { TFile } from "obsidian";
-import { getFileRT, getFiles_RT, getMd52 } from "src/io/obsidian-fp";
+import { getFileRTE, getFiles_RTE, getMd52 } from "src/io/obsidian-fp";
 import {
 	BaseContext,
 	BaseItemBuilder,
@@ -14,11 +15,17 @@ import {
 	FileStatus,
 	Item,
 } from "../types";
-import { FileProcessingStateImpl } from "src/file-processing-state";
+import {
+	FPState,
+	markLocalCopy,
+	newProcessingState,
+	registerEmbeddedAssets,
+} from "src/file-processing-state";
 import { checkSlugCollision } from "./check-slug-collision";
 import { checkMd5Collision } from "./check-md5-collision";
 import { Monoid, concatAll } from "fp-ts/lib/Monoid";
 import { ServerFile, getFileListFp } from "src/io/network";
+import { teeRTE } from "src/utils";
 
 const getServerPath = (path: string) => (syncFolder: string) => {
 	if (!path.endsWith(".md")) {
@@ -31,7 +38,7 @@ const getEmbeddedAssets =
 	(file: TFile) =>
 	({ app }: BaseContext) =>
 		pipe(
-			app.metadataCache.resolvedLinks[file.path],
+			app.metadataCache.resolvedLinks[file.path] ?? [],
 			r.toArray,
 			A.filter(([path, n]) => !path.endsWith(".md")),
 			A.map(([path, n]) => path),
@@ -62,32 +69,32 @@ const buildBaseItem: BaseItemBuilder = (file) =>
 		RTE.apS("md5", getMd5RTE(file))
 	);
 
-const registerEmbeddedAssets = (post: { embeddedAssets: Set<string> }) =>
-	SRTE.modify((s: FileProcessingStateImpl) => {
-		return s.registerEmbeddedAssets(post.embeddedAssets);
+const callRegisterEmbeddedAssets = (post: { embeddedAssets: Set<string> }) =>
+	SRTE.modify((s: FPState) => {
+		return registerEmbeddedAssets(s, post.embeddedAssets);
 	});
 
-const markLocalCopy = (post: { serverPath: string }) =>
-	SRTE.modify((s: FileProcessingStateImpl) => {
-		return s.markLocalCopy(post.serverPath);
+const callMarkLocalCopy = (post: { serverPath: string }) =>
+	SRTE.modify((s: FPState) => {
+		return markLocalCopy(s, post.serverPath);
 	});
 
 const buildItem = (file: TFile) =>
 	pipe(
 		buildBaseItem(file),
 		SRTE.fromReaderTaskEither,
-		SRTE.tap((item) => registerEmbeddedAssets(item)),
-		SRTE.tap((item) => markLocalCopy(item)),
+		SRTE.tap((item) => callRegisterEmbeddedAssets(item)),
+		SRTE.tap((item) => callMarkLocalCopy(item)),
 		SRTE.chainW(checkSlugCollision),
 		SRTE.chainW(checkMd5Collision)
 	);
 
-// type FileProcessResult<E, A> = [E[], [], "noop"] | [[], A[], FileProcessingStateImpl]
-type FileProcessResult<E, A> = [E[], A[], "noop" | FileProcessingStateImpl];
+// type FileProcessResult<E, A> = [E[], [], "noop"] | [[], A[], FPState]
+type FileProcessResult<E, A> = [E[], A[], "noop" | FPState];
 type FPResult = FileProcessResult<ErroredItem, Item>;
 
 const resultMonoid = <E, A>(
-	emptyState: FileProcessingStateImpl
+	emptyState: FPState
 ): Monoid<FileProcessResult<E, A>> => ({
 	concat: (x, y) => {
 		const [xPending, xErrors, xState] = x;
@@ -98,30 +105,29 @@ const resultMonoid = <E, A>(
 	empty: [[], [], emptyState],
 });
 
-const buildItems =
-	<T>(state: FileProcessingStateImpl) =>
-	(files: TFile[]) =>
-		pipe(
-			files,
-			A.map((file) =>
-				pipe(
-					buildItem(file)(state),
-					RTE.fold(
-						(e) => RT.of([[e], [], "noop"] as FPResult),
-						([a, s]) => RT.of([[], [a], s] as FPResult)
-					)
+const buildItems = (state: FPState) => (files: TFile[]) =>
+	pipe(
+		files,
+		A.map((file) =>
+			pipe(
+				buildItem(file)(state),
+				RTE.fold(
+					(e) => RT.of([[e], [], "noop"] as FPResult),
+					([a, s]) => RT.of([[], [a], s] as FPResult)
 				)
-			),
-			RT.sequenceArray,
-			RT.map(concatAll(resultMonoid(state)))
-		);
+			)
+		),
+		RT.sequenceArray,
+		RT.map(concatAll(resultMonoid(state))),
+		RT.map((res) => E.right(res))
+	);
 
 const getSyncCandidateFiles = pipe(
-	RT.ask<BaseContext>(),
-	RT.chainW(({ blog: { syncFolder } }) =>
+	RTE.ask<BaseContext>(),
+	RTE.chainW(({ blog: { syncFolder } }) =>
 		pipe(
-			getFiles_RT,
-			RT.map(
+			getFiles_RTE,
+			RTE.map(
 				flow(
 					A.filter((file) => file.path.endsWith(".md")),
 					A.filter((file) => file.path.startsWith(syncFolder))
@@ -131,51 +137,45 @@ const getSyncCandidateFiles = pipe(
 	)
 );
 
-export const planUpload = (files: ServerFile[]) =>
+export const planUpload = () =>
 	pipe(
-		RT.Do,
-		RT.apS(
+		RTE.Do,
+		RTE.apS(
 			"files",
 			pipe(
 				getFileListFp,
-				// TODO: This whole thing (plan upload should be RTE)
-				// as this could fail
-				RTE.map(({ posts, assets }) => [...posts, ...assets]),
-				RTE.fold(
-					() => RT.of([]),
-					(serverFiles) => RT.of(serverFiles)
-				)
+				RTE.map(({ posts, assets }) => [...posts, ...assets])
 			)
 		),
-		RT.bind("state", ({ files }) =>
-			RT.of(new FileProcessingStateImpl(files))
-		),
-		RT.chainW(({ state }) =>
+		RTE.bind("state", ({ files }) => RTE.of(newProcessingState(files))),
+		teeRTE,
+		RTE.chainW(({ state }) =>
 			pipe(
 				getSyncCandidateFiles,
-				RT.chain(buildItems(state)),
-				RT.map(([errors, items, newState]) => ({
+				RTE.chain(buildItems(state)),
+				RTE.map(([errors, items, newState]) => ({
 					errors,
 					items,
-					state: newState as FileProcessingStateImpl,
+					state: newState as FPState,
 				}))
 			)
 		),
-		RT.chain(({ state, errors, items }) =>
+		teeRTE,
+		RTE.chain(({ state, errors, items }) =>
 			pipe(
 				Array.from(state.embeddedAssets),
-				A.map(getFileRT),
-				RT.sequenceArray,
-				RT.map(A.compact),
-				RT.chain(buildItems(state)),
-				RT.map(([assetErrors, assetItems, newState]) => ({
+				A.map(getFileRTE),
+				RTE.sequenceArray,
+				RTE.map(A.compact),
+				RTE.chain(buildItems(state)),
+				RTE.map(([assetErrors, assetItems, newState]) => ({
 					errors: errors.concat(assetErrors),
 					items: items.concat(assetItems),
-					state: newState as FileProcessingStateImpl,
+					state: newState as FPState,
 				}))
 			)
 		),
-		RT.map((args) => {
+		RTE.map((args) => {
 			const toDelete: string[] = [];
 			args.state.serverPosts.forEach((value, key) => {
 				if (!value.hasLocalCopy) {

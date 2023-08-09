@@ -3,6 +3,7 @@ import Logger from "js-logger";
 import { SettingTab } from "src/settings/setting-tab";
 import { buildPluginConfig } from "src/plugin-config";
 import { syncFiles } from "src/plugin-actions";
+import { uploadWithoutConfirming } from "src/actions/upload-without-confirming";
 
 export default class BlogSync extends Plugin {
 	settingTab: SettingTab;
@@ -46,12 +47,15 @@ export default class BlogSync extends Plugin {
 				id: `test-debug-${id}`,
 				name: `xdebug ${name}`,
 				callback: async () => {
-					const file =
-						this.app.vault.getAbstractFileByPath("md5-test.png");
-					const pluginConfig = buildPluginConfig();
+					// const file =
+					// 	this.app.vault.getAbstractFileByPath("md5-test.png");
+					// const pluginConfig = buildPluginConfig();
+					// const blog = this.settingTab.blogs[i];
+					// if (file instanceof TFile) {
+					// }
+					console.log("wtf");
 					const blog = this.settingTab.blogs[i];
-					if (file instanceof TFile) {
-					}
+					await uploadWithoutConfirming({ app: this.app, blog });
 				},
 			});
 

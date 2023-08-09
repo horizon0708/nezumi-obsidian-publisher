@@ -21,8 +21,7 @@ import { App, TFile } from "obsidian";
 import { buildPluginConfig } from "./plugin-config";
 import { Blog } from "./io/network";
 import { Monoid, concatAll } from "fp-ts/lib/Monoid";
-import { FileProcessingStateImpl } from "./file-processing-state";
-import { sequenceS } from "fp-ts/lib/Apply";
+import { FPState } from "./file-processing-state";
 
 type ServerPosts = Map<string, ServerFileState>;
 type LocalSlugs = Map<string, string>;
@@ -97,8 +96,6 @@ const getServerPath = (path: string) => (syncFolder: string) => {
 	}
 	return syncFolder === "/" ? path : path.slice(syncFolder.length + 1);
 };
-
-const getServerPath2 = flip(getServerPath);
 
 const getSlug = pipe(
 	RTE.Do,
@@ -238,7 +235,7 @@ export const processAsset: FileSRTE<Asset> = pipe(
 	)
 );
 
-type FileProcessResult<T> = [T[], ErroredFile[], FileProcessingState | "noop"];
+type FileProcessResult<T> = [T[], ErroredFile[], FPState | "noop"];
 const resultMonoid = <T>(
 	emptyState = emptyFileProcessingState()
 ): Monoid<FileProcessResult<T>> => ({

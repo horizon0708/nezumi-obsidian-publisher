@@ -1,6 +1,6 @@
 import { App, TFile, getBlobArrayBuffer, requestUrl } from "obsidian";
 import * as RTE from "fp-ts/ReaderTaskEither";
-import RT from "fp-ts/ReaderTask";
+import * as RT from "fp-ts/ReaderTask";
 import * as TE from "fp-ts/TaskEither";
 import * as T from "fp-ts/Task";
 import { flow, pipe } from "fp-ts/function";
@@ -140,6 +140,16 @@ export const getFileRT =
 			return T.of(O.some(file));
 		}
 		return T.of(O.none);
+	};
+
+export const getFileRTE =
+	(path: string) =>
+	({ app }: AppContext) => {
+		const file = app.vault.getAbstractFileByPath(path);
+		if (file instanceof TFile) {
+			return TE.of(O.some(file));
+		}
+		return TE.of(O.none);
 	};
 
 export const getFile =

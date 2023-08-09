@@ -4,7 +4,7 @@ import { buildPluginConfig } from "src/plugin-config";
 import * as O from "fp-ts/Option";
 import * as RTE from "fp-ts/ReaderTaskEither";
 import * as SRTE from "fp-ts/StateReaderTaskEither";
-import { FileProcessingStateImpl } from "src/file-processing-state";
+import { FPState } from "src/file-processing-state";
 
 export type BaseContext = {
 	app: App;
@@ -53,7 +53,7 @@ export type Asset = BaseItem & {
 export type Item = Post | Asset;
 
 export type SRTEBuilder<E, A> = SRTE.StateReaderTaskEither<
-	FileProcessingStateImpl,
+	FPState,
 	BaseContext,
 	E,
 	A
