@@ -1,7 +1,7 @@
 import { pipe } from "fp-ts/lib/function";
 import RTE from "fp-ts/ReaderTaskEither";
 import A from "fp-ts/Array";
-import { Asset, FileStatus, FileType, Item, Post } from "./plan-upload/types";
+import { Asset, FileStatus, FileType, Item, Post } from "./types";
 import { readAssetC, readPostC } from "src/io/obsidian-fp";
 import { uploadAsset, uploadPost } from "src/io/network";
 

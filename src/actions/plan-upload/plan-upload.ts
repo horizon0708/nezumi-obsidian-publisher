@@ -13,12 +13,12 @@ import {
 	ErroredItem,
 	FileStatus,
 	Item,
-} from "./types";
+} from "../types";
 import { FileProcessingStateImpl } from "src/file-processing-state";
 import { checkSlugCollision } from "./check-slug-collision";
 import { checkMd5Collision } from "./check-md5-collision";
 import { Monoid, concatAll } from "fp-ts/lib/Monoid";
-import { ServerFile } from "src/io/network";
+import { ServerFile, getFileListFp } from "src/io/network";
 
 const getServerPath = (path: string) => (syncFolder: string) => {
 	if (!path.endsWith(".md")) {
@@ -134,7 +134,22 @@ const getSyncCandidateFiles = pipe(
 export const planUpload = (files: ServerFile[]) =>
 	pipe(
 		RT.Do,
-		RT.apS("state", RT.of(new FileProcessingStateImpl(files))),
+		RT.apS(
+			"files",
+			pipe(
+				getFileListFp,
+				// TODO: This whole thing (plan upload should be RTE)
+				// as this could fail
+				RTE.map(({ posts, assets }) => [...posts, ...assets]),
+				RTE.fold(
+					() => RT.of([]),
+					(serverFiles) => RT.of(serverFiles)
+				)
+			)
+		),
+		RT.bind("state", ({ files }) =>
+			RT.of(new FileProcessingStateImpl(files))
+		),
 		RT.chainW(({ state }) =>
 			pipe(
 				getSyncCandidateFiles,

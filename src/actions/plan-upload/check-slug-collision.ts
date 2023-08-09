@@ -11,7 +11,7 @@ import {
 	FileType,
 	ItemBuilder,
 	Post,
-} from "./types";
+} from "../types";
 
 type PostContext = BaseContext & { base: BaseItem };
 
