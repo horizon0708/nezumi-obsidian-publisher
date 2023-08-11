@@ -7,7 +7,7 @@ import * as r from "fp-ts/Record";
 import * as O from "fp-ts/Option";
 import * as E from "fp-ts/Either";
 import { TFile } from "obsidian";
-import { getFileRTE, getFiles_RTE, getMd52 } from "src/io/obsidian-fp";
+import { getFileRTE, getFiles_RTE, getFileMd5 } from "src/io/obsidian-fp";
 import {
 	BaseContext,
 	BaseItemBuilder,
@@ -42,7 +42,7 @@ export const planUpload = () =>
 		RTE.chainW(({ state }) =>
 			pipe(
 				getSyncCandidateFiles,
-				RTE.chain(buildItems(state)),
+				RTE.chainW(buildItems(state)),
 				RTE.map(([errors, items, newState]) => ({
 					errors,
 					items,
@@ -96,7 +96,7 @@ const getEmbeddedAssets =
 const getMd5RTE = (file: TFile) =>
 	pipe(
 		file,
-		getMd52,
+		getFileMd5,
 		RTE.mapLeft(() => ({
 			file,
 			status: FileStatus.READ_ERROR,

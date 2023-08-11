@@ -64,7 +64,7 @@ export const updateSlug = (slug: string) =>
 		)
 	);
 
-export const getMd52 =
+export const getFileMd5 =
 	<T extends { app: App }>(file: TFile) =>
 	({ app }: T) => {
 		const path = file.path;

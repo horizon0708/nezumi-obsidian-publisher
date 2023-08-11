@@ -5,6 +5,8 @@ import * as O from "fp-ts/Option";
 import * as RTE from "fp-ts/ReaderTaskEither";
 import * as SRTE from "fp-ts/StateReaderTaskEither";
 import { FPState } from "src/file-processing-state";
+import { ManifestState } from "./v2/manifest-state";
+import { FileError } from "./v2/file-error";
 
 export type BaseContext = {
 	app: App;
@@ -23,6 +25,8 @@ export enum FileStatus {
 	UPLOAD_ERROR = "UPLOAD/FAILURE",
 }
 
+export type ItemType = FileType.POST | FileType.ASSET;
+
 export enum FileType {
 	POST = "post",
 	ASSET = "asset",
@@ -39,6 +43,7 @@ export type BaseItem = ErroredItem & {
 	md5: string;
 	embeddedAssets: Set<string>;
 	serverMd5: O.Option<string>;
+	type: FileType;
 };
 
 export type Post = BaseItem & {
@@ -51,6 +56,13 @@ export type Asset = BaseItem & {
 };
 
 export type Item = Post | Asset;
+
+export type SRTEBuilder2<A> = SRTE.StateReaderTaskEither<
+	ManifestState,
+	BaseContext,
+	FileError,
+	A
+>;
 
 export type SRTEBuilder<E, A> = SRTE.StateReaderTaskEither<
 	FPState,
