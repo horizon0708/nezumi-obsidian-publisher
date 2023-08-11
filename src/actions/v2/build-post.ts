@@ -23,7 +23,7 @@ import {
  * Adds Post specific fields to the BaseItem.
  * Casts BaseItem to Post | Asset
  */
-export const buildPostOrAsset = (baseItem: BaseItem): SRTEBuilder2<Item> => {
+export const buildPostOrAsset = (baseItem: BaseItem) => {
 	if (baseItem.type === FileType.ASSET) {
 		return SRTE.of({
 			...baseItem,
@@ -35,10 +35,9 @@ export const buildPostOrAsset = (baseItem: BaseItem): SRTEBuilder2<Item> => {
 		getSlug(baseItem.file),
 		RTE.chainW((slug) =>
 			RTE.of({ ...baseItem, slug, type: FileType.POST as const })
-		),
-		SRTE.fromReaderTaskEither,
-		SRTE.chain((post) => checkForSlugCollision(post)),
-		SRTE.tap((post) => registerLocalSlugSRTE(post.slug, post.serverPath))
+		)
+		// SRTE.chain((post) => checkForSlugCollision(post)),
+		// SRTE.tap((post) => registerLocalSlugSRTE(post.slug, post.serverPath))
 	);
 };
 
