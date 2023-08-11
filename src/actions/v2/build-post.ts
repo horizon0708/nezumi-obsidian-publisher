@@ -47,6 +47,7 @@ const checkForSlugCollision = <R, E>(base: Post) =>
 		SRTE.get<ManifestState, R, E>(),
 		SRTE.map((s) => {
 			const slug = getLocalPath(s, base.slug);
+			console.log(base, s, base.slug);
 			if (slug) {
 				return {
 					...base,

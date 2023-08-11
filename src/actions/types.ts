@@ -2,9 +2,7 @@ import { App, TFile } from "obsidian";
 import { Blog } from "src/io/network";
 import { buildPluginConfig } from "src/plugin-config";
 import * as O from "fp-ts/Option";
-import * as RTE from "fp-ts/ReaderTaskEither";
 import * as SRTE from "fp-ts/StateReaderTaskEither";
-import { FPState } from "src/file-processing-state";
 import { ManifestState } from "./v2/manifest-state";
 import { FileError } from "./v2/file-error";
 
@@ -63,26 +61,3 @@ export type SRTEBuilder2<A> = SRTE.StateReaderTaskEither<
 	FileError,
 	A
 >;
-
-export type SRTEBuilder<E, A> = SRTE.StateReaderTaskEither<
-	FPState,
-	BaseContext,
-	E,
-	A
->;
-
-export type RTEBuilder<E, A> = RTE.ReaderTaskEither<BaseContext, E, A>;
-
-export type BaseItemBuilder = (
-	file: TFile
-) => RTEBuilder<ErroredItem, BaseItem>;
-
-export type ItemBuilder = (file: BaseItem) => SRTEBuilder<ErroredItem, Item>;
-
-export type ItemsBuilder = (
-	files: TFile[]
-) => SRTEBuilder<ErroredItem[], Item[]>;
-
-export type ItemsFetcher = (
-	item: Item[]
-) => SRTEBuilder<ErroredItem[], [Item[], Item[]]>;

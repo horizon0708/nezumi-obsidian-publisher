@@ -2,11 +2,10 @@ import { App, Plugin, TFile } from "obsidian";
 import Logger from "js-logger";
 import { SettingTab } from "src/settings/setting-tab";
 import { buildPluginConfig } from "src/plugin-config";
-import { syncFiles } from "src/plugin-actions";
-import { uploadWithoutConfirming } from "src/actions/upload-without-confirming";
+import { upload } from "src/actions/v2/upload";
 
 export default class BlogSync extends Plugin {
-	settingTab: SettingTab;
+	settingTab?: SettingTab;
 	updateLog: Record<string, boolean>[] = [];
 
 	getApp = () => {
@@ -25,16 +24,16 @@ export default class BlogSync extends Plugin {
 	}
 
 	loadCommands = () => {
-		for (let i = 0; i < this.settingTab.blogs.length; i++) {
-			const { id, name } = this.settingTab.blogs[i];
+		for (let i = 0; i < this.settingTab!.blogs.length; i++) {
+			const blog = this.settingTab!.blogs[i];
+			const { id, name } = blog;
 
 			this.addCommand({
 				id: `test-upload-blog-${id}`,
 				name: `Push updates to ${name}`,
 				callback: async () => {
 					Logger.setLevel(Logger.DEBUG);
-					const blog = this.settingTab.blogs[i];
-					const e = await syncFiles({ app: this.app, blog });
+					const e = await upload({ app: this.app, blog });
 					if (e._tag === "Left") {
 						console.log(e.left);
 						return;
@@ -53,48 +52,9 @@ export default class BlogSync extends Plugin {
 					// const blog = this.settingTab.blogs[i];
 					// if (file instanceof TFile) {
 					// }
-					console.log("wtf");
-					const blog = this.settingTab.blogs[i];
-					await uploadWithoutConfirming({ app: this.app, blog });
-				},
-			});
-
-			this.addCommand({
-				id: `test-test-${id}`,
-				name: `test for ${name}`,
-				callback: async () => {
-					Logger.setLevel(Logger.DEBUG);
-					const blog = this.settingTab.blogs[i];
-					const e = await syncFiles({ app: this.app, blog });
-					if (e._tag === "Left") {
-						console.log(e.left);
-						return;
-					}
-					console.log(e.right);
-
-					// const filesResponse = await getFileListFp({
-					// 	blog,
-					// 	pluginConfig,
-					// })();
-					// if (filesResponse._tag === "Left") {
-					// 	console.log(filesResponse.left);
-					// 	return;
-					// }
-					// const files = [
-					// 	...filesResponse.right.posts,
-					// 	...filesResponse.right.assets,
-					// ];
-
-					// console.log(filesResponse, files);
-
-					// const res = await processManifest({
-					// 	blog,
-					// 	app: this.app,
-					// 	files,
-					// })();
-					// if (res._tag === "Right") {
-					// 	console.log(res.right);
-					// }
+					// console.log("wtf");
+					// const blog = this.settingTab.blogs[i];
+					// await uploadWithoutConfirming({ app: this.app, blog });
 				},
 			});
 		}

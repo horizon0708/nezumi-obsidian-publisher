@@ -21,13 +21,12 @@ import { concatAll } from "fp-ts/lib/Monoid";
 
 const buildItem = (state: ManifestState) => (file: TFile) =>
 	pipe(
-		buildBaseItem(file),
 		SRTE.fromReaderTaskEither<
 			BaseContext,
 			FileError,
 			BaseItem,
 			ManifestState
-		>,
+		>(buildBaseItem(file)),
 		SRTE.tap((item) => registerEmbeddedAssetsSRTE(item.embeddedAssets)),
 		SRTE.tap((item) => markLocalCopySRTE(item.serverPath)),
 		SRTE.chainW((item) => buildPostOrAsset(item)),
@@ -47,17 +46,21 @@ export const buildItems = (state: ManifestState) => (files: TFile[]) =>
 	pipe(
 		files,
 		A.map(buildItem(state)),
-		RTE.sequenceArray,
+		// This needs to be SeqArray
+		// as we need to check for duplicates / collisions
+		// could really just check in the end for collisions
+		// and make the code way simpler...(:thinking:)
+		RTE.sequenceSeqArray,
 		RTE.map((e) =>
 			pipe(
-				emptyState(),
-				SRTEMonoid<FileError, Item, ManifestState>,
+				SRTEMonoid<FileError, Item, ManifestState>(emptyState()),
 				concatAll
 			)(e)
 		),
 		RTE.chainW((args) =>
 			pipe(
 				args.state,
+				// if State is None ... something is very wrong!
 				RTE.fromOption(() => new Error("state is none")),
 				RTE.map((someState) => ({ ...args, state: someState }))
 			)

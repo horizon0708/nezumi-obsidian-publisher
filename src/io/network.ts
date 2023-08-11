@@ -91,8 +91,8 @@ export const pingBlogFP = pipe(
 		buildHeaders([headers.jsonContentType, headers.apiKey])
 	),
 	RTE.apSW("url", buildUrl("ping")),
-	RTE.apSW("method", RTE.of(HttpMethod.GET)),
-	RTE.chain(sendRequest(pingBlogResponse))
+	RTE.let("method", () => HttpMethod.GET),
+	RTE.chainW(sendRequest(pingBlogResponse))
 );
 
 /**
@@ -168,7 +168,7 @@ const buildUploadMany =
 			A.map((p) =>
 				pipe(
 					rte(p),
-					RTE.chain(() => RTE.of(successResultM(p))),
+					RTE.chain(() => RTE.of(successResultM<T, T>(p))),
 					RTE.orElse(() => RTE.of(errorResultM(p)))
 				)
 			),
@@ -195,7 +195,7 @@ type UploadAssetPayload = {
 const buildAssetBody = (p: UploadAssetPayload) =>
 	pipe(
 		RTE.ask<Dependencies>(),
-		RTE.chain((d) =>
+		RTE.chainW((d) =>
 			pipe(
 				buildFormDataBodyTE(
 					p.content,

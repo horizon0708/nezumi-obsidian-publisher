@@ -8,7 +8,7 @@ import * as RTE from "fp-ts/ReaderTaskEither";
 import * as A from "fp-ts/Array";
 import * as r from "fp-ts/Record";
 
-const getType = (path: string) =>
+export const getType = (path: string) =>
 	path.endsWith(".md") ? FileType.POST : FileType.ASSET;
 
 const getServerPath =
