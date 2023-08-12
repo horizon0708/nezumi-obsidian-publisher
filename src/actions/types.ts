@@ -2,10 +2,8 @@ import { App, TFile } from "obsidian";
 import { Blog } from "src/io/network";
 import { buildPluginConfig } from "src/plugin-config";
 import * as O from "fp-ts/Option";
-import * as SRTE from "fp-ts/StateReaderTaskEither";
 import * as RTE from "fp-ts/ReaderTaskEither";
-import { ManifestState } from "./v2/manifest-state";
-import { FileError } from "./v2/file-error";
+import { FileError } from "./upload/file-error";
 
 export type BaseContext = {
 	app: App;
@@ -62,10 +60,3 @@ export type ServerFileState = {
 };
 
 export type RTEBuilder<A> = RTE.ReaderTaskEither<BaseContext, FileError, A>;
-
-export type SRTEBuilder2<A> = SRTE.StateReaderTaskEither<
-	ManifestState,
-	BaseContext,
-	FileError,
-	A
->;

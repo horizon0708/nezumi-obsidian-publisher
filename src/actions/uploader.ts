@@ -2,8 +2,8 @@ import { pipe } from "fp-ts/lib/function";
 import * as RTE from "fp-ts/ReaderTaskEither";
 import * as A from "fp-ts/Array";
 import { Asset, FileStatus, FileType, Item, Post } from "./types";
-import { readAssetC, readPostC } from "src/io/obsidian-fp";
 import { uploadAsset, uploadPost } from "src/io/network";
+import { cachedRead, readBinary } from "src/io/obsidian-fp2";
 
 /**
  * Calls uploadPost with the payload ,
@@ -19,7 +19,7 @@ const callUploadPost = (post: Post) =>
 			md5: p.md5,
 		}),
 		RTE.of,
-		RTE.bind("content", () => readPostC(post.file)),
+		RTE.bind("content", () => cachedRead(post.file)),
 		RTE.chainW(uploadPost),
 		RTE.bimap(
 			// TODO: add message depending on error from server
@@ -38,7 +38,7 @@ const callUploadAsset = (asset: Asset) =>
 			md5: a.md5,
 		}),
 		RTE.of,
-		RTE.bind("content", () => readAssetC(asset.file)),
+		RTE.bind("content", () => readBinary(asset.file)),
 		RTE.chainW(uploadAsset),
 		RTE.bimap(
 			// TODO: add message depending on error from server

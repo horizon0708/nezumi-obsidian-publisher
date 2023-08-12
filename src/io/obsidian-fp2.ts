@@ -9,7 +9,7 @@ import * as TE from "fp-ts/TaskEither";
 import SparkMD5 from "spark-md5";
 import * as A from "fp-ts/Array";
 import * as r from "fp-ts/Record";
-import { FileError } from "src/actions/v2/file-error";
+import { FileError } from "src/actions/upload/file-error";
 
 export const showNotice = (message: string) => {
 	new Notice(message);

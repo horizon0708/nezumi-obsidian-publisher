@@ -5,9 +5,9 @@ import { flow, pipe } from "fp-ts/function";
 import * as t from "io-ts";
 import { Semigroup } from "fp-ts/lib/string";
 import { concatAll } from "fp-ts/lib/Monoid";
-import { buildFormDataBodyTE, fetchUrl } from "./obsidian-fp";
 import { buildPluginConfig } from "../plugin-config";
 import { successResultM, errorResultM, resultM } from "../utils";
+import { buildFormDataBodyTE, fetchUrl } from "./obsidian-fp2";
 
 type Dependencies = {
 	blog: Blog;

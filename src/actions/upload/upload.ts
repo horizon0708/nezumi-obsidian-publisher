@@ -6,7 +6,7 @@ import * as RTE from "fp-ts/ReaderTaskEither";
 
 import * as A from "fp-ts/Array";
 import { uploadItems } from "../uploader";
-import { showNotice } from "src/io/obsidian-fp";
+import { showNotice } from "src/io/obsidian-fp2";
 
 export const upload = async (context: Omit<BaseContext, "pluginConfig">) => {
 	const pluginConfig = buildPluginConfig();

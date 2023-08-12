@@ -2,7 +2,7 @@ import { App, Plugin, TFile } from "obsidian";
 import Logger from "js-logger";
 import { SettingTab } from "src/settings/setting-tab";
 import { buildPluginConfig } from "src/plugin-config";
-import { upload } from "src/actions/v2/upload";
+import { upload } from "src/actions/upload/upload";
 
 export default class BlogSync extends Plugin {
 	settingTab?: SettingTab;

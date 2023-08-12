@@ -11,8 +11,8 @@ import {
 import * as A from "fp-ts/Array";
 import * as O from "fp-ts/Option";
 import { getFile, getFiles } from "src/io/obsidian-fp2";
-import { getType } from "./build-base-item";
 import { buildItems } from "./build-items";
+import { getType } from "src/utils";
 
 export const planUpload = () =>
 	pipe(

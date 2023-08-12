@@ -5,6 +5,7 @@ import * as RE from "fp-ts/ReaderEither";
 import * as E from "fp-ts/Either";
 import * as R from "fp-ts/Reader";
 import * as T from "fp-ts/Task";
+import { FileType } from "./actions/types";
 
 type ResultMonoid<E, A> = [A[], E[]];
 
@@ -66,3 +67,6 @@ export const liftRT = <R, A, B>(
 export const teeRTE = RTE.tapIO((e) => {
 	return () => console.log(JSON.stringify(e));
 });
+
+export const getType = (path: string) =>
+	path.endsWith(".md") ? FileType.POST : FileType.ASSET;
