@@ -5,14 +5,9 @@ import { flow, pipe } from "fp-ts/function";
 import * as t from "io-ts";
 import { Semigroup } from "fp-ts/lib/string";
 import { concatAll } from "fp-ts/lib/Monoid";
-import { buildPluginConfig } from "../plugin-config";
 import { successResultM, errorResultM, resultM } from "../utils";
-import { buildFormDataBodyTE, fetchUrl } from "./obsidian-fp2";
-
-type Dependencies = {
-	blog: Blog;
-	pluginConfig: ReturnType<typeof buildPluginConfig>;
-};
+import { buildFormDataBodyTE, fetchUrl } from "./obsidian-fp";
+import { BaseContext } from "src/actions/types";
 
 enum HttpMethod {
 	GET = "GET",
@@ -23,13 +18,13 @@ enum HttpMethod {
 
 const headers = pipe(
 	{
-		jsonContentType: (d: Dependencies) => ({
+		jsonContentType: (d: BaseContext) => ({
 			["Content-Type"]: "application/json",
 		}),
-		formDataContentType: (d: Dependencies) => ({
+		formDataContentType: (d: BaseContext) => ({
 			["Content-Type"]: `multipart/form-data; boundary=----${d.pluginConfig.formDataBoundaryString}`,
 		}),
-		apiKey: (d: Dependencies) => ({
+		apiKey: (d: BaseContext) => ({
 			[d.pluginConfig.apiKeyHeader]: d.blog.apiKey,
 		}),
 	},
@@ -55,7 +50,7 @@ const buildHeaders = <T>(
 	);
 
 const buildUrl = (ep: string) =>
-	RTE.asks((d: Dependencies) => d.blog.endpoint + "/" + ep);
+	RTE.asks((d: BaseContext) => d.blog.endpoint + "/" + ep);
 
 const sendRequest = <T extends t.Props>(r: t.TypeC<T>) =>
 	flow(
@@ -194,7 +189,7 @@ type UploadAssetPayload = {
 
 const buildAssetBody = (p: UploadAssetPayload) =>
 	pipe(
-		RTE.ask<Dependencies>(),
+		RTE.ask<BaseContext>(),
 		RTE.chainW((d) =>
 			pipe(
 				buildFormDataBodyTE(

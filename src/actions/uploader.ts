@@ -3,7 +3,7 @@ import * as RTE from "fp-ts/ReaderTaskEither";
 import * as A from "fp-ts/Array";
 import { Asset, FileStatus, FileType, Item, Post } from "./types";
 import { uploadAsset, uploadPost } from "src/io/network";
-import { cachedRead, readBinary } from "src/io/obsidian-fp2";
+import { cachedRead, readBinary } from "src/io/obsidian-fp";
 
 /**
  * Calls uploadPost with the payload ,

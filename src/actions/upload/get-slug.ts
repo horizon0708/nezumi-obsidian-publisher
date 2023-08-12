@@ -3,7 +3,7 @@ import { App, TFile } from "obsidian";
 import * as O from "fp-ts/Option";
 import * as R from "fp-ts/Reader";
 import { BaseContext } from "src/actions/types";
-import { getFM, buildFmUpdater } from "src/io/obsidian-fp2";
+import { getFM, buildFmUpdater } from "src/io/obsidian-fp";
 import * as RTE from "fp-ts/ReaderTaskEither";
 
 /**

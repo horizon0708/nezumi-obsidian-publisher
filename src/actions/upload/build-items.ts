@@ -17,7 +17,7 @@ import {
 import { FileError } from "./file-error";
 import { separatedMonoid } from "./separated-monoid";
 import { concatAll } from "fp-ts/lib/Monoid";
-import { getFileMd5, getResolvedLinks } from "src/io/obsidian-fp2";
+import { getFileMd5, getResolvedLinks } from "src/io/obsidian-fp";
 import { getSlug } from "./get-slug";
 import { getType } from "src/utils";
 
