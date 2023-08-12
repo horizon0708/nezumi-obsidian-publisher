@@ -7,6 +7,7 @@ import {
 	FileType,
 	Item,
 	Post,
+	RTEBuilder,
 	SRTEBuilder2,
 } from "../types";
 import * as SRTE from "fp-ts/StateReaderTaskEither";
@@ -23,9 +24,9 @@ import {
  * Adds Post specific fields to the BaseItem.
  * Casts BaseItem to Post | Asset
  */
-export const buildPostOrAsset = (baseItem: BaseItem) => {
+export const buildPostOrAsset = (baseItem: BaseItem): RTEBuilder<Item> => {
 	if (baseItem.type === FileType.ASSET) {
-		return SRTE.of({
+		return RTE.of({
 			...baseItem,
 			type: baseItem.type,
 		});

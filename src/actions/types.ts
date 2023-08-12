@@ -3,6 +3,7 @@ import { Blog } from "src/io/network";
 import { buildPluginConfig } from "src/plugin-config";
 import * as O from "fp-ts/Option";
 import * as SRTE from "fp-ts/StateReaderTaskEither";
+import * as RTE from "fp-ts/ReaderTaskEither";
 import { ManifestState } from "./v2/manifest-state";
 import { FileError } from "./v2/file-error";
 
@@ -54,6 +55,13 @@ export type Asset = BaseItem & {
 };
 
 export type Item = Post | Asset;
+
+export type ServerFileState = {
+	md5: string;
+	hasLocalCopy: boolean;
+};
+
+export type RTEBuilder<A> = RTE.ReaderTaskEither<BaseContext, FileError, A>;
 
 export type SRTEBuilder2<A> = SRTE.StateReaderTaskEither<
 	ManifestState,

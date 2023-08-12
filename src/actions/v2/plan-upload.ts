@@ -1,9 +1,15 @@
 import { flow, pipe } from "fp-ts/lib/function";
 import * as RTE from "fp-ts/ReaderTaskEither";
 import { getFileListFp } from "src/io/network";
-import { newProcessingState } from "./manifest-state";
-import { BaseContext, FileType } from "../types";
+import {
+	BaseContext,
+	FileStatus,
+	FileType,
+	Item,
+	ServerFileState,
+} from "../types";
 import * as A from "fp-ts/Array";
+import * as O from "fp-ts/Option";
 import { getFile, getFiles } from "src/io/obsidian-fp2";
 import { getType } from "./build-base-item";
 import { buildItems } from "./build-items";
@@ -11,39 +17,52 @@ import { buildItems } from "./build-items";
 export const planUpload = () =>
 	pipe(
 		RTE.Do,
-		RTE.apS(
-			"files",
+		RTE.apSW(
+			"serverFiles",
 			pipe(
 				getFileListFp,
 				RTE.map(({ posts, assets }) => [...posts, ...assets])
 			)
 		),
-		RTE.bind("state", ({ files }) => RTE.of(newProcessingState(files))),
-		RTE.chainW(({ state }) =>
-			pipe(getSyncCandidateFiles, RTE.chain(buildItems(state)))
+		RTE.apSW(
+			"posts",
+			pipe(getSyncCandidateFiles, RTE.chainReaderTaskK(buildItems))
 		),
-		RTE.chainW(({ left, right, state }) =>
+		RTE.let("embeddedAssets", ({ posts: { right } }) =>
+			getEmbeddedAssets(right)
+		),
+		RTE.bindW("assets", ({ embeddedAssets }) =>
 			pipe(
-				Array.from(state.embeddedAssets),
+				Array.from(embeddedAssets),
 				A.map(RTE.fromReaderK(getFile)),
 				RTE.sequenceArray,
 				RTE.map((arr) => A.compact(Array.from(arr))),
-				RTE.chain(buildItems(state)),
-				RTE.map(({ left: left2, right: right2, state: state2 }) => ({
-					left: left.concat(left2),
-					right: right.concat(right2),
-					state: state2,
-				}))
+				RTE.chainReaderTaskKW(buildItems)
 			)
 		),
-		RTE.map((args) => {
+		RTE.map(({ posts, assets, serverFiles }) => {
+			const serverMap = new Map<string, ServerFileState>();
+			serverFiles.forEach(({ path, md5 }) => {
+				if (path) {
+					serverMap.set(path, { md5, hasLocalCopy: false });
+				}
+			});
+			const items = updateItemStatuses(serverMap)([
+				...posts.right,
+				...assets.right,
+			]);
 			const toDelete: string[] = [];
-			args.state.serverPosts.forEach((value, key) => {
+			serverMap.forEach((value, key) => {
 				if (!value.hasLocalCopy) {
 					toDelete.push(key);
 				}
 			});
-			return { ...args, toDelete };
+
+			return {
+				errors: [...posts.left, ...assets.left],
+				items,
+				toDelete,
+			};
 		})
 	);
 
@@ -54,14 +73,56 @@ const getSyncCandidateFiles = pipe(
 			getFiles,
 			RTE.fromReader,
 			RTE.map(
-				flow(
-					A.filter(
-						(file) =>
-							getType(file.path) === FileType.POST &&
-							file.path.startsWith(syncFolder)
-					)
+				A.filter(
+					(file) =>
+						getType(file.path) === FileType.POST &&
+						file.path.startsWith(syncFolder)
 				)
 			)
 		)
 	)
 );
+
+const getEmbeddedAssets = (items: Item[]) => {
+	const embeddedAssets = new Set<string>();
+	items.forEach((item) => {
+		if (item.type === FileType.POST) {
+			item.embeddedAssets.forEach((asset) => {
+				embeddedAssets.add(asset);
+			});
+		}
+	});
+	return embeddedAssets;
+};
+
+const updateItemStatuses =
+	(serverFiles: Map<string, ServerFileState>) => (items: Item[]) => {
+		const slugToPath = new Map<string, string>();
+		return items.map((item) => {
+			const serverFile = serverFiles.get(item.serverPath);
+			if (serverFile) {
+				serverFile.hasLocalCopy = true;
+			}
+
+			if (item.type === FileType.POST) {
+				const path = slugToPath.get(item.slug);
+				if (path) {
+					return {
+						...item,
+						status: FileStatus.SLUG_COLLISION,
+						message: O.some(path),
+					};
+				}
+				slugToPath.set(item.slug, item.file.path);
+			}
+
+			if (serverFile && serverFile.md5 === item.md5) {
+				return {
+					...item,
+					status: FileStatus.MD5_COLLISION,
+				};
+			}
+
+			return item;
+		});
+	};
