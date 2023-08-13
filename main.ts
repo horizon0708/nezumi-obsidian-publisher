@@ -33,7 +33,11 @@ export default class BlogSync extends Plugin {
 				name: `Push updates to ${name}`,
 				callback: async () => {
 					Logger.setLevel(Logger.DEBUG);
-					const e = await upload({ app: this.app, blog });
+					const e = await upload({
+						app: this.app,
+						blog,
+						plugin: this,
+					});
 					if (e._tag === "Left") {
 						console.log(e.left);
 						return;

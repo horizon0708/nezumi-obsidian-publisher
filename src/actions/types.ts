@@ -1,4 +1,4 @@
-import { App, TFile } from "obsidian";
+import { App, TFile, Plugin } from "obsidian";
 import { Blog } from "src/io/network";
 import { buildPluginConfig } from "src/plugin-config";
 import * as O from "fp-ts/Option";
@@ -8,6 +8,13 @@ import { FileError } from "../shared/file-error";
 export type BaseContext = {
 	app: App;
 	blog: Blog;
+	plugin: Plugin;
+	pluginConfig: ReturnType<typeof buildPluginConfig>;
+};
+
+export type PluginContext = {
+	app: App;
+	plugin: Plugin;
 	pluginConfig: ReturnType<typeof buildPluginConfig>;
 };
 

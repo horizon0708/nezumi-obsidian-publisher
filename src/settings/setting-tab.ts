@@ -43,7 +43,7 @@ export class SettingTab extends PluginSettingTab {
 						description: "The API key for your blog.",
 						value: "",
 						initialValue: "",
-						setting: null,
+						setting: undefined,
 						errorEl: null,
 						validationCb: this.apiKeyValidation(),
 					},

@@ -2,7 +2,7 @@ import { pipe } from "fp-ts/function";
 import { Notice, TFile, getBlobArrayBuffer, requestUrl } from "obsidian";
 import * as O from "fp-ts/Option";
 import * as R from "fp-ts/Reader";
-import { BaseContext } from "src/actions/types";
+import { BaseContext, PluginContext } from "src/actions/types";
 import * as RTE from "fp-ts/ReaderTaskEither";
 import * as TE from "fp-ts/TaskEither";
 import { FileError } from "src/shared/file-error";
@@ -15,6 +15,20 @@ import { FileError } from "src/shared/file-error";
 export const showNotice = (message: string) => {
 	new Notice(message);
 };
+
+export const saveData =
+	<T>(data: T) =>
+	({ plugin }: PluginContext) =>
+		TE.tryCatch(
+			() => plugin.saveData(data),
+			(e) => e
+		);
+
+export const loadData = ({ plugin }: PluginContext) =>
+	TE.tryCatch(
+		() => plugin.loadData(),
+		(e) => e
+	);
 
 export const getFM = (file: TFile) =>
 	R.asks(({ app }: BaseContext) =>
