@@ -63,7 +63,7 @@ export const uploadItems = (items: Item[]) =>
 			console.log(e);
 			return e;
 		},
-		({ pending: skipped, right: pending }) =>
+		({ left: skipped, right: pending }) =>
 			pipe(
 				// Is it worth prioitising post uploads over asset uploads?
 				A.map(uploadItem)(pending),

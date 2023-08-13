@@ -9,20 +9,20 @@ export const separatedMonoid = <E, A>(): Monoid<Separated<E[], A[]>> &
 	Builder<E, A> => ({
 	concat: (x, y) => {
 		return {
-			pending: [...x.pending, ...y.pending],
+			left: [...x.left, ...y.left],
 			right: [...x.right, ...y.right],
 		};
 	},
 	empty: {
-		pending: [],
+		left: [],
 		right: [],
 	},
 	fromLeft: (e: E) => ({
-		pending: [e],
+		left: [e],
 		right: [],
 	}),
 	fromRight: (a: A) => ({
-		pending: [],
+		left: [],
 		right: [a],
 	}),
 });

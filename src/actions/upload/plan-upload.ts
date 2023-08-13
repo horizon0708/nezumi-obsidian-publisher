@@ -1,17 +1,11 @@
 import { flow, pipe } from "fp-ts/lib/function";
 import * as RTE from "fp-ts/ReaderTaskEither";
 import { getFileListFp } from "src/io/network";
-import {
-	BaseContext,
-	FileStatus,
-	FileType,
-	Item,
-	ServerFileState,
-} from "../types";
+import { BaseContext, FileStatus, FileType, Item } from "../types";
 import * as A from "fp-ts/Array";
 import * as O from "fp-ts/Option";
 import { getFile, getFiles } from "src/io/obsidian-fp";
-import { buildItems } from "./build-items";
+import { buildItemsRTE } from "./build-items";
 import { getType } from "src/utils";
 
 export const planUpload = () =>
@@ -24,10 +18,7 @@ export const planUpload = () =>
 				RTE.map(({ posts, assets }) => [...posts, ...assets])
 			)
 		),
-		RTE.apSW(
-			"posts",
-			pipe(getSyncCandidateFiles, RTE.chainReaderTaskK(buildItems))
-		),
+		RTE.apSW("posts", pipe(getSyncCandidateFiles, buildItemsRTE)),
 		RTE.let("embeddedAssets", ({ posts: { right } }) =>
 			getEmbeddedAssets(right)
 		),
@@ -37,31 +28,25 @@ export const planUpload = () =>
 				A.map(RTE.fromReaderK(getFile)),
 				RTE.sequenceArray,
 				RTE.map((arr) => A.compact(Array.from(arr))),
-				RTE.chainReaderTaskKW(buildItems)
+				buildItemsRTE
 			)
 		),
 		RTE.map(({ posts, assets, serverFiles }) => {
-			const serverMap = new Map<string, ServerFileState>();
+			const serverMap = new Map<string, string>();
 			serverFiles.forEach(({ path, md5 }) => {
 				if (path) {
-					serverMap.set(path, { md5, hasLocalCopy: false });
+					serverMap.set(path, md5);
 				}
 			});
 			const items = updateItemStatuses(serverMap)([
 				...posts.right,
 				...assets.right,
 			]);
-			const toDelete: string[] = [];
-			serverMap.forEach((value, key) => {
-				if (!value.hasLocalCopy) {
-					toDelete.push(key);
-				}
-			});
 
 			return {
-				errors: [...posts.pending, ...assets.pending],
+				errors: [...posts.left, ...assets.left],
 				items,
-				toDelete,
+				toDelete: Array.from(serverMap.keys()),
 			};
 		})
 	);
@@ -96,12 +81,12 @@ const getEmbeddedAssets = (items: Item[]) => {
 };
 
 const updateItemStatuses =
-	(serverFiles: Map<string, ServerFileState>) => (items: Item[]) => {
+	(serverFiles: Map<string, string>) => (items: Item[]) => {
 		const slugToPath = new Map<string, string>();
 		return items.map((item) => {
-			const serverFile = serverFiles.get(item.serverPath);
-			if (serverFile) {
-				serverFile.hasLocalCopy = true;
+			const serverMd5 = serverFiles.get(item.serverPath);
+			if (serverMd5) {
+				serverFiles.delete(item.serverPath);
 			}
 
 			if (item.type === FileType.POST) {
@@ -116,7 +101,7 @@ const updateItemStatuses =
 				slugToPath.set(item.slug, item.file.path);
 			}
 
-			if (serverFile && serverFile.md5 === item.md5) {
+			if (serverMd5 && serverMd5 === item.md5) {
 				return {
 					...item,
 					status: FileStatus.MD5_COLLISION,

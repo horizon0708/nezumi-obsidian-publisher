@@ -7,6 +7,7 @@ import * as RTE from "fp-ts/ReaderTaskEither";
 import * as A from "fp-ts/Array";
 import { uploadItems } from "../uploader";
 import { showNotice } from "src/io/obsidian-fp";
+import { deleteFiles } from "src/io/network";
 
 export const upload = async (context: Omit<BaseContext, "pluginConfig">) => {
 	const pluginConfig = buildPluginConfig();
@@ -14,15 +15,21 @@ export const upload = async (context: Omit<BaseContext, "pluginConfig">) => {
 
 	const res = await pipe(
 		planUpload(),
+		// IMPROVEMENT: return delete result
+		RTE.tap(({ toDelete }) => deleteFiles({ keys: toDelete })),
 		RTE.chainW(({ items }) => uploadItems(items)),
 		RTE.map(([r, skipped]) =>
 			pipe(
 				Array.from(r),
 				A.partition((e) => e.status === FileStatus.UPLOAD_SUCCESS),
-				({ pending, right }) => {
+				(e) => {
+					console.log(e);
+					return e;
+				},
+				({ left, right }) => {
 					return {
 						successCount: right.length,
-						errorCount: pending.length,
+						errorCount: left.length,
 						skippedCount: skipped.length,
 					};
 				}

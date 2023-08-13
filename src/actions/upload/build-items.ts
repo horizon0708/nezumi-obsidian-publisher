@@ -34,6 +34,7 @@ export const buildItems = (files: TFile[]) =>
 		RT.sequenceArray,
 		RT.map((e) => pipe(eitherMonoid, concatAll)(e))
 	);
+export const buildItemsRTE = RTE.chainReaderTaskKW(buildItems);
 
 const buildItem = (file: TFile) =>
 	pipe(
