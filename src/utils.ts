@@ -48,6 +48,11 @@ export const liftRightE = <A, B>(
 	return (a: A) => E.right(f(a));
 };
 
+export const liftRT =
+	<R, A, B>(f: (a: A) => B): ((a: A) => RT.ReaderTask<R, B>) =>
+	(a: A) =>
+		RT.of(f(a));
+
 export const liftT = <A, B>(f: (a: A) => B): ((a: A) => T.Task<B>) => {
 	return (a: A) => T.of(f(a));
 };
@@ -56,12 +61,6 @@ export const liftR =
 	<R, A, B>(fn: (t: A) => B) =>
 	(a: A) =>
 		R.of<R, B>(fn(a));
-
-export const liftRT = <R, A, B>(
-	f: (a: A) => B
-): ((a: A) => RT.ReaderTask<R, B>) => {
-	return (a: A) => RT.of(f(a));
-};
 
 // IMPROVE: Loses the context in browser console
 export const teeRTE = RTE.tapIO((e) => {

@@ -19,10 +19,10 @@ export const upload = async (context: Omit<BaseContext, "pluginConfig">) => {
 			pipe(
 				Array.from(r),
 				A.partition((e) => e.status === FileStatus.UPLOAD_SUCCESS),
-				({ left, right }) => {
+				({ pending, right }) => {
 					return {
 						successCount: right.length,
-						errorCount: left.length,
+						errorCount: pending.length,
 						skippedCount: skipped.length,
 					};
 				}

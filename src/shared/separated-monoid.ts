@@ -1,5 +1,5 @@
-import { Monoid } from "fp-ts/lib/Monoid";
-import { Separated } from "fp-ts/lib/Separated";
+import { Monoid } from "fp-ts/Monoid";
+import { Separated } from "fp-ts/Separated";
 
 type Builder<E, A> = {
 	fromLeft: (e: E) => Separated<E[], A[]>;
@@ -9,20 +9,20 @@ export const separatedMonoid = <E, A>(): Monoid<Separated<E[], A[]>> &
 	Builder<E, A> => ({
 	concat: (x, y) => {
 		return {
-			left: [...x.left, ...y.left],
+			pending: [...x.pending, ...y.pending],
 			right: [...x.right, ...y.right],
 		};
 	},
 	empty: {
-		left: [],
+		pending: [],
 		right: [],
 	},
 	fromLeft: (e: E) => ({
-		left: [e],
+		pending: [e],
 		right: [],
 	}),
 	fromRight: (a: A) => ({
-		left: [],
+		pending: [],
 		right: [a],
 	}),
 });

@@ -1,15 +1,16 @@
 import { pipe } from "fp-ts/function";
-import { App, Notice, TFile, getBlobArrayBuffer, requestUrl } from "obsidian";
+import { Notice, TFile, getBlobArrayBuffer, requestUrl } from "obsidian";
 import * as O from "fp-ts/Option";
 import * as R from "fp-ts/Reader";
-import { BaseContext, FileType, ItemType } from "src/actions/types";
-import * as T from "fp-ts/Task";
+import { BaseContext } from "src/actions/types";
 import * as RTE from "fp-ts/ReaderTaskEither";
 import * as TE from "fp-ts/TaskEither";
-import SparkMD5 from "spark-md5";
-import * as A from "fp-ts/Array";
-import * as r from "fp-ts/Record";
-import { FileError } from "src/actions/upload/file-error";
+import { FileError } from "src/shared/file-error";
+
+/*
+ * This module is a **thin** wrapper for the Obsidian API
+ *
+ */
 
 export const showNotice = (message: string) => {
 	new Notice(message);
@@ -52,38 +53,6 @@ export const getResolvedLinks =
 	({ app }: BaseContext) =>
 		app.metadataCache.resolvedLinks[path] ?? [];
 
-export const getFileMd5 =
-	(file: TFile, type: ItemType) =>
-	({ app }: BaseContext) => {
-		if (type === FileType.POST) {
-			return pipe(
-				TE.tryCatch(
-					() => app.vault.cachedRead(file),
-					() => new FileError("Failed to read file", file)
-				),
-				TE.map((content) => SparkMD5.hash(content))
-			);
-		}
-		return pipe(
-			TE.tryCatch(
-				() => app.vault.readBinary(file),
-				() => new FileError("Failed to read file", file)
-			),
-			TE.map((content) => SparkMD5.ArrayBuffer.hash(content))
-		);
-	};
-
-export const getEmbeddedAssets =
-	(file: TFile) =>
-	({ app }: BaseContext) =>
-		pipe(
-			app.metadataCache.resolvedLinks[file.path] ?? [],
-			r.toArray,
-			A.filter(([path, n]) => !path.endsWith(".md")),
-			A.map(([path, n]) => path),
-			(paths) => new Set<string>(paths)
-		);
-
 export const getFile =
 	(path: string) =>
 	({ app }: BaseContext) => {
@@ -101,6 +70,7 @@ export const getFiles = pipe(
 
 export const fetchUrl = TE.tryCatchK(requestUrl, (e) => e);
 
+// IMPROVEMENT: This should be in a separate module
 export async function encodeFormDataBody(
 	payload: ArrayBuffer,
 	randomBoundryString: string,
@@ -122,12 +92,3 @@ export async function encodeFormDataBody(
 }
 
 export const buildFormDataBodyTE = TE.tryCatchK(encodeFormDataBody, (e) => e);
-
-// ------------------
-
-type AppDependentFn<T, A> = (app: App) => (arg: T) => A;
-
-const liftAppR =
-	<T extends { app: App }, K, A>(fn: AppDependentFn<K, A>) =>
-	(a: K) =>
-		R.asks<T, A>(({ app }) => fn(app)(a));

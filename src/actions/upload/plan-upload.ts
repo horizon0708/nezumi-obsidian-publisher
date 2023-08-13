@@ -59,7 +59,7 @@ export const planUpload = () =>
 			});
 
 			return {
-				errors: [...posts.left, ...assets.left],
+				errors: [...posts.pending, ...assets.pending],
 				items,
 				toDelete,
 			};

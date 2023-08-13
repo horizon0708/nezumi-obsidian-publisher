@@ -3,7 +3,7 @@ import { Blog } from "src/io/network";
 import { buildPluginConfig } from "src/plugin-config";
 import * as O from "fp-ts/Option";
 import * as RTE from "fp-ts/ReaderTaskEither";
-import { FileError } from "./upload/file-error";
+import { FileError } from "../shared/file-error";
 
 export type BaseContext = {
 	app: App;

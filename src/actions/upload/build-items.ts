@@ -7,19 +7,23 @@ import * as A from "fp-ts/Array";
 import * as R from "fp-ts/Reader";
 import * as r from "fp-ts/Record";
 import {
+	Asset,
 	BaseContext,
 	BaseItem,
 	FileStatus,
 	FileType,
 	Item,
+	ItemType,
+	Post,
 	RTEBuilder,
 } from "../types";
-import { FileError } from "./file-error";
-import { separatedMonoid } from "./separated-monoid";
+import { FileError } from "../../shared/file-error";
+import { separatedMonoid } from "../../shared/separated-monoid";
 import { concatAll } from "fp-ts/lib/Monoid";
-import { getFileMd5, getResolvedLinks } from "src/io/obsidian-fp";
+import { cachedRead, getResolvedLinks, readBinary } from "src/io/obsidian-fp";
 import { getSlug } from "./get-slug";
-import { getType } from "src/utils";
+import { getType, liftRT } from "src/utils";
+import SparkMD5 from "spark-md5";
 
 const eitherMonoid = separatedMonoid<FileError, Item>();
 
@@ -40,17 +44,18 @@ const buildItem = (file: TFile) =>
 		RTE.let("serverMd5", () => O.none),
 		RTE.let("type", () => getType(file.path)),
 		RTE.bind("md5", ({ type }) => getFileMd5(file, type)),
-		RTE.apSW("serverPath", pipe(getServerPath(file.path), RTE.fromReader)),
-		RTE.apSW(
-			"embeddedAssets",
-			pipe(getEmbeddedAssets(file.path), RTE.fromReader)
-		),
-		RTE.chainW((item) => buildPostOrAsset(item)),
-		RTE.foldW(
-			(e) => pipe(eitherMonoid.fromLeft(e), RT.of),
-			(a) => pipe(eitherMonoid.fromRight(a), RT.of)
-		)
+		RTE.apSW("serverPath", getServerPathRTE(file.path)),
+		RTE.apSW("embeddedAssets", getEmbeededAssetsRTE(file.path)),
+		RTE.chainW(buildPostOrAsset),
+		RTE.foldW(liftRT(eitherMonoid.fromLeft), liftRT(eitherMonoid.fromRight))
 	);
+
+const getFileMd5 = (file: TFile, type: ItemType) => {
+	if (type === FileType.POST) {
+		return pipe(cachedRead(file), RTE.map(SparkMD5.hash));
+	}
+	return pipe(readBinary(file), RTE.map(SparkMD5.ArrayBuffer.hash));
+};
 
 const getServerPath =
 	(path: string) =>
@@ -62,6 +67,7 @@ const getServerPath =
 			? path
 			: path.slice(blog.syncFolder.length + 1);
 	};
+const getServerPathRTE = RTE.fromReaderK(getServerPath);
 
 const getEmbeddedAssets = (path: string) =>
 	pipe(
@@ -76,8 +82,9 @@ const getEmbeddedAssets = (path: string) =>
 			)
 		)
 	);
+const getEmbeededAssetsRTE = RTE.fromReaderK(getEmbeddedAssets);
 
-const buildPostOrAsset = (baseItem: BaseItem): RTEBuilder<Item> => {
+const buildPostOrAsset = (baseItem: BaseItem): RTEBuilder<Post | Asset> => {
 	if (baseItem.type === FileType.ASSET) {
 		return RTE.of({
 			...baseItem,
@@ -87,8 +94,6 @@ const buildPostOrAsset = (baseItem: BaseItem): RTEBuilder<Item> => {
 
 	return pipe(
 		getSlug(baseItem.file),
-		RTE.chainW((slug) =>
-			RTE.of({ ...baseItem, slug, type: FileType.POST as const })
-		)
+		RTE.map((slug) => ({ ...baseItem, slug, type: FileType.POST }))
 	);
 };
