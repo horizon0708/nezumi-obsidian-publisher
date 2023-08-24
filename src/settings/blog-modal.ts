@@ -134,12 +134,12 @@ export class BlogModal extends Modal {
 		if (message !== "") {
 			field.errorEl?.setText(message);
 			field.errorEl?.show();
-			this.submitButton.setDisabled(true);
+			this.submitButton?.setDisabled(true);
 			return message;
 		}
 
 		field.errorEl?.hide();
-		this.submitButton.setDisabled(false);
+		this.submitButton?.setDisabled(false);
 		return message;
 	};
 
@@ -158,8 +158,8 @@ export class BlogModal extends Modal {
 
 	private onSubmitClick = async () => {
 		try {
-			this.submitErrorEl.hide();
-			this.submitButton.setDisabled(true);
+			this.submitErrorEl?.hide();
+			this.submitButton?.setDisabled(true);
 			const validationErrors = [];
 			const formValues = Object.entries(this.form.fields).reduce<
 				Record<string, string>
@@ -177,17 +177,17 @@ export class BlogModal extends Modal {
 			}
 
 			const message = await this.onSubmit(formValues);
-			this.submitButton.setDisabled(false);
+			this.submitButton?.setDisabled(false);
 
 			if (message === "") {
 				this.close();
 			} else {
-				this.submitErrorEl.setText(message);
-				this.submitErrorEl.show();
+				this.submitErrorEl?.setText(message);
+				this.submitErrorEl?.show();
 			}
 		} catch (e) {
 			console.error(e);
-			this.submitButton.setDisabled(false);
+			this.submitButton?.setDisabled(false);
 		}
 	};
 }

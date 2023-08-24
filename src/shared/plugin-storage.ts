@@ -9,7 +9,11 @@ type UploadLog = {
 	level: "info" | "warning" | "error";
 };
 
-type ConnectedBlog = Blog & { logs: UploadLog[] };
+type ConnectedBlog = Blog & {
+	logs: UploadLog[];
+	errorEl: HTMLElement | null;
+	message: string;
+};
 
 type PluginData = {
 	blogs: ConnectedBlog[];
@@ -33,6 +37,7 @@ const appendLog = (blogId: string, log: UploadLog) => (data: PluginData) => {
 		}
 		return {
 			...blog,
+			// TODO: implement FIFO for logs
 			logs: [...blog.logs, log],
 		};
 	};
@@ -44,32 +49,41 @@ const appendLog = (blogId: string, log: UploadLog) => (data: PluginData) => {
 };
 export const appendLogRTE = liftUpdaterA2(appendLog);
 
-const appendBlog = (blog: Blog) => (data: PluginData) => {
-	return {
-		...data,
-		blogs: [...data.blogs, { ...blog, logs: [] }],
-	};
-};
-export const appendBlogRTE = liftUpdater(appendBlog);
-
-const updateBlog =
-	(blog: Partial<ConnectedBlog> & { id: string }) => (data: PluginData) => {
-		const update = (b: ConnectedBlog) => {
-			if (b.id !== blog.id) {
-				return b;
-			}
-			return {
-				...b,
-				...blog,
-			};
+const upsertBlog = (blog: Blog, customName?: string) => (data: PluginData) => {
+	const ind = data.blogs.findIndex((b) => b.id === blog.id);
+	const update = (b: ConnectedBlog) => {
+		if (b.id !== blog.id) {
+			return b;
+		}
+		return {
+			...b,
+			...blog,
+			name: customName ?? blog.name,
 		};
+	};
 
+	if (ind !== -1) {
 		return {
 			...data,
 			blogs: data.blogs.map(update),
 		};
+	}
+
+	return {
+		...data,
+		blogs: [
+			...data.blogs,
+			{
+				...blog,
+				name: customName ?? blog.name,
+				logs: [],
+				errorEl: null,
+				message: "",
+			},
+		],
 	};
-export const updateBlogRTE = liftUpdater(updateBlog);
+};
+export const upsertBlogRTE = liftUpdaterA2(upsertBlog);
 
 const deleteBlog = (blogId: string) => (data: PluginData) => {
 	return {

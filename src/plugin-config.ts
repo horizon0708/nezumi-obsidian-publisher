@@ -15,7 +15,8 @@ export const buildPluginConfig = () => {
 		name: "Nezumi",
 		slugKey: "nezumi_slug",
 		domain: DOMAIN,
-		baseUrl: `https://${DOMAIN}/api`,
+		baseUrl: `http://localhost:4000/api`,
+		// baseUrl: `https://${DOMAIN}/api`,
 		apiKeyHeader: "x-blog-api-Key",
 		endpoints: {
 			getBlog: "ping",

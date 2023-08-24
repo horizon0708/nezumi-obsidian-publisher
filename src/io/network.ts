@@ -7,7 +7,7 @@ import { Semigroup } from "fp-ts/lib/string";
 import { concatAll } from "fp-ts/lib/Monoid";
 import { successResultM, errorResultM, resultM } from "../utils";
 import { buildFormDataBodyTE, fetchUrl } from "./obsidian-fp";
-import { BaseContext } from "src/actions/types";
+import { AppContext, BaseContext } from "src/actions/types";
 
 enum HttpMethod {
 	GET = "GET",
@@ -64,31 +64,35 @@ const sendRequest = <T extends t.Props>(r: t.TypeC<T>) =>
  *  Ping Blog (Get Blog Info)
  *
  */
-const blog = t.type({
+export const blogSchema = t.type({
 	id: t.string,
 	name: t.string,
 	subdomain: t.string,
-	syncFolder: t.string,
-	endpoint: t.string,
-	apiKey: t.string,
 });
 
 const pingBlogResponse = t.type({
-	blog,
+	blog: blogSchema,
 });
 
-export type Blog = t.TypeOf<typeof blog>;
+export type Blog = t.TypeOf<typeof blogSchema>;
 
-export const pingBlogFP = pipe(
-	RTE.Do,
-	RTE.apSW(
-		"headers",
-		buildHeaders([headers.jsonContentType, headers.apiKey])
-	),
-	RTE.apSW("url", buildUrl("ping")),
-	RTE.let("method", () => HttpMethod.GET),
-	RTE.chainW(sendRequest(pingBlogResponse))
-);
+type PingBlogPayload = {
+	syncFolder: string;
+	apiKey: string;
+	endpoint: string;
+};
+
+export const pingBlogFP = (payload: PingBlogPayload) =>
+	pipe(
+		RTE.asks((d: AppContext) => d.pluginConfig.apiKeyHeader),
+		RTE.let("headers", (apiKeyHeader) => ({
+			["Content-Type"]: "application/json",
+			[apiKeyHeader]: payload.apiKey,
+		})),
+		RTE.let("url", () => payload.endpoint + "/ping"),
+		RTE.let("method", () => HttpMethod.GET),
+		RTE.chainW(sendRequest(pingBlogResponse))
+	);
 
 /**
  *

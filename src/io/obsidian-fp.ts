@@ -26,7 +26,10 @@ export const saveData =
 
 export const loadData = ({ plugin }: PluginContext) =>
 	TE.tryCatch(
-		() => plugin.loadData(),
+		() => {
+			console.log(plugin);
+			return plugin.loadData();
+		},
 		(e) => e
 	);
 

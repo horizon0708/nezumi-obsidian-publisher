@@ -3,6 +3,8 @@ import Logger from "js-logger";
 import { SettingTab } from "src/settings/setting-tab";
 import { buildPluginConfig } from "src/plugin-config";
 import { upload } from "src/actions/upload/upload";
+import { NewSettingTab } from "src/settings-new/settings-tab-new";
+import { saveData } from "src/io/obsidian-fp";
 
 export default class BlogSync extends Plugin {
 	settingTab?: SettingTab;
@@ -13,13 +15,35 @@ export default class BlogSync extends Plugin {
 	};
 
 	async onload() {
-		if (!this.settingTab) {
-			const settingTab = new SettingTab(this.app, this);
-			this.addSettingTab(settingTab);
-			this.settingTab = settingTab;
-		}
+		this.addSettingTab(new NewSettingTab(this.app, this));
+		await saveData({
+			blogs: [
+				{
+					id: "asdf",
+					name: "Test Blog (dev)",
+					apiKey: "bk_42gp0UU3Y1WlqSm5Sdgx8n",
+					syncFolder: "TestBlog",
+					endpoint: "http://localhost:4000/api",
+					subdomain: "testblog",
+				},
+				{
+					id: "b_02tahK5viJpAXk1LJYvhu3",
+					name: "teerwef",
+					apiKey: "bk_0E35ek0QaNj4BZ7NtU6uBf",
+					syncFolder: "TestBlog",
+					endpoint: "http://localhost:4000/api",
+					subdomain: "sub",
+				},
+			],
+		})({ app: this.app, plugin: this })();
 
-		await this.settingTab.loadSettings();
+		// if (!this.settingTab) {
+		// 	const settingTab = new SettingTab(this.app, this);
+		// 	this.addSettingTab(settingTab);
+		// 	this.settingTab = settingTab;
+		// }
+
+		// await this.settingTab.loadSettings();
 		this.loadCommands();
 	}
 
