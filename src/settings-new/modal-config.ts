@@ -1,8 +1,12 @@
-import { FormField } from "src/io/edit-modal";
+import { FormField } from "src/settings-new/edit-modal";
 import { buildPluginConfig } from "src/plugin-config";
 import * as t from "io-ts";
 import { withMessage } from "io-ts-types";
+import { SavedBlog } from "./saved-blog";
+import * as A from "fp-ts/Array";
+import { App, TFolder } from "obsidian";
 
+// If you update the order, update `buildUpdateFormFields` below
 export const blogModalFormFields: FormField[] = [
 	{
 		key: "apiKey",
@@ -41,6 +45,18 @@ export const blogModalFormFields: FormField[] = [
 	},
 ];
 
+export const buildUpdateFormFields = (blog: SavedBlog) =>
+	A.zipWith(
+		[
+			{ value: blog.apiKey },
+			{ value: blog.syncFolder },
+			{ value: blog.name },
+			{ value: blog.endpoint },
+		],
+		blogModalFormFields,
+		(f1, f2) => ({ ...f2, ...f1 })
+	);
+
 interface MinimumLength {
 	readonly stringMinLength: unique symbol; // use `unique symbol` here to ensure uniqueness across modules / packages
 }
@@ -50,9 +66,25 @@ const minLength = t.brand(
 	"stringMinLength" // the name must match the readonly field in the brand
 );
 
-export const blogModalFormSchema = t.type({
-	apiKey: withMessage(minLength, () => "API key cannot be empty"),
-	syncFolder: withMessage(minLength, () => "Sync folder cannot be empty"),
-	alias: t.string,
-	endpoint: withMessage(minLength, () => "Endpoint cannot be empty"),
-});
+interface ValidPath {
+	readonly validPath: unique symbol;
+}
+const validPath = (app: App) =>
+	t.brand(
+		t.string,
+		(n): n is t.Branded<string, ValidPath> =>
+			app.vault.getAbstractFileByPath(n) instanceof TFolder,
+		"validPath"
+	);
+
+export const blogModalFormSchema = ({ app }: { app: App }) =>
+	t.type({
+		apiKey: withMessage(minLength, () => "API key cannot be empty"),
+		syncFolder: withMessage(
+			validPath(app),
+			() => "Sync folder must be a valid folder"
+		),
+		alias: t.string,
+		// TODO: regex valid url
+		endpoint: withMessage(minLength, () => "Endpoint cannot be empty"),
+	});

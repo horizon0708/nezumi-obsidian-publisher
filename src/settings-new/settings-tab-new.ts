@@ -1,13 +1,13 @@
 import { App, Plugin, PluginSettingTab, Setting } from "obsidian";
 import * as RIO from "fp-ts/ReaderIO";
+import * as RTE from "fp-ts/ReaderTaskEither";
 import * as A from "fp-ts/Array";
 import { pipe } from "fp-ts/lib/function";
 import { Blog } from "../io/network";
-import { loadData } from "../io/obsidian-fp";
-import { deleteBlog } from "../io/plugin-data";
-import { BlogEditModal } from "../io/edit-modal";
-import { blogModalFormFields } from "./modal-config";
-import { SavedBlog } from "./saved-blog";
+import { deleteBlog, getBlog, getBlogs } from "../io/plugin-data";
+import { BlogEditModal } from "./edit-modal";
+import { blogModalFormFields, buildUpdateFormFields } from "./modal-config";
+import { buildPluginConfig } from "src/plugin-config";
 
 export class NewSettingTab extends PluginSettingTab {
 	plugin: Plugin;
@@ -19,13 +19,6 @@ export class NewSettingTab extends PluginSettingTab {
 	async display() {
 		this.containerEl.empty();
 		const pluginContext = { app: this.app, plugin: this.plugin };
-		const res = await loadData(pluginContext)();
-
-		if (res._tag === "Left") {
-			return;
-		}
-		console.log(res);
-		const blogs = res.right["blogs"];
 		const modal = new BlogEditModal(this.app, this.plugin);
 
 		const context: BlogListContext = {
@@ -34,11 +27,19 @@ export class NewSettingTab extends PluginSettingTab {
 				await deleteBlog(id)(pluginContext)();
 				this.display();
 			},
-			onEdit: (id) => {
-				const blog = blogs.find((blog: SavedBlog) => blog.id === id);
-				if (!blog) {
-					return;
-				}
+			onEdit: async (id) => {
+				await pipe(
+					getBlog(id),
+					RTE.map(buildUpdateFormFields),
+					RTE.tapIO((fields) => () => {
+						modal.render({
+							title: "Edit blog",
+							fields: fields,
+							onSubmit: () => this.display(),
+						});
+						modal.open();
+					})
+				)(pluginContext)();
 			},
 			onAdd: () => {
 				modal.render({
@@ -50,8 +51,12 @@ export class NewSettingTab extends PluginSettingTab {
 			},
 		};
 
+		const res = await getBlogs(pluginContext)();
+		if (res._tag === "Left") {
+			return;
+		}
 		pipe(
-			[createAddBlogButton, createBlogItemList(blogs)],
+			[createAddBlogButton, createList(res.right)],
 			RIO.sequenceArray
 		)(context)();
 	}
@@ -59,19 +64,10 @@ export class NewSettingTab extends PluginSettingTab {
 
 type BlogListContext = {
 	containerEl: HTMLElement;
-	onEdit: (id: string) => void;
+	onEdit: (id: string) => Promise<void>;
 	onDelete: (id: string) => Promise<void>;
 	onAdd: () => void;
 };
-
-export const createBlogItemList = (blogs: Blog[]) =>
-	pipe(
-		RIO.Do,
-		RIO.bind("container", () =>
-			RIO.asks<BlogListContext, HTMLElement>((r) => r.containerEl)
-		),
-		RIO.apS("items", createList(blogs))
-	);
 
 const createList = (blogs: Blog[]) =>
 	pipe(blogs, A.map(createBlogItem), RIO.sequenceArray);
@@ -92,9 +88,15 @@ const createBlogItem =
 	(blog: Blog) =>
 	({ containerEl, onEdit, onDelete }: BlogListContext) =>
 	() => {
+		const el = new DocumentFragment();
+		const anchor = el.createEl("a");
+		anchor.href = `https://${blog.subdomain}.${buildPluginConfig().domain}`;
+		anchor.innerText = anchor.href;
+		el.appendChild(anchor);
+
 		new Setting(containerEl)
 			.setName(blog.name)
-			.setDesc(blog.subdomain)
+			.setDesc(el)
 			.addButton((btn) => {
 				btn.setIcon("edit").onClick(() => onEdit(blog.id));
 			})

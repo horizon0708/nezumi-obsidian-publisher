@@ -7,9 +7,9 @@ import * as t from "io-ts";
 import * as O from "fp-ts/Option";
 import { pipe } from "fp-ts/lib/function";
 import { blogModalFormSchema } from "src/settings-new/modal-config";
-import { pingBlogFP } from "./network";
+import { pingBlogFP } from "../io/network";
 import { buildPluginConfig } from "src/plugin-config";
-import { addBlog } from "./plugin-data";
+import { addBlog } from "../io/plugin-data";
 
 export type FormField = {
 	key: string;
@@ -29,6 +29,7 @@ type FormRenderContext = {
 
 type FormControlContext = {
 	controls: FormControl[];
+	app: App;
 };
 
 // Reader IO will do this :sweat_smile:
@@ -96,6 +97,7 @@ export class BlogEditModal extends Modal {
 					RTE.tapError(RTE.fromReaderIOK(setErrors)),
 					RTE.bindTo("form"),
 					RTE.bindW("response", ({ form }) => pingBlogFP(form)),
+					// TODO: tapError on the sendForm error to show serverside error
 					// transform blog response to SavedBlog
 					RTE.map(({ form, response: { blog } }) => ({
 						...blog,
@@ -106,7 +108,6 @@ export class BlogEditModal extends Modal {
 						logs: [],
 					})),
 					RTE.tap(addBlog),
-					// TODO: tapError on the sendForm error to show serverside error
 					RTE.tapTask(() => updateSettingsTab),
 					RTE.tapIO(() => () => this.close())
 				)({
@@ -149,7 +150,7 @@ const setError =
 			})
 		);
 
-const submitForm = ({ controls }: FormControlContext) =>
+const submitForm = ({ controls, app }: FormControlContext) =>
 	pipe(
 		controls,
 		(e) => {
@@ -164,7 +165,7 @@ const submitForm = ({ controls }: FormControlContext) =>
 			...acc,
 			[ctrl.key]: ctrl.text.getValue(),
 		})),
-		blogModalFormSchema.decode,
+		blogModalFormSchema({ app }).decode,
 		TE.fromEither
 	);
 
@@ -173,6 +174,7 @@ const createFormControl =
 	({ containerEl, hiddenEl }: FormRenderContext) =>
 	() => {
 		const {
+			value,
 			initialValue,
 			label,
 			description,
@@ -199,7 +201,7 @@ const createFormControl =
 		let textComponent: TextComponent | null = null;
 		setting.addText((text) => {
 			textComponent = text;
-			text.setValue(initialValue).onChange(() => {
+			text.setValue(value || initialValue).onChange(() => {
 				// when touched, it should remove any error messages
 				error.setText("");
 				error.hide();

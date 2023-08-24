@@ -29,7 +29,7 @@ export const deleteBlog = (id: string) =>
 		RTE.tap(({ data, blogs }) => saveData({ ...data, blogs }))
 	);
 
-// TODO: upsert
+// NEXT TODO: upsert
 export const addBlog = (blog: SavedBlog) =>
 	pipe(
 		loadData,
@@ -39,3 +39,20 @@ export const addBlog = (blog: SavedBlog) =>
 		})),
 		RTE.tap(saveData)
 	);
+
+export const getBlog = (id: string) =>
+	pipe(
+		loadData,
+		RTE.chainW((data) =>
+			pipe(
+				data.blogs,
+				A.findFirst((blog: SavedBlog) => blog.id === id),
+				RTE.fromOption(() => "blog not found")
+			)
+		)
+	);
+
+export const getBlogs = pipe(
+	loadData,
+	RTE.map((data) => data.blogs as SavedBlog[])
+);
