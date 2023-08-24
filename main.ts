@@ -25,6 +25,7 @@ export default class BlogSync extends Plugin {
 					syncFolder: "TestBlog",
 					endpoint: "http://localhost:4000/api",
 					subdomain: "testblog",
+					logs: [],
 				},
 				{
 					id: "b_02tahK5viJpAXk1LJYvhu3",
@@ -33,6 +34,7 @@ export default class BlogSync extends Plugin {
 					syncFolder: "TestBlog",
 					endpoint: "http://localhost:4000/api",
 					subdomain: "sub",
+					logs: [],
 				},
 			],
 		})({ app: this.app, plugin: this })();

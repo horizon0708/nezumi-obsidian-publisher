@@ -2,9 +2,9 @@ import { FormField } from "src/settings-new/edit-modal";
 import { buildPluginConfig } from "src/plugin-config";
 import * as t from "io-ts";
 import { withMessage } from "io-ts-types";
-import { SavedBlog } from "./saved-blog";
 import * as A from "fp-ts/Array";
 import { App, TFolder } from "obsidian";
+import { SavedBlog } from "src/io/plugin-data";
 
 // If you update the order, update `buildUpdateFormFields` below
 export const blogModalFormFields: FormField[] = [

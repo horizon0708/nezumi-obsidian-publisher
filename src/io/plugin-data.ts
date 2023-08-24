@@ -8,17 +8,41 @@ import * as RTE from "fp-ts/ReaderTaskEither";
 import * as O from "fp-ts/Option";
 import { pipe } from "fp-ts/lib/function";
 import { loadData, saveData } from "./obsidian-fp";
-import { SavedBlog } from "../settings-new/saved-blog";
+
+import * as t from "io-ts";
+import { blogSchema } from "../io/network";
+
+const logSchema = t.type({
+	timestamp: t.string,
+	message: t.string,
+});
+
+const blogClientData = t.type({
+	apiKey: t.string,
+	endpoint: t.string,
+	syncFolder: t.string,
+	logs: t.array(logSchema),
+});
+
+const savedBlogSchema = t.intersection([blogSchema, blogClientData]);
+export type SavedBlog = t.TypeOf<typeof savedBlogSchema>;
+
+const pluginData = t.type({
+	blogs: t.array(savedBlogSchema),
+});
 
 export const deleteBlog = (id: string) =>
 	pipe(
 		RTE.Do,
-		RTE.apS("data", loadData),
-		// TODO: Decode using io-ts
+		RTE.apS("data", pipe(loadData, RTE.chainEitherKW(pluginData.decode))),
 		RTE.let("blogs", ({ data: { blogs } }) =>
 			pipe(
 				blogs,
 				A.findIndex((blog: SavedBlog) => blog.id === id),
+				(e) => {
+					console.log(e);
+					return e;
+				},
 				O.chain((ind) => A.deleteAt(ind)(blogs)),
 				O.fold(
 					() => blogs,
@@ -30,13 +54,21 @@ export const deleteBlog = (id: string) =>
 	);
 
 // NEXT TODO: upsert
-export const addBlog = (blog: SavedBlog) =>
+export const upsertBlog = (blog: SavedBlog) =>
 	pipe(
 		loadData,
-		RTE.map((data) => ({
-			...data,
-			blogs: A.append(blog)(data.blogs),
-		})),
+		RTE.chainEitherKW(pluginData.decode),
+		RTE.map(({ blogs }) => {
+			return pipe(
+				blogs,
+				A.map((b) => (b.id === blog.id ? blog : b)),
+				(updateBlogs) =>
+					updateBlogs.findIndex((b) => b.id === blog.id) === -1
+						? A.append(blog)(updateBlogs)
+						: updateBlogs,
+				(blogs) => ({ blogs })
+			);
+		}),
 		RTE.tap(saveData)
 	);
 

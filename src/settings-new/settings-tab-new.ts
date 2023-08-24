@@ -8,6 +8,7 @@ import { deleteBlog, getBlog, getBlogs } from "../io/plugin-data";
 import { BlogEditModal } from "./edit-modal";
 import { blogModalFormFields, buildUpdateFormFields } from "./modal-config";
 import { buildPluginConfig } from "src/plugin-config";
+import { PluginContext } from "src/actions/types";
 
 export class NewSettingTab extends PluginSettingTab {
 	plugin: Plugin;
@@ -21,10 +22,11 @@ export class NewSettingTab extends PluginSettingTab {
 		const pluginContext = { app: this.app, plugin: this.plugin };
 		const modal = new BlogEditModal(this.app, this.plugin);
 
-		const context: BlogListContext = {
+		const context: BlogListContext & PluginContext = {
 			containerEl: this.containerEl,
 			onDelete: async (id) => {
-				await deleteBlog(id)(pluginContext)();
+				const b = await deleteBlog(id)(pluginContext)();
+				console.log(b);
 				this.display();
 			},
 			onEdit: async (id) => {
@@ -49,15 +51,14 @@ export class NewSettingTab extends PluginSettingTab {
 				});
 				modal.open();
 			},
+			...pluginContext,
 		};
 
-		const res = await getBlogs(pluginContext)();
-		if (res._tag === "Left") {
-			return;
-		}
-		pipe(
-			[createAddBlogButton, createList(res.right)],
-			RIO.sequenceArray
+		await pipe(
+			createAddBlogButton,
+			RTE.rightReaderIO,
+			RTE.chainW(() => getBlogs),
+			RTE.tapReaderIO(createList)
 		)(context)();
 	}
 }

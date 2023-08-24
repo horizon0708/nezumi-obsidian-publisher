@@ -9,7 +9,7 @@ import { pipe } from "fp-ts/lib/function";
 import { blogModalFormSchema } from "src/settings-new/modal-config";
 import { pingBlogFP } from "../io/network";
 import { buildPluginConfig } from "src/plugin-config";
-import { addBlog } from "../io/plugin-data";
+import { upsertBlog } from "../io/plugin-data";
 
 export type FormField = {
 	key: string;
@@ -107,7 +107,7 @@ export class BlogEditModal extends Modal {
 						syncFolder: form.syncFolder,
 						logs: [],
 					})),
-					RTE.tap(addBlog),
+					RTE.tap(upsertBlog),
 					RTE.tapTask(() => updateSettingsTab),
 					RTE.tapIO(() => () => this.close())
 				)({

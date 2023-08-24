@@ -3,7 +3,7 @@ import { buildPluginConfig } from "src/plugin-config";
 import * as O from "fp-ts/Option";
 import * as RTE from "fp-ts/ReaderTaskEither";
 import { FileError } from "../shared/file-error";
-import { SavedBlog } from "src/settings-new/saved-blog";
+import { SavedBlog } from "src/io/plugin-data";
 
 export type AppContext = {
 	app: App;
