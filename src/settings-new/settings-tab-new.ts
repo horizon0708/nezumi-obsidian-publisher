@@ -11,6 +11,13 @@ import { buildPluginConfig } from "src/plugin-config";
 import { PluginContext } from "src/actions/types";
 import { showNotice } from "src/io/obsidian-fp";
 
+type BlogListContext = {
+	containerEl: HTMLElement;
+	onEdit: (id: string) => Promise<void>;
+	onDelete: (id: string) => Promise<void>;
+	onAdd: () => void;
+};
+
 export class NewSettingTab extends PluginSettingTab {
 	plugin: Plugin;
 	constructor(app: App, plugin: Plugin) {
@@ -62,22 +69,12 @@ export class NewSettingTab extends PluginSettingTab {
 			createAddBlogButton,
 			RTE.rightReaderIO,
 			RTE.chainW(() => getBlogs),
-			RTE.tapReaderIO(createList)
+			RTE.tapReaderIO(createBlogItemList)
 		)(context)();
 	}
 }
 
 const showErrorNotice = RTE.fromIOK((e: Error) => () => showNotice(e.message));
-
-type BlogListContext = {
-	containerEl: HTMLElement;
-	onEdit: (id: string) => Promise<void>;
-	onDelete: (id: string) => Promise<void>;
-	onAdd: () => void;
-};
-
-const createList = (blogs: Blog[]) =>
-	pipe(blogs, A.map(createBlogItem), RIO.sequenceArray);
 
 const createAddBlogButton =
 	({ containerEl, onAdd }: BlogListContext) =>
@@ -91,27 +88,33 @@ const createAddBlogButton =
 		});
 	};
 
-const createBlogItem =
-	(blog: Blog) =>
-	({ containerEl, onEdit, onDelete }: BlogListContext) =>
-	() => {
-		const el = new DocumentFragment();
-		const anchor = el.createEl("a");
-		anchor.href = `https://${blog.subdomain}.${buildPluginConfig().domain}`;
-		anchor.innerText = anchor.href;
-		el.appendChild(anchor);
+const createBlogItemList = (blogs: Blog[]) => {
+	const createBlogItem =
+		(blog: Blog) =>
+		({ containerEl, onEdit, onDelete }: BlogListContext) =>
+		() => {
+			const el = new DocumentFragment();
+			const anchor = el.createEl("a");
+			anchor.href = `https://${blog.subdomain}.${
+				buildPluginConfig().domain
+			}`;
+			anchor.innerText = anchor.href;
+			el.appendChild(anchor);
 
-		new Setting(containerEl)
-			.setName(blog.name)
-			.setDesc(el)
-			.addButton((btn) => {
-				btn.setIcon("edit").onClick(() => onEdit(blog.id));
-			})
-			.addButton((btn) => {
-				btn.setIcon("trash")
-					.setWarning()
-					.onClick(async () => {
-						await onDelete(blog.id);
-					});
-			});
-	};
+			new Setting(containerEl)
+				.setName(blog.name)
+				.setDesc(el)
+				.addButton((btn) => {
+					btn.setIcon("edit").onClick(() => onEdit(blog.id));
+				})
+				.addButton((btn) => {
+					btn.setIcon("trash")
+						.setWarning()
+						.onClick(async () => {
+							await onDelete(blog.id);
+						});
+				});
+		};
+
+	return pipe(blogs, A.map(createBlogItem), RIO.sequenceArray);
+};
