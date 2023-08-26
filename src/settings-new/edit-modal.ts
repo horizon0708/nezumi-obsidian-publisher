@@ -2,6 +2,7 @@ import { App, Modal, Setting, TextComponent, Plugin } from "obsidian";
 import * as RIO from "fp-ts/ReaderIO";
 import * as A from "fp-ts/Array";
 import * as RTE from "fp-ts/ReaderTaskEither";
+import * as E from "fp-ts/Either";
 import * as TE from "fp-ts/TaskEither";
 import * as t from "io-ts";
 import * as O from "fp-ts/Option";
@@ -10,6 +11,8 @@ import { blogModalFormSchema } from "src/settings-new/modal-config";
 import { pingBlogFP } from "../io/network";
 import { buildPluginConfig } from "src/plugin-config";
 import { upsertBlog } from "../io/plugin-data";
+import { DecodeError } from "src/shared/errors";
+import { showNotice } from "src/io/obsidian-fp";
 
 export type FormField = {
 	key: string;
@@ -25,10 +28,12 @@ export type FormField = {
 type FormRenderContext = {
 	containerEl: HTMLElement;
 	hiddenEl: HTMLElement;
+	submitErrorEl: HTMLElement;
 };
 
 type FormControlContext = {
 	controls: FormControl[];
+	submitErrorEl: HTMLElement;
 	app: App;
 };
 
@@ -56,10 +61,17 @@ export class BlogEditModal extends Modal {
 
 		this.contentEl.createEl("h2", { text: title });
 
+		// Create containers and buttons
 		const formEl = this.contentEl.createEl("form");
 		const hiddenEl = this.contentEl.createEl("div");
+		const submitContainer = new Setting(this.contentEl);
+		const submitErrorEl = submitContainer.controlEl.createEl("span", {
+			text: "controlEl",
+			cls: "error-message",
+		});
+		submitErrorEl.hide();
 
-		// Run the IO computations to render the form controls
+		// Run the IO computations to render the form fields
 		// This returns references to the Form elements to
 		const controls = pipe(
 			fields,
@@ -69,6 +81,7 @@ export class BlogEditModal extends Modal {
 		)({
 			containerEl: formEl,
 			hiddenEl,
+			submitErrorEl,
 		})();
 
 		// render toggle button to show hidden fields
@@ -82,36 +95,38 @@ export class BlogEditModal extends Modal {
 				});
 			});
 
-		// Create a container for submit button
-		const submitContainer = new Setting(this.contentEl);
-		const submitErrorEl = submitContainer.controlEl.createEl("span", {
-			text: "controlEl",
-			cls: "error-message",
-		});
-		submitErrorEl.hide();
 		submitContainer.addButton((btn) => {
 			btn.setButtonText("Save").onClick(async () => {
 				const onSubmit = pipe(
 					submitForm,
-					RTE.mapLeft(formatErrors),
-					RTE.tapError(RTE.fromReaderIOK(setErrors)),
-					RTE.bindTo("form"),
-					RTE.bindW("response", ({ form }) => pingBlogFP(form)),
-					// TODO: tapError on the sendForm error to show serverside error
-					// transform blog response to SavedBlog
-					RTE.map(({ form, response: { blog } }) => ({
-						...blog,
-						name: form.alias || blog.name,
-						apiKey: form.apiKey,
-						endpoint: form.endpoint,
-						syncFolder: form.syncFolder,
-						logs: [],
-					})),
+					RTE.fromReaderEither,
+					RTE.tapError(RTE.fromReaderIOK(setFieldErrors)),
+					RTE.chainW((form) =>
+						pipe(
+							pingBlogFP(form),
+							RTE.map(({ blog }) => ({
+								...blog,
+								name: form.alias || blog.name,
+								apiKey: form.apiKey,
+								endpoint: form.endpoint,
+								syncFolder: form.syncFolder,
+								logs: [],
+							}))
+						)
+					),
 					RTE.tap(upsertBlog),
 					RTE.tapTask(() => updateSettingsTab),
-					RTE.tapIO(() => () => this.close())
+					RTE.tapError(RTE.fromReaderIOK(setSubmitError)),
+					RTE.tapIO(() => () => this.close()),
+					RTE.tapIO(
+						(blog) => () =>
+							showNotice(
+								`Successfully connected to ${blog.name}!`
+							)
+					)
 				)({
 					controls,
+					submitErrorEl,
 					app: this.app,
 					pluginConfig: buildPluginConfig(),
 					plugin: this.plugin,
@@ -124,54 +139,60 @@ export class BlogEditModal extends Modal {
 	}
 }
 
-const formatErrors = (errors: t.Errors) => {
-	return errors
-		.map((error) =>
-			error.context
-				.filter(({ key }) => key.length > 0)
-				.map(({ key }) => ({ key, msg: error.message }))
-		)
-		.flat();
-};
-
-const setErrors = (errors: FormError[]) =>
-	pipe(errors, A.map(setError), RIO.sequenceArray);
-
-const setError =
-	({ key, msg }: FormError) =>
-	({ controls }: FormControlContext) =>
-	() =>
-		pipe(
-			controls,
-			A.findFirst((c) => c.key === key),
-			O.map((ctrl) => {
-				ctrl.error.textContent = msg ?? "";
-				ctrl.error.show();
-			})
-		);
+const setSubmitError =
+	(error: Error) =>
+	({ submitErrorEl }: FormControlContext) =>
+	() => {
+		submitErrorEl.setText(error.message);
+		submitErrorEl.show();
+	};
 
 const submitForm = ({ controls, app }: FormControlContext) =>
 	pipe(
 		controls,
-		(e) => {
-			console.log(controls);
-			return e;
-		},
-		A.map((e) => {
-			console.log(e.text.getValue());
-			return e;
-		}),
 		A.reduce<FormControl, Record<string, string>>({}, (acc, ctrl) => ({
 			...acc,
 			[ctrl.key]: ctrl.text.getValue(),
 		})),
 		blogModalFormSchema({ app }).decode,
-		TE.fromEither
+		E.mapLeft((errors) => new DecodeError(errors))
 	);
+
+const setFieldErrors = (de: DecodeError) => {
+	const transformDecodeErrors = (errors: t.Errors) => {
+		return errors
+			.map((error) =>
+				error.context
+					.filter(({ key }) => key.length > 0)
+					.map(({ key }) => ({ key, msg: error.message }))
+			)
+			.flat();
+	};
+
+	const setFieldError =
+		({ key, msg }: FormError) =>
+		({ controls }: FormControlContext) =>
+		() =>
+			pipe(
+				controls,
+				A.findFirst((c) => c.key === key),
+				O.map((ctrl) => {
+					ctrl.error.textContent = msg ?? "";
+					ctrl.error.show();
+				})
+			);
+
+	return pipe(
+		de.errors,
+		transformDecodeErrors,
+		A.map(setFieldError),
+		RIO.sequenceArray
+	);
+};
 
 const createFormControl =
 	(field: FormField) =>
-	({ containerEl, hiddenEl }: FormRenderContext) =>
+	({ containerEl, hiddenEl, submitErrorEl }: FormRenderContext) =>
 	() => {
 		const {
 			value,
@@ -186,7 +207,6 @@ const createFormControl =
 		if (label) {
 			setting.setName(label);
 		}
-
 		if (description) {
 			setting.setDesc(description);
 		}
@@ -205,6 +225,8 @@ const createFormControl =
 				// when touched, it should remove any error messages
 				error.setText("");
 				error.hide();
+				submitErrorEl.setText("");
+				submitErrorEl.hide();
 			});
 		});
 		if (showRestoreButton) {

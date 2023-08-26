@@ -6,6 +6,7 @@ import { BaseContext, PluginContext } from "src/actions/types";
 import * as RTE from "fp-ts/ReaderTaskEither";
 import * as TE from "fp-ts/TaskEither";
 import { FileError } from "src/shared/file-error";
+import { NetworkError } from "src/shared/errors";
 
 /*
  * This module is a **thin** wrapper for the Obsidian API
@@ -82,7 +83,16 @@ export const getFiles = pipe(
 	R.map(({ app }) => app.vault.getFiles())
 );
 
-export const fetchUrl = TE.tryCatchK(requestUrl, (e) => e);
+export const fetchUrl = TE.tryCatchK(
+	requestUrl,
+	(e: any): NetworkError | Error => {
+		if (e.status) {
+			return new NetworkError(e.status, e.message);
+		}
+		// if there is no status, then its not a network error.
+		return new Error("Unhandled error");
+	}
+);
 
 // IMPROVEMENT: This should be in a separate module
 export async function encodeFormDataBody(
@@ -105,4 +115,9 @@ export async function encodeFormDataBody(
 	]).arrayBuffer();
 }
 
-export const buildFormDataBodyTE = TE.tryCatchK(encodeFormDataBody, (e) => e);
+export const buildFormDataBodyTE = TE.tryCatchK(encodeFormDataBody, (e) => {
+	if (e instanceof Error) {
+		return e;
+	}
+	return new Error("Encode form data faield");
+});

@@ -6,7 +6,7 @@ import * as A from "fp-ts/Array";
 import { App, TFolder } from "obsidian";
 import { SavedBlog } from "src/io/plugin-data";
 
-// If you update the order, update `buildUpdateFormFields` below
+// If you update the order, update `buildUpdateFormFields` below!
 export const blogModalFormFields: FormField[] = [
 	{
 		key: "apiKey",
@@ -57,6 +57,18 @@ export const buildUpdateFormFields = (blog: SavedBlog) =>
 		(f1, f2) => ({ ...f2, ...f1 })
 	);
 
+export const blogModalFormSchema = ({ app }: { app: App }) =>
+	t.type({
+		apiKey: withMessage(minLength, () => "API key cannot be empty"),
+		syncFolder: withMessage(
+			validPath(app),
+			() => "Sync folder must be a valid folder"
+		),
+		alias: t.string,
+		// TODO: regex valid url
+		endpoint: withMessage(minLength, () => "Endpoint cannot be empty"),
+	});
+
 interface MinimumLength {
 	readonly stringMinLength: unique symbol; // use `unique symbol` here to ensure uniqueness across modules / packages
 }
@@ -76,15 +88,3 @@ const validPath = (app: App) =>
 			app.vault.getAbstractFileByPath(n) instanceof TFolder,
 		"validPath"
 	);
-
-export const blogModalFormSchema = ({ app }: { app: App }) =>
-	t.type({
-		apiKey: withMessage(minLength, () => "API key cannot be empty"),
-		syncFolder: withMessage(
-			validPath(app),
-			() => "Sync folder must be a valid folder"
-		),
-		alias: t.string,
-		// TODO: regex valid url
-		endpoint: withMessage(minLength, () => "Endpoint cannot be empty"),
-	});

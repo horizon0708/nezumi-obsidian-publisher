@@ -1,14 +1,8 @@
-import { App, Plugin, PluginSettingTab, Setting } from "obsidian";
-import * as RIO from "fp-ts/ReaderIO";
-import * as IO from "fp-ts/IO";
 import * as A from "fp-ts/Array";
-import * as r from "fp-ts/Record";
-import * as rt from "fp-ts/ReadonlyTuple";
 import * as RTE from "fp-ts/ReaderTaskEither";
 import * as O from "fp-ts/Option";
 import { pipe } from "fp-ts/lib/function";
 import { loadData, saveData } from "./obsidian-fp";
-
 import * as t from "io-ts";
 import { blogSchema } from "../io/network";
 
@@ -30,12 +24,25 @@ export type SavedBlog = t.TypeOf<typeof savedBlogSchema>;
 const pluginData = t.type({
 	blogs: t.array(savedBlogSchema),
 });
+export type PluginData = t.TypeOf<typeof pluginData>;
+
+const loadPluginData = pipe(
+	loadData,
+	RTE.chainEitherKW(pluginData.decode),
+	RTE.mapLeft(() => new Error("plugin data is corrupted"))
+);
+
+const savePluginData = (newData: PluginData) =>
+	pipe(
+		saveData(newData),
+		RTE.mapLeft(() => new Error("Could not save plugin data"))
+	);
 
 export const deleteBlog = (id: string) =>
 	pipe(
 		RTE.Do,
-		RTE.apS("data", pipe(loadData, RTE.chainEitherKW(pluginData.decode))),
-		RTE.let("blogs", ({ data: { blogs } }) =>
+		RTE.apSW("data", loadPluginData),
+		RTE.bindW("blogs", ({ data: { blogs } }) =>
 			pipe(
 				blogs,
 				A.findIndex((blog: SavedBlog) => blog.id === id),
@@ -44,20 +51,16 @@ export const deleteBlog = (id: string) =>
 					return e;
 				},
 				O.chain((ind) => A.deleteAt(ind)(blogs)),
-				O.fold(
-					() => blogs,
-					(newBlogs) => newBlogs
-				)
+				RTE.fromOption(() => new Error("blog not found"))
 			)
 		),
-		RTE.tap(({ data, blogs }) => saveData({ ...data, blogs }))
+		RTE.tap(({ data, blogs }) => savePluginData({ ...data, blogs }))
 	);
 
 // NEXT TODO: upsert
 export const upsertBlog = (blog: SavedBlog) =>
 	pipe(
-		loadData,
-		RTE.chainEitherKW(pluginData.decode),
+		loadPluginData,
 		RTE.map(({ blogs }) => {
 			return pipe(
 				blogs,
@@ -69,22 +72,22 @@ export const upsertBlog = (blog: SavedBlog) =>
 				(blogs) => ({ blogs })
 			);
 		}),
-		RTE.tap(saveData)
+		RTE.tap(savePluginData)
 	);
 
 export const getBlog = (id: string) =>
 	pipe(
-		loadData,
+		loadPluginData,
 		RTE.chainW((data) =>
 			pipe(
 				data.blogs,
 				A.findFirst((blog: SavedBlog) => blog.id === id),
-				RTE.fromOption(() => "blog not found")
+				RTE.fromOption(() => new Error("blog not found"))
 			)
 		)
 	);
 
 export const getBlogs = pipe(
-	loadData,
+	loadPluginData,
 	RTE.map((data) => data.blogs as SavedBlog[])
 );

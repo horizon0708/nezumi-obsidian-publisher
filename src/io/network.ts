@@ -1,5 +1,7 @@
 import * as r from "fp-ts/Record";
 import * as A from "fp-ts/Array";
+import * as E from "fp-ts/Either";
+import * as TE from "fp-ts/TaskEither";
 import * as RTE from "fp-ts/ReaderTaskEither";
 import { flow, pipe } from "fp-ts/function";
 import * as t from "io-ts";
@@ -8,6 +10,7 @@ import { concatAll } from "fp-ts/lib/Monoid";
 import { successResultM, errorResultM, resultM } from "../utils";
 import { buildFormDataBodyTE, fetchUrl } from "./obsidian-fp";
 import { AppContext, BaseContext } from "src/actions/types";
+import { DecodeError } from "src/shared/errors";
 
 enum HttpMethod {
 	GET = "GET",
@@ -55,8 +58,18 @@ const buildUrl = (ep: string) =>
 const sendRequest = <T extends t.Props>(r: t.TypeC<T>) =>
 	flow(
 		fetchUrl,
-		RTE.fromTaskEither,
-		RTE.chainW((response) => pipe(response.json, r.decode, RTE.fromEither))
+		TE.chainEitherKW((res) =>
+			pipe(
+				r.decode(res.json),
+				E.mapLeft(
+					(errors) =>
+						new DecodeError(
+							errors,
+							"Server response does not match schema. Please try updating the plugin."
+						)
+				)
+			)
+		)
 	);
 
 /**
@@ -91,7 +104,7 @@ export const pingBlogFP = (payload: PingBlogPayload) =>
 		})),
 		RTE.let("url", () => payload.endpoint + "/ping"),
 		RTE.let("method", () => HttpMethod.GET),
-		RTE.chainW(sendRequest(pingBlogResponse))
+		RTE.chainTaskEitherK(sendRequest(pingBlogResponse))
 	);
 
 /**
@@ -125,7 +138,7 @@ export const getFileListFp = pipe(
 		buildHeaders([headers.jsonContentType, headers.apiKey])
 	),
 	RTE.apSW("method", RTE.of(HttpMethod.GET)),
-	RTE.chainW(sendRequest(getFilesResponse))
+	RTE.chainTaskEitherK(sendRequest(getFilesResponse))
 );
 
 /**
@@ -156,7 +169,7 @@ export const uploadPost = (p: UploadPostPayload) =>
 			buildHeaders([headers.jsonContentType, headers.apiKey])
 		),
 		RTE.apSW("method", RTE.of(HttpMethod.POST)),
-		RTE.chainW(sendRequest(uploadPostResponse))
+		RTE.chainTaskEitherK(sendRequest(uploadPostResponse))
 	);
 
 const buildUploadMany =
@@ -220,7 +233,7 @@ export const uploadAsset = (p: UploadAssetPayload) =>
 			])
 		),
 		RTE.apSW("method", RTE.of(HttpMethod.POST)),
-		RTE.chainW(flow(fetchUrl, RTE.fromTaskEither))
+		RTE.chainTaskEitherKW(fetchUrl)
 	);
 
 export const uploadAssets = buildUploadMany(uploadAsset);
