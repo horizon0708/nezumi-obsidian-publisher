@@ -18,7 +18,7 @@ type BlogListContext = {
 	onAdd: () => void;
 };
 
-export class NewSettingTab extends PluginSettingTab {
+export class TuhuaSettingTab extends PluginSettingTab {
 	plugin: Plugin;
 	constructor(app: App, plugin: Plugin) {
 		super(app, plugin);

@@ -1,4 +1,4 @@
-import { FormField } from "src/settings-new/edit-modal";
+import { FormField } from "src/settings/edit-modal";
 import { buildPluginConfig } from "src/plugin-config";
 import * as t from "io-ts";
 import { withMessage } from "io-ts-types";
