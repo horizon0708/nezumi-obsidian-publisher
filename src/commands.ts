@@ -5,7 +5,7 @@ import * as RTE from "fp-ts/ReaderTaskEither";
 import * as A from "fp-ts/Array";
 import * as RIO from "fp-ts/ReaderIO";
 import { upload } from "./actions/upload/upload";
-import { showNotice } from "./io/obsidian-fp";
+import { showErrorNoticeRTE } from "./shared/notifications";
 
 export const registerPushUpdateCommand = () =>
 	pipe(
@@ -18,7 +18,7 @@ export const registerPushUpdateCommand = () =>
 				RTE.rightReaderIO
 			)
 		),
-		RTE.tapError(showErrorNotice)
+		RTE.tapError(showErrorNoticeRTE)
 	);
 
 const addBlogCommand = (blog: SavedBlog) => (ctx: PluginContext) => () => {
@@ -31,5 +31,3 @@ const addBlogCommand = (blog: SavedBlog) => (ctx: PluginContext) => () => {
 		},
 	});
 };
-
-const showErrorNotice = RTE.fromIOK((e: Error) => () => showNotice(e.message));

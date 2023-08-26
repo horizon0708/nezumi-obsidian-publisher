@@ -7,6 +7,7 @@ import * as O from "fp-ts/Option";
 import { getFile, getFiles } from "src/io/obsidian-fp";
 import { buildItemsRTE } from "./build-items";
 import { getType } from "src/utils";
+import { showErrorNoticeRTE } from "src/shared/notifications";
 
 export const planUpload = () =>
 	pipe(
@@ -48,7 +49,8 @@ export const planUpload = () =>
 				items,
 				toDelete: Array.from(serverMap.keys()),
 			};
-		})
+		}),
+		RTE.tapError(showErrorNoticeRTE)
 	);
 
 const getSyncCandidateFiles = pipe(

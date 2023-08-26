@@ -10,6 +10,7 @@ import { blogModalFormFields, buildUpdateFormFields } from "./modal-config";
 import { buildPluginConfig } from "src/plugin-config";
 import { PluginContext } from "src/actions/types";
 import { showNotice } from "src/io/obsidian-fp";
+import { showErrorNoticeRTE } from "src/shared/notifications";
 
 type BlogListContext = {
 	containerEl: HTMLElement;
@@ -35,7 +36,7 @@ export class TuhuaSettingTab extends PluginSettingTab {
 			onDelete: async (id) => {
 				await pipe(
 					deleteBlog(id),
-					RTE.tapError(showErrorNotice),
+					RTE.tapError(showErrorNoticeRTE),
 					RTE.tapIO(() => () => this.display())
 				)(pluginContext)();
 			},
@@ -51,7 +52,7 @@ export class TuhuaSettingTab extends PluginSettingTab {
 						});
 						modal.open();
 					}),
-					RTE.tapError(showErrorNotice)
+					RTE.tapError(showErrorNoticeRTE)
 				)(pluginContext)();
 			},
 			onAdd: () => {
@@ -73,8 +74,6 @@ export class TuhuaSettingTab extends PluginSettingTab {
 		)(context)();
 	}
 }
-
-const showErrorNotice = RTE.fromIOK((e: Error) => () => showNotice(e.message));
 
 const createAddBlogButton =
 	({ containerEl, onAdd }: BlogListContext) =>
