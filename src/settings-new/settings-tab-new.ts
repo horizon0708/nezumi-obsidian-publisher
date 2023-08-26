@@ -9,6 +9,7 @@ import { BlogEditModal } from "./edit-modal";
 import { blogModalFormFields, buildUpdateFormFields } from "./modal-config";
 import { buildPluginConfig } from "src/plugin-config";
 import { PluginContext } from "src/actions/types";
+import { showNotice } from "src/io/obsidian-fp";
 
 export class NewSettingTab extends PluginSettingTab {
 	plugin: Plugin;
@@ -25,9 +26,11 @@ export class NewSettingTab extends PluginSettingTab {
 		const context: BlogListContext & PluginContext = {
 			containerEl: this.containerEl,
 			onDelete: async (id) => {
-				const b = await deleteBlog(id)(pluginContext)();
-				console.log(b);
-				this.display();
+				await pipe(
+					deleteBlog(id),
+					RTE.tapError(showErrorNotice),
+					RTE.tapIO(() => () => this.display())
+				)(pluginContext)();
 			},
 			onEdit: async (id) => {
 				await pipe(
@@ -40,7 +43,8 @@ export class NewSettingTab extends PluginSettingTab {
 							onSubmit: () => this.display(),
 						});
 						modal.open();
-					})
+					}),
+					RTE.tapError(showErrorNotice)
 				)(pluginContext)();
 			},
 			onAdd: () => {
@@ -62,6 +66,8 @@ export class NewSettingTab extends PluginSettingTab {
 		)(context)();
 	}
 }
+
+const showErrorNotice = RTE.fromIOK((e: Error) => () => showNotice(e.message));
 
 type BlogListContext = {
 	containerEl: HTMLElement;
