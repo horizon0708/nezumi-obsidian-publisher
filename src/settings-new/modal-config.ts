@@ -4,7 +4,7 @@ import * as t from "io-ts";
 import { withMessage } from "io-ts-types";
 import * as A from "fp-ts/Array";
 import { App, TFolder } from "obsidian";
-import { SavedBlog } from "src/io/plugin-data";
+import { SavedBlog } from "src/shared/plugin-data";
 
 // If you update the order, update `buildUpdateFormFields` below!
 export const blogModalFormFields: FormField[] = [

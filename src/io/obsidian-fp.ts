@@ -5,8 +5,7 @@ import * as R from "fp-ts/Reader";
 import { BaseContext, PluginContext } from "src/actions/types";
 import * as RTE from "fp-ts/ReaderTaskEither";
 import * as TE from "fp-ts/TaskEither";
-import { FileError } from "src/shared/file-error";
-import { NetworkError } from "src/shared/errors";
+import { FileError, NetworkError } from "src/shared/errors";
 
 /*
  * This module is a **thin** wrapper for the Obsidian API
@@ -41,7 +40,7 @@ export const buildFmUpdater = (processFn: (fm: any) => void) => (file: TFile) =>
 		pipe(
 			TE.tryCatch(
 				() => app.fileManager.processFrontMatter(file, processFn),
-				() => new FileError("Failed to update FM", file)
+				() => new FileError("Failed to update FM", file.path)
 			),
 			RTE.fromTaskEither
 		)
@@ -52,7 +51,7 @@ export const cachedRead =
 	({ app }: BaseContext) =>
 		TE.tryCatch(
 			() => app.vault.cachedRead(file),
-			() => new FileError("Failed to read file", file)
+			() => new FileError("Failed to read file", file.path)
 		);
 
 export const readBinary =
@@ -60,7 +59,7 @@ export const readBinary =
 	({ app }: BaseContext) =>
 		TE.tryCatch(
 			() => app.vault.readBinary(file),
-			() => new FileError("Failed to read file", file)
+			() => new FileError("Failed to read file", file.path)
 		);
 
 export const getResolvedLinks =

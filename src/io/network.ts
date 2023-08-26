@@ -173,7 +173,7 @@ export const uploadPost = (p: UploadPostPayload) =>
 	);
 
 const buildUploadMany =
-	<T, R, A>(rte: (t: T) => RTE.ReaderTaskEither<R, unknown, A>) =>
+	<T, R, A>(rte: (t: T) => RTE.ReaderTaskEither<R, Error, A>) =>
 	(items: T[]) =>
 		pipe(
 			items,

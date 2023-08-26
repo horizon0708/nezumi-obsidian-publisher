@@ -1,6 +1,6 @@
 import { pipe } from "fp-ts/lib/function";
 import { PluginContext } from "./actions/types";
-import { SavedBlog, getBlogs } from "./io/plugin-data";
+import { SavedBlog, getBlogs } from "./shared/plugin-data";
 import * as RTE from "fp-ts/ReaderTaskEither";
 import * as A from "fp-ts/Array";
 import * as RIO from "fp-ts/ReaderIO";

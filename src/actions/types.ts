@@ -2,8 +2,8 @@ import { App, TFile, Plugin } from "obsidian";
 import { buildPluginConfig } from "src/plugin-config";
 import * as O from "fp-ts/Option";
 import * as RTE from "fp-ts/ReaderTaskEither";
-import { FileError } from "../shared/file-error";
-import { SavedBlog } from "src/io/plugin-data";
+import { SavedBlog } from "src/shared/plugin-data";
+import { FileError } from "src/shared/errors";
 
 export type AppContext = {
 	app: App;

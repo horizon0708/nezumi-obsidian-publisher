@@ -17,13 +17,13 @@ import {
 	Post,
 	RTEBuilder,
 } from "../types";
-import { FileError } from "../../shared/file-error";
 import { separatedMonoid } from "../../shared/separated-monoid";
 import { concatAll } from "fp-ts/lib/Monoid";
 import { cachedRead, getResolvedLinks, readBinary } from "src/io/obsidian-fp";
 import { getSlug } from "./get-slug";
 import { getType, liftRT } from "src/utils";
 import SparkMD5 from "spark-md5";
+import { FileError } from "src/shared/errors";
 
 const eitherMonoid = separatedMonoid<FileError, Item>();
 

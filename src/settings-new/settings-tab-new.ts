@@ -4,7 +4,7 @@ import * as RTE from "fp-ts/ReaderTaskEither";
 import * as A from "fp-ts/Array";
 import { pipe } from "fp-ts/lib/function";
 import { Blog } from "../io/network";
-import { deleteBlog, getBlog, getBlogs } from "../io/plugin-data";
+import { deleteBlog, getBlog, getBlogs } from "../shared/plugin-data";
 import { BlogEditModal } from "./edit-modal";
 import { blogModalFormFields, buildUpdateFormFields } from "./modal-config";
 import { buildPluginConfig } from "src/plugin-config";

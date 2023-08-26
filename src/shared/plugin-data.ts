@@ -2,7 +2,7 @@ import * as A from "fp-ts/Array";
 import * as RTE from "fp-ts/ReaderTaskEither";
 import * as O from "fp-ts/Option";
 import { pipe } from "fp-ts/lib/function";
-import { loadData, saveData } from "./obsidian-fp";
+import { loadData, saveData } from "../io/obsidian-fp";
 import * as t from "io-ts";
 import { blogSchema } from "../io/network";
 

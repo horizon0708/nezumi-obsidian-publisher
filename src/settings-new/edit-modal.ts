@@ -10,7 +10,7 @@ import { pipe } from "fp-ts/lib/function";
 import { blogModalFormSchema } from "src/settings-new/modal-config";
 import { pingBlogFP } from "../io/network";
 import { buildPluginConfig } from "src/plugin-config";
-import { upsertBlog } from "../io/plugin-data";
+import { upsertBlog } from "../shared/plugin-data";
 import { DecodeError } from "src/shared/errors";
 import { showNotice } from "src/io/obsidian-fp";
 
