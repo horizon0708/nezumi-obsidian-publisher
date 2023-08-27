@@ -9,19 +9,21 @@ import { BlogEditModal } from "./edit-modal";
 import { blogModalFormFields, buildUpdateFormFields } from "./modal-config";
 import { buildPluginConfig } from "src/plugin-config";
 import { PluginContext } from "src/actions/types";
-import { showNotice } from "src/io/obsidian-fp";
 import { showErrorNoticeRTE } from "src/shared/notifications";
+import BlogSync from "main";
+import { LogsModal } from "./logs-modal";
 
 type BlogListContext = {
 	containerEl: HTMLElement;
 	onEdit: (id: string) => Promise<void>;
 	onDelete: (id: string) => Promise<void>;
 	onAdd: () => void;
+	onViewLog: (id: string) => Promise<void>;
 };
 
 export class TuhuaSettingTab extends PluginSettingTab {
-	plugin: Plugin;
-	constructor(app: App, plugin: Plugin) {
+	plugin: BlogSync;
+	constructor(app: App, plugin: BlogSync) {
 		super(app, plugin);
 		this.plugin = plugin;
 	}
@@ -30,6 +32,7 @@ export class TuhuaSettingTab extends PluginSettingTab {
 		this.containerEl.empty();
 		const pluginContext = { app: this.app, plugin: this.plugin };
 		const modal = new BlogEditModal(this.app, this.plugin);
+		const logModal = new LogsModal(this.app, this.plugin);
 
 		const context: BlogListContext & PluginContext = {
 			containerEl: this.containerEl,
@@ -63,6 +66,10 @@ export class TuhuaSettingTab extends PluginSettingTab {
 				});
 				modal.open();
 			},
+			onViewLog: async (id) => {
+				await logModal.render(id);
+				logModal.open();
+			},
 			...pluginContext,
 		};
 
@@ -90,7 +97,7 @@ const createAddBlogButton =
 const createBlogItemList = (blogs: Blog[]) => {
 	const createBlogItem =
 		(blog: Blog) =>
-		({ containerEl, onEdit, onDelete }: BlogListContext) =>
+		({ containerEl, onEdit, onDelete, onViewLog }: BlogListContext) =>
 		() => {
 			const el = new DocumentFragment();
 			const anchor = el.createEl("a");
@@ -103,6 +110,11 @@ const createBlogItemList = (blogs: Blog[]) => {
 			new Setting(containerEl)
 				.setName(blog.name)
 				.setDesc(el)
+				.addButton((btn) => {
+					btn.setButtonText("logs").onClick(async () => {
+						await onViewLog(blog.id);
+					});
+				})
 				.addButton((btn) => {
 					btn.setIcon("edit").onClick(() => onEdit(blog.id));
 				})

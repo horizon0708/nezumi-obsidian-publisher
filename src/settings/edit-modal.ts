@@ -12,6 +12,7 @@ import { buildPluginConfig } from "src/plugin-config";
 import { upsertBlog } from "../shared/plugin-data";
 import { DecodeError } from "src/shared/errors";
 import { showNotice } from "src/io/obsidian-fp";
+import BlogSync from "main";
 
 export type FormField = {
 	key: string;
@@ -48,8 +49,8 @@ type ModalViewModel = {
 type FormError = { key: string; msg: string | undefined };
 
 export class BlogEditModal extends Modal {
-	private plugin: Plugin;
-	constructor(app: App, plugin: Plugin) {
+	private plugin: BlogSync;
+	constructor(app: App, plugin: BlogSync) {
 		super(app);
 		this.plugin = plugin;
 	}

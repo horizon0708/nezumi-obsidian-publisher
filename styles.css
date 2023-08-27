@@ -5,8 +5,24 @@ button[disabled]{
 	opacity: 0.5;
 	cursor: not-allowed;
 }
+.log-modal {
+	overflow: hidden;
+	display: flex;
+	flex-direction: column;
+	padding: 0;
+}
 
-
+.log-container {
+	overflow: scroll;
+    flex-grow: 1;
+	font-size: small;
+	font-family: var(--font-monospace);
+    font-size: var(--font-ui-smaller);
+    color: var(--text-muted);
+    border-top: 1px solid var(--background-modifier-border);
+    border-bottom: 1px solid var(--background-modifier-border);
+	background-color: var(--background-secondary);
+}
 
 .error-message {
 	color: 	#ff3333;

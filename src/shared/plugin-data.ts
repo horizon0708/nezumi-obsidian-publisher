@@ -5,11 +5,27 @@ import { pipe } from "fp-ts/lib/function";
 import { loadData, saveData } from "../io/obsidian-fp";
 import * as t from "io-ts";
 import { blogSchema } from "../io/network";
+import { BlogContext } from "src/actions/types";
+
+const logLevel = t.keyof({
+	debug: null,
+	info: null,
+	warning: null,
+	error: null,
+});
+export type LogLevel = t.TypeOf<typeof logLevel>;
 
 const logSchema = t.type({
 	timestamp: t.string,
 	message: t.string,
+	level: t.keyof({
+		debug: null,
+		info: null,
+		warning: null,
+		error: null,
+	}),
 });
+export type Log = t.TypeOf<typeof logSchema>;
 
 const blogClientData = t.type({
 	apiKey: t.string,
@@ -91,3 +107,55 @@ export const getBlogs = pipe(
 	loadPluginData,
 	RTE.map((data) => data.blogs as SavedBlog[])
 );
+
+// maybe this should be RT instead of RTE, failing logging shouldn't fail the whole flow
+// for now I've made it never fail
+export const appendLog = (message: string, level: LogLevel = "info") =>
+	pipe(
+		RTE.ask<BlogContext>(),
+		RTE.chainW((e) => getBlog(e.blog.id)),
+		RTE.map((blog) => ({
+			...blog,
+			logs: pipe(
+				blog.logs,
+				A.append({
+					timestamp: new Date().toISOString(),
+					message,
+					level,
+				}),
+				truncateArray(1000)
+			),
+		})),
+		RTE.tap(upsertBlog),
+		RTE.orElseW((e) => RTE.of(e))
+	);
+
+const truncateArray =
+	(maxLength: number) =>
+	<A>(arr: A[]) => {
+		arr.length > maxLength ? arr.shift() : arr;
+		return arr;
+	};
+
+export const clearLogs = (blogId: string) =>
+	pipe(
+		getBlog(blogId),
+		RTE.map((blog) => ({
+			...blog,
+			logs: [],
+		})),
+		RTE.tap(upsertBlog)
+	);
+
+export const getLogs = (blogId: string) =>
+	pipe(
+		getBlog(blogId),
+		RTE.map((b) => b.logs)
+	);
+
+export const printLogs = (blogId: string) =>
+	pipe(
+		getBlog(blogId),
+		RTE.map((b) => b.logs),
+		RTE.tapIO((logs) => () => console.log(logs))
+	);

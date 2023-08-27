@@ -4,10 +4,15 @@ import * as O from "fp-ts/Option";
 import * as RTE from "fp-ts/ReaderTaskEither";
 import { SavedBlog } from "src/shared/plugin-data";
 import { FileError } from "src/shared/errors";
+import BlogSync from "main";
 
 export type AppContext = {
 	app: App;
 	pluginConfig: ReturnType<typeof buildPluginConfig>;
+};
+
+export type BlogContext = {
+	blog: SavedBlog;
 };
 
 export type BaseContext = {
@@ -18,7 +23,7 @@ export type BaseContext = {
 
 export type PluginContext = {
 	app: App;
-	plugin: Plugin;
+	plugin: BlogSync;
 	// pluginConfig: ReturnType<typeof buildPluginConfig>;
 };
 
@@ -31,6 +36,7 @@ export enum FileStatus {
 	READ_ERROR = "SKIP/READ_ERROR",
 	UPLOAD_SUCCESS = "UPLOAD/SUCCESS",
 	UPLOAD_ERROR = "UPLOAD/FAILURE",
+	UPLOAD_CANCELLED = "UPLOAD/CANCELLED",
 }
 
 export type ItemType = FileType.POST | FileType.ASSET;
@@ -52,6 +58,7 @@ export type BaseItem = ErroredItem & {
 	embeddedAssets: Set<string>;
 	serverMd5: O.Option<string>;
 	type: FileType;
+	sessionId: string;
 };
 
 export type Post = BaseItem & {

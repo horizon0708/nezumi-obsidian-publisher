@@ -8,6 +8,7 @@ import { getFile, getFiles } from "src/io/obsidian-fp";
 import { buildItemsRTE } from "./build-items";
 import { getType } from "src/utils";
 import { showErrorNoticeRTE } from "src/shared/notifications";
+import { appendLog } from "src/shared/plugin-data";
 
 export const planUpload = () =>
 	pipe(
@@ -50,8 +51,27 @@ export const planUpload = () =>
 				toDelete: Array.from(serverMap.keys()),
 			};
 		}),
+		RTE.tap(logPlanResult),
 		RTE.tapError(showErrorNoticeRTE)
 	);
+
+type LogPlanResultArgs = { errors: Error[]; items: Item[]; toDelete: string[] };
+const logPlanResult = ({ errors, items, toDelete }: LogPlanResultArgs) => {
+	const errorStrings = errors.map((e) => e.message);
+	const itemStrings = items.map((i) => `${i.file.path} - ${i.status}`);
+	const deleteString = `deleting ${
+		toDelete.length
+	} files from server: ${toDelete.join(", ")}`;
+	const logString = [
+		"--- Upload Plan Start ---",
+		...errorStrings,
+		...itemStrings,
+		deleteString,
+		"--- Upload Plan End ---",
+	];
+
+	return pipe(logString, A.map(appendLog), RTE.sequenceSeqArray);
+};
 
 const getSyncCandidateFiles = pipe(
 	RTE.ask<BaseContext>(),
