@@ -25,7 +25,7 @@ import {
 	getResolvedLinks,
 	readBinary,
 } from "src/shared/obsidian-fp";
-import { getType, liftRT } from "src/utils";
+import { getType, liftRT } from "src/shared/utils";
 import SparkMD5 from "spark-md5";
 import { getCurrentUploadSessionIdRTE } from "src/shared/plugin-data/upload-session";
 
