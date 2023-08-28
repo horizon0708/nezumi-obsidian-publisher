@@ -8,9 +8,8 @@ import * as A from "fp-ts/Array";
 import { uploadItems } from "../upload-items";
 import { showNotice } from "src/io/obsidian-fp";
 import { deleteFiles } from "src/io/network";
-import { setNewUploadSessionIO } from "src/shared/upload-session";
 import { showErrorNoticeRTE } from "src/shared/notifications";
-import { appendLog } from "src/shared/plugin-data";
+import { logForSession, setNewUploadSession } from "src/shared/plugin-data";
 
 export const upload = async (
 	context: Omit<BaseContext, "pluginConfig"> & PluginContext
@@ -19,10 +18,9 @@ export const upload = async (
 	const deps = { ...context, pluginConfig };
 
 	const res = await pipe(
-		RTE.rightReaderIO(setNewUploadSessionIO),
-		RTE.chainW(planUpload),
+		setNewUploadSession,
+		RTE.chainW(() => planUpload()),
 		// IMPROVEMENT: return delete result
-		RTE.tap(() => appendLog("Starting upload")),
 		RTE.tap(({ toDelete }) => deleteFiles({ keys: toDelete })),
 		RTE.chainW(({ items }) => uploadItems(items)),
 		RTE.map(([r, skipped]) =>
@@ -42,8 +40,8 @@ export const upload = async (
 				}
 			)
 		),
-		RTE.tap((result) =>
-			appendLog(
+		RTE.tapReaderTask((result) =>
+			logForSession(
 				`Upload complete. ${result.successCount} files uploaded, ${result.errorCount} errors, ${result.skippedCount} skipped.`
 			)
 		),

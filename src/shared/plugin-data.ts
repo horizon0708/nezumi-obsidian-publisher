@@ -1,44 +1,21 @@
-import * as A from "fp-ts/Array";
 import * as RTE from "fp-ts/ReaderTaskEither";
-import * as O from "fp-ts/Option";
 import { pipe } from "fp-ts/lib/function";
 import { loadData, saveData } from "../io/obsidian-fp";
 import * as t from "io-ts";
-import { blogSchema } from "../io/network";
-import { BlogContext } from "src/actions/types";
-
-const logLevel = t.keyof({
-	debug: null,
-	info: null,
-	warning: null,
-	error: null,
-});
-export type LogLevel = t.TypeOf<typeof logLevel>;
-
-const logSchema = t.type({
-	timestamp: t.string,
-	message: t.string,
-	level: t.keyof({
-		debug: null,
-		info: null,
-		warning: null,
-		error: null,
-	}),
-});
-export type Log = t.TypeOf<typeof logSchema>;
-
-const blogClientData = t.type({
-	apiKey: t.string,
-	endpoint: t.string,
-	syncFolder: t.string,
-	logs: t.array(logSchema),
-});
-
-const savedBlogSchema = t.intersection([blogSchema, blogClientData]);
-export type SavedBlog = t.TypeOf<typeof savedBlogSchema>;
+import * as RT from "fp-ts/ReaderTask";
+import {
+	appendNewUploadSession,
+	appendToSessionLog,
+	getCurrentUploadSessionIdRTE,
+	getSession,
+	uploadSessionSchema,
+} from "./plugin-data/upload-session";
+import * as B from "./plugin-data/blog";
+import { Log, LogLevel } from "./plugin-data/upload-session/log";
 
 const pluginData = t.type({
-	blogs: t.array(savedBlogSchema),
+	blogs: t.array(B.savedBlogSchema),
+	uploadSessions: t.array(uploadSessionSchema),
 });
 export type PluginData = t.TypeOf<typeof pluginData>;
 
@@ -54,39 +31,30 @@ const savePluginData = (newData: PluginData) =>
 		RTE.mapLeft(() => new Error("Could not save plugin data"))
 	);
 
+// ----------------
+// Blogs
+// ----------------
 export const deleteBlog = (id: string) =>
 	pipe(
 		RTE.Do,
 		RTE.apSW("data", loadPluginData),
 		RTE.bindW("blogs", ({ data: { blogs } }) =>
 			pipe(
-				blogs,
-				A.findIndex((blog: SavedBlog) => blog.id === id),
-				(e) => {
-					console.log(e);
-					return e;
-				},
-				O.chain((ind) => A.deleteAt(ind)(blogs)),
+				B.deleteBlog(blogs, id),
 				RTE.fromOption(() => new Error("blog not found"))
 			)
 		),
 		RTE.tap(({ data, blogs }) => savePluginData({ ...data, blogs }))
 	);
 
-// NEXT TODO: upsert
-export const upsertBlog = (blog: SavedBlog) =>
+export const upsertBlog = (blog: B.SavedBlog) =>
 	pipe(
 		loadPluginData,
-		RTE.map(({ blogs }) => {
-			return pipe(
-				blogs,
-				A.map((b) => (b.id === blog.id ? blog : b)),
-				(updateBlogs) =>
-					updateBlogs.findIndex((b) => b.id === blog.id) === -1
-						? A.append(blog)(updateBlogs)
-						: updateBlogs,
-				(blogs) => ({ blogs })
-			);
+		RTE.map(({ blogs, ...rest }) => {
+			return {
+				blogs: B.upsertBlog(blogs, blog),
+				...rest,
+			};
 		}),
 		RTE.tap(savePluginData)
 	);
@@ -96,8 +64,7 @@ export const getBlog = (id: string) =>
 		loadPluginData,
 		RTE.chainW((data) =>
 			pipe(
-				data.blogs,
-				A.findFirst((blog: SavedBlog) => blog.id === id),
+				B.getBlog(data.blogs, id),
 				RTE.fromOption(() => new Error("blog not found"))
 			)
 		)
@@ -105,57 +72,82 @@ export const getBlog = (id: string) =>
 
 export const getBlogs = pipe(
 	loadPluginData,
-	RTE.map((data) => data.blogs as SavedBlog[])
+	RTE.map((data) => data.blogs as B.SavedBlog[])
 );
 
-// maybe this should be RT instead of RTE, failing logging shouldn't fail the whole flow
-// for now I've made it never fail
-export const appendLog = (message: string, level: LogLevel = "info") =>
+// ----------------
+// sessions
+// ----------------
+export const setNewUploadSession = pipe(
+	loadPluginData,
+	RTE.chainW((pluginData) =>
+		pipe(
+			pluginData.uploadSessions,
+			appendNewUploadSession,
+			RTE.map((uploadSessions) => ({ ...pluginData, uploadSessions }))
+		)
+	),
+	RTE.chainW(savePluginData)
+);
+
+export const clearUploadSessions = pipe(
+	loadPluginData,
+	RTE.map((pluginData) => ({
+		...pluginData,
+		uploadSessions: [],
+	})),
+	RTE.chainW(savePluginData)
+);
+
+// ----------------
+// logs
+// ----------------
+export const logForSession = (message: string, level: LogLevel = "info") =>
 	pipe(
-		RTE.ask<BlogContext>(),
-		RTE.chainW((e) => getBlog(e.blog.id)),
-		RTE.map((blog) => ({
-			...blog,
-			logs: pipe(
-				blog.logs,
-				A.append({
-					timestamp: new Date().toISOString(),
+		RTE.Do,
+		RTE.apSW("sessionId", getCurrentUploadSessionIdRTE),
+		RTE.apSW("pluginData", pipe(loadPluginData)),
+		RTE.map(({ sessionId, pluginData }) => {
+			return {
+				...pluginData,
+				uploadSessions: appendToSessionLog(
 					message,
-					level,
-				}),
-				truncateArray(1000)
-			),
-		})),
-		RTE.tap(upsertBlog),
-		RTE.orElseW((e) => RTE.of(e))
+					level
+				)(pluginData.uploadSessions)(sessionId),
+			};
+		}),
+		RTE.chainW(savePluginData),
+		RTE.tapError((e) =>
+			RTE.fromIO(() => {
+				console.warn("logging failed with error:");
+				console.warn(e);
+			})
+		),
+		foldRTE(undefined as void)
 	);
 
-const truncateArray =
-	(maxLength: number) =>
-	<A>(arr: A[]) => {
-		arr.length > maxLength ? arr.shift() : arr;
-		return arr;
-	};
-
-export const clearLogs = (blogId: string) =>
+export const getLogsForSession = (sessionId: string) =>
 	pipe(
-		getBlog(blogId),
-		RTE.map((blog) => ({
-			...blog,
-			logs: [],
-		})),
-		RTE.tap(upsertBlog)
+		loadPluginData,
+		RTE.chainW((pluginData) =>
+			pipe(
+				pluginData.uploadSessions,
+				getSession(sessionId),
+				RTE.fromOption(() => new Error("session not found")),
+				RTE.map((session) => session.logs)
+			)
+		)
 	);
 
-export const getLogs = (blogId: string) =>
-	pipe(
-		getBlog(blogId),
-		RTE.map((b) => b.logs)
+const foldRTE = <A>(a: A) =>
+	RTE.foldW(
+		() => RT.of(a),
+		() => RT.of(a)
 	);
 
-export const printLogs = (blogId: string) =>
-	pipe(
-		getBlog(blogId),
-		RTE.map((b) => b.logs),
-		RTE.tapIO((logs) => () => console.log(logs))
-	);
+//  ----------
+//  Re exports
+//  ----------
+
+export type { SavedBlog } from "./plugin-data/blog";
+export type { Log, LogLevel } from "./plugin-data/upload-session/log";

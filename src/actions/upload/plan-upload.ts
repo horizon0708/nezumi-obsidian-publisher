@@ -4,11 +4,12 @@ import { getFileListFp } from "src/io/network";
 import { BaseContext, FileStatus, FileType, Item } from "../types";
 import * as A from "fp-ts/Array";
 import * as O from "fp-ts/Option";
+import * as RT from "fp-ts/ReaderTask";
 import { getFile, getFiles } from "src/io/obsidian-fp";
 import { buildItemsRTE } from "./build-items";
 import { getType } from "src/utils";
 import { showErrorNoticeRTE } from "src/shared/notifications";
-import { appendLog } from "src/shared/plugin-data";
+import { logForSession } from "src/shared/plugin-data";
 
 export const planUpload = () =>
 	pipe(
@@ -70,7 +71,12 @@ const logPlanResult = ({ errors, items, toDelete }: LogPlanResultArgs) => {
 		"--- Upload Plan End ---",
 	];
 
-	return pipe(logString, A.map(appendLog), RTE.sequenceSeqArray);
+	return pipe(
+		logString,
+		A.map(logForSession),
+		RT.sequenceArray,
+		RTE.rightReaderTask
+	);
 };
 
 const getSyncCandidateFiles = pipe(

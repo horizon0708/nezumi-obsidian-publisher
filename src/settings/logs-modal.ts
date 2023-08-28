@@ -1,6 +1,6 @@
 import { pipe } from "fp-ts/lib/function";
 import { App, Modal } from "obsidian";
-import { Log, getLogs } from "src/shared/plugin-data";
+import { Log, getLogsForSession } from "src/shared/plugin-data";
 import * as RTE from "fp-ts/ReaderTaskEither";
 import * as IO from "fp-ts/IO";
 import * as A from "fp-ts/Array";
@@ -13,7 +13,7 @@ export class LogsModal extends Modal {
 		this.plugin = plugin;
 	}
 
-	async render(blogId: string) {
+	async render(sessionId: string) {
 		this.contentEl.empty();
 		this.contentEl.addClass("log-modal");
 
@@ -24,7 +24,7 @@ export class LogsModal extends Modal {
 		list.addClass("log-container");
 
 		return await pipe(
-			getLogs(blogId),
+			getLogsForSession(sessionId),
 			RTE.chainIOK(renderLog(list))
 		)({
 			app: this.app,

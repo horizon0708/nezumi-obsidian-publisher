@@ -23,7 +23,7 @@ import { cachedRead, getResolvedLinks, readBinary } from "src/io/obsidian-fp";
 import { getSlug } from "./get-slug";
 import { getType, liftRT } from "src/utils";
 import SparkMD5 from "spark-md5";
-import { getUploadSessionIdRTE } from "src/shared/upload-session";
+import { getCurrentUploadSessionIdRTE } from "src/shared/plugin-data/upload-session";
 
 const eitherMonoid = separatedMonoid<Error, Item>();
 
@@ -54,7 +54,7 @@ const buildItem = (file: TFile) =>
 		RTE.bind("md5", ({ type }) => getFileMd5(file, type)),
 		RTE.apSW("serverPath", getServerPathRTE(file.path)),
 		RTE.apSW("embeddedAssets", getEmbeededAssetsRTE(file.path)),
-		RTE.apSW("sessionId", getUploadSessionIdRTE),
+		RTE.apSW("sessionId", getCurrentUploadSessionIdRTE),
 		RTE.chainW(buildPostOrAsset),
 		RTE.foldW(liftRT(eitherMonoid.fromLeft), liftRT(eitherMonoid.fromRight))
 	);

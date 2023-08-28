@@ -1,19 +1,12 @@
 import { pipe } from "fp-ts/lib/function";
 import { PluginContext } from "./actions/types";
-import {
-	SavedBlog,
-	appendLog,
-	clearLogs,
-	getBlogs,
-	printLogs,
-} from "./shared/plugin-data";
+import { SavedBlog, clearUploadSessions, getBlogs } from "./shared/plugin-data";
 import * as RTE from "fp-ts/ReaderTaskEither";
 import * as A from "fp-ts/Array";
 import * as RIO from "fp-ts/ReaderIO";
 import { upload } from "./actions/upload/upload";
 import { showErrorNoticeRTE } from "./shared/notifications";
-import { deleteUploadSessionIO } from "./shared/upload-session";
-import { buildPluginConfig } from "./plugin-config";
+import { deleteCurrentUploadSessionID } from "./shared/plugin-data/upload-session";
 
 type BlogCommand = (blog: SavedBlog) => RIO.ReaderIO<PluginContext, void>;
 
@@ -21,9 +14,7 @@ export const registerBlogCommands = (
 	blogCommands: BlogCommand[] = [
 		addBlogUploadCommand,
 		stopUploadCommand,
-		addDebugLogCommand,
-		addDebugLogClearCommand,
-		addDebugLogPrint,
+		addDebugSessionClearCommand,
 	]
 ) => {
 	const addCommands = (blog: SavedBlog) =>
@@ -64,41 +55,18 @@ const stopUploadCommand = (blog: SavedBlog) => (ctx: PluginContext) => () => {
 		name: `Stop upload ${blog.name}`,
 		// TODO: check callback
 		callback: () => {
-			deleteUploadSessionIO({ ...ctx })();
+			deleteCurrentUploadSessionID({ ...ctx })();
 		},
 	});
 };
 
-const addDebugLogCommand = (blog: SavedBlog) => (ctx: PluginContext) => () => {
-	ctx.plugin.addCommand({
-		id: `xlog-blog-${blog.id}`,
-		name: `add test log to ${blog.name}`,
-		callback: async () => {
-			await appendLog("append log")({
-				...ctx,
-				blog,
-			})();
-		},
-	});
-};
-
-const addDebugLogClearCommand =
+const addDebugSessionClearCommand =
 	(blog: SavedBlog) => (ctx: PluginContext) => () => {
 		ctx.plugin.addCommand({
-			id: `xlog-blog-clear-${blog.id}`,
-			name: `clear logs for ${blog.name}`,
+			id: `debug-blog-session-clear-${blog.id}`,
+			name: `clear all sessions`,
 			callback: async () => {
-				await clearLogs(blog.id)({ ...ctx })();
+				await clearUploadSessions({ ...ctx })();
 			},
 		});
 	};
-
-const addDebugLogPrint = (blog: SavedBlog) => (ctx: PluginContext) => () => {
-	ctx.plugin.addCommand({
-		id: `xlog-blog-print-${blog.id}`,
-		name: `print all current logs for ${blog.name}`,
-		callback: async () => {
-			await printLogs(blog.id)({ ...ctx })();
-		},
-	});
-};

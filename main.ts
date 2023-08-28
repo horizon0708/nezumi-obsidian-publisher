@@ -1,7 +1,7 @@
 import { Plugin } from "obsidian";
 import { TuhuaSettingTab } from "src/settings/settings-tab";
 import { registerBlogCommands } from "src/commands";
-import { UploadSession } from "src/shared/upload-session";
+import { UploadSession } from "src/shared/plugin-data/upload-session";
 
 export default class BlogSync extends Plugin {
 	updateLog: Record<string, boolean>[] = [];

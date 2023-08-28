@@ -4,8 +4,8 @@ import * as A from "fp-ts/Array";
 import { Asset, FileStatus, FileType, Item, Post } from "./types";
 import { uploadAsset, uploadPost } from "src/io/network";
 import { cachedRead, readBinary } from "src/io/obsidian-fp";
-import { getUploadSessionIdRTE } from "src/shared/upload-session";
-import { appendLog } from "src/shared/plugin-data";
+import { getCurrentUploadSessionIdRTE } from "src/shared/plugin-data/upload-session";
+import { logForSession } from "src/shared/plugin-data";
 import { setItemStatus } from "./upload/build-items";
 
 export const uploadItems = (items: Item[]) =>
@@ -14,9 +14,10 @@ export const uploadItems = (items: Item[]) =>
 		A.partition((item) => item.status === FileStatus.PENDING),
 		({ left: skipped, right: pending }) =>
 			pipe(
-				appendLog(
+				logForSession(
 					`Starting upload. Skipping ${skipped.length} files and uploading ${pending.length} items.`
 				),
+				RTE.rightReaderTask,
 				// Is it worth prioitising post uploads over asset uploads?
 				RTE.chainW(() =>
 					pipe(A.map(uploadItem)(pending), RTE.sequenceSeqArray)
@@ -48,14 +49,16 @@ const uploadItem = (item: Item) => {
 	);
 
 	return pipe(
-		getUploadSessionIdRTE,
+		getCurrentUploadSessionIdRTE,
 		RTE.mapLeft(() => cancelledItem),
 		RTE.chainW(checkSessionEqual),
-		RTE.tap(() => logUploadStart(item)),
+		RTE.tapReaderTask(() =>
+			logForSession(`Uploading ${item.file.path}...`)
+		),
 		RTE.chainW(() => upload(item)),
 		// RTE.tapTaskEither(() => delayTE(5000)),
-		RTE.orElse((e) => RTE.of(e)),
-		RTE.tapIO((item) => () => console.log(`uploaded ${item.serverPath}`))
+		RTE.orElse((e) => RTE.of(e))
+		// RTE.tapIO((item) => () => console.log(`uploaded ${item.serverPath}`))
 	);
 };
 
@@ -100,17 +103,8 @@ const callUploadAsset = (asset: Asset) =>
 		RTE.orElse((e) => RTE.of(e))
 	);
 
-const logUploadStart = (item: Item) =>
-	pipe(
-		appendLog(`Uploading ${item.file.path}...`),
-		RTE.bimap(
-			() => item,
-			() => item
-		),
-		RTE.orElse(() => RTE.of(item))
-	);
-
-const logUploadResult = (item: Item) => appendLog(buildLog(item));
+const logUploadResult = (item: Item) =>
+	pipe(item, buildLog, logForSession, RTE.rightReaderTask);
 
 const buildLog = (item: Item) => {
 	switch (item.status) {
