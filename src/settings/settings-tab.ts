@@ -8,7 +8,7 @@ import { deleteBlog, getBlog, getBlogs } from "../shared/plugin-data";
 import { BlogEditModal } from "./edit-modal";
 import { blogModalFormFields, buildUpdateFormFields } from "./modal-config";
 import { buildPluginConfig } from "src/plugin-config";
-import { PluginContext } from "src/commands/types";
+import { PluginContext } from "src/shared/types";
 import { showErrorNoticeRTE } from "src/shared/notifications";
 import BlogSync from "main";
 import { LogsModal } from "./logs-modal";

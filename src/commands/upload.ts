@@ -1,11 +1,11 @@
 import { buildPluginConfig } from "src/plugin-config";
-import { BaseContext, FileStatus, PluginContext } from "./types";
+import { BaseContext, FileStatus, PluginContext } from "../shared/types";
 import { pipe } from "fp-ts/lib/function";
 import { planUpload } from "./upload/plan-upload";
 import * as RTE from "fp-ts/ReaderTaskEither";
 
 import * as A from "fp-ts/Array";
-import { uploadItems } from "./upload-items";
+import { uploadItems } from "./upload/upload-items";
 import { showNotice } from "src/io/obsidian-fp";
 import { deleteFiles } from "src/io/network";
 import { showErrorNoticeRTE } from "src/shared/notifications";

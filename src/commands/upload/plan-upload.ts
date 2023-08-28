@@ -1,7 +1,7 @@
 import { flow, pipe } from "fp-ts/lib/function";
 import * as RTE from "fp-ts/ReaderTaskEither";
 import { getFileListFp } from "src/io/network";
-import { BaseContext, FileStatus, FileType, Item } from "../types";
+import { BaseContext, FileStatus, FileType, Item } from "../../shared/types";
 import * as A from "fp-ts/Array";
 import * as O from "fp-ts/Option";
 import * as RT from "fp-ts/ReaderTask";

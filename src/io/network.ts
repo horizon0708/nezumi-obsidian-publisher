@@ -9,7 +9,7 @@ import { Semigroup } from "fp-ts/lib/string";
 import { concatAll } from "fp-ts/lib/Monoid";
 import { successResultM, errorResultM, resultM } from "../utils";
 import { buildFormDataBodyTE, fetchUrl } from "./obsidian-fp";
-import { AppContext, BaseContext } from "src/commands/types";
+import { AppContext, BaseContext } from "src/shared/types";
 import { DecodeError } from "src/shared/errors";
 
 enum HttpMethod {

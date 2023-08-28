@@ -1,5 +1,5 @@
 import { pipe } from "fp-ts/lib/function";
-import { PluginContext } from "./commands/types";
+import { PluginContext } from "./shared/types";
 import {
 	SavedBlog,
 	clearPluginData,

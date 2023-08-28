@@ -5,7 +5,7 @@ import * as RE from "fp-ts/ReaderEither";
 import * as E from "fp-ts/Either";
 import * as R from "fp-ts/Reader";
 import * as T from "fp-ts/Task";
-import { FileType } from "./commands/types";
+import { FileType } from "./shared/types";
 
 type ResultMonoid<E, A> = [A[], E[]];
 

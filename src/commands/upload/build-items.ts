@@ -16,7 +16,7 @@ import {
 	ItemType,
 	Post,
 	RTEBuilder,
-} from "../types";
+} from "../../shared/types";
 import { separatedMonoid } from "../../shared/separated-monoid";
 import { concatAll } from "fp-ts/lib/Monoid";
 import { cachedRead, getResolvedLinks, readBinary } from "src/io/obsidian-fp";
