@@ -1,5 +1,5 @@
 import { App, TFile, Plugin } from "obsidian";
-import { buildPluginConfig } from "src/plugin-config";
+import { buildPluginConfig } from "src/shared/plugin-config";
 import * as O from "fp-ts/Option";
 import * as RTE from "fp-ts/ReaderTaskEither";
 import { SavedBlog } from "src/shared/plugin-data";

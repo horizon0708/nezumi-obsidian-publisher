@@ -3,15 +3,18 @@ import * as RIO from "fp-ts/ReaderIO";
 import * as RTE from "fp-ts/ReaderTaskEither";
 import * as A from "fp-ts/Array";
 import { pipe } from "fp-ts/lib/function";
-import { Blog } from "../shared/network";
-import { deleteBlog, getBlog, getBlogs } from "../shared/plugin-data";
-import { BlogEditModal } from "./edit-modal";
-import { blogModalFormFields, buildUpdateFormFields } from "./modal-config";
-import { buildPluginConfig } from "src/plugin-config";
+import { Blog } from "./shared/network";
+import { deleteBlog, getBlog, getBlogs } from "./shared/plugin-data";
+import { BlogEditModal } from "./settings/edit-modal";
+import {
+	blogModalFormFields,
+	buildUpdateFormFields,
+} from "./settings/modal-config";
+import { buildPluginConfig } from "src/shared/plugin-config";
 import { PluginContext } from "src/shared/types";
 import { showErrorNoticeRTE } from "src/shared/notifications";
 import BlogSync from "main";
-import { LogsModal } from "./logs-modal";
+import { LogsModal } from "./settings/logs-modal";
 
 type BlogListContext = {
 	containerEl: HTMLElement;

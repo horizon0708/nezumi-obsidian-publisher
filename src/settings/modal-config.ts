@@ -1,5 +1,5 @@
 import { FormField } from "src/settings/edit-modal";
-import { buildPluginConfig } from "src/plugin-config";
+import { buildPluginConfig } from "src/shared/plugin-config";
 import * as t from "io-ts";
 import { withMessage } from "io-ts-types";
 import * as A from "fp-ts/Array";

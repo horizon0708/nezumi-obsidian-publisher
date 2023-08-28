@@ -1,5 +1,5 @@
 import { Plugin } from "obsidian";
-import { TuhuaSettingTab } from "src/settings/settings-tab";
+import { TuhuaSettingTab } from "src/settings";
 import { registerBlogCommands, registerPluginCommands } from "src/commands";
 import { UploadSession } from "src/shared/plugin-data/upload-session";
 import { maybeInitialisePluginData } from "src/shared/plugin-data";

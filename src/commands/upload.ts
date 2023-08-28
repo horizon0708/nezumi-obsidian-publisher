@@ -1,4 +1,4 @@
-import { buildPluginConfig } from "src/plugin-config";
+import { buildPluginConfig } from "src/shared/plugin-config";
 import { BaseContext, FileStatus, PluginContext } from "../shared/types";
 import { pipe } from "fp-ts/lib/function";
 import { planUpload } from "./upload/plan-upload";
