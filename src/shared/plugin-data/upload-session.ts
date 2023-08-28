@@ -1,4 +1,4 @@
-import { BlogContext, PluginContext } from "src/actions/types";
+import { BlogContext, PluginContext } from "src/commands/types";
 import * as IO from "fp-ts/IO";
 import * as O from "fp-ts/Option";
 import * as RTE from "fp-ts/ReaderTaskEither";

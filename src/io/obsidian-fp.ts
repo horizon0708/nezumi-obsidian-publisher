@@ -2,7 +2,7 @@ import { pipe } from "fp-ts/function";
 import { Notice, TFile, getBlobArrayBuffer, requestUrl } from "obsidian";
 import * as O from "fp-ts/Option";
 import * as R from "fp-ts/Reader";
-import { BaseContext, PluginContext } from "src/actions/types";
+import { BaseContext, PluginContext } from "src/commands/types";
 import * as RTE from "fp-ts/ReaderTaskEither";
 import * as TE from "fp-ts/TaskEither";
 import { FileError, NetworkError } from "src/shared/errors";

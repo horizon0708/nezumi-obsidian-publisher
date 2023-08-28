@@ -1,5 +1,5 @@
 import { pipe } from "fp-ts/lib/function";
-import { PluginContext } from "./actions/types";
+import { PluginContext } from "./commands/types";
 import {
 	SavedBlog,
 	clearPluginData,
@@ -9,7 +9,7 @@ import {
 import * as RTE from "fp-ts/ReaderTaskEither";
 import * as A from "fp-ts/Array";
 import * as RIO from "fp-ts/ReaderIO";
-import { upload } from "./actions/upload/upload";
+import { upload } from "./commands/upload/upload";
 import { showErrorNoticeRTE } from "./shared/notifications";
 import { deleteCurrentUploadSessionID } from "./shared/plugin-data/upload-session";
 

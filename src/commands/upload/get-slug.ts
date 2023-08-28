@@ -2,7 +2,7 @@ import { flip, pipe } from "fp-ts/function";
 import { App, TFile } from "obsidian";
 import * as O from "fp-ts/Option";
 import * as R from "fp-ts/Reader";
-import { BaseContext } from "src/actions/types";
+import { BaseContext } from "src/commands/types";
 import { getFM, buildFmUpdater } from "src/io/obsidian-fp";
 import * as RTE from "fp-ts/ReaderTaskEither";
 
