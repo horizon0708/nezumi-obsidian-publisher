@@ -19,8 +19,12 @@ import {
 } from "../../shared/types";
 import { separatedMonoid } from "../../shared/separated-monoid";
 import { concatAll } from "fp-ts/lib/Monoid";
-import { cachedRead, getResolvedLinks, readBinary } from "src/io/obsidian-fp";
-import { getSlug } from "./get-slug";
+import {
+	cachedRead,
+	getFM,
+	getResolvedLinks,
+	readBinary,
+} from "src/io/obsidian-fp";
 import { getType, liftRT } from "src/utils";
 import SparkMD5 from "spark-md5";
 import { getCurrentUploadSessionIdRTE } from "src/shared/plugin-data/upload-session";
@@ -45,12 +49,14 @@ export const setItemStatus =
 
 const buildItem = (file: TFile) =>
 	pipe(
-		RTE.Do,
-		RTE.let("file", () => file),
-		RTE.let("status", () => FileStatus.PENDING),
-		RTE.let("message", () => O.none),
-		RTE.let("serverMd5", () => O.none),
-		RTE.let("type", () => getType(file.path)),
+		{
+			file,
+			status: FileStatus.PENDING,
+			message: O.none,
+			serverMd5: O.none,
+			type: getType(file.path),
+		},
+		RTE.of,
 		RTE.bind("md5", ({ type }) => getFileMd5(file, type)),
 		RTE.apSW("serverPath", getServerPathRTE(file.path)),
 		RTE.apSW("embeddedAssets", getEmbeededAssetsRTE(file.path)),
@@ -103,6 +109,25 @@ const buildPostOrAsset = (baseItem: BaseItem): RTEBuilder<Post | Asset> => {
 
 	return pipe(
 		getSlug(baseItem.file),
+		RTE.rightReader,
 		RTE.map((slug) => ({ ...baseItem, slug, type: FileType.POST }))
 	);
 };
+
+const getSlug = (file: TFile) =>
+	pipe(
+		getFM(file),
+		R.chain(maybeGetSlug),
+		R.map(O.getOrElse(() => getDefaultSlug(file)))
+	);
+
+const maybeGetSlug =
+	(maybeFm: O.Option<Record<string, any>>) =>
+	({ pluginConfig: { slugKey } }: BaseContext) =>
+		pipe(
+			maybeFm,
+			O.map((fm) => fm[slugKey] as string)
+		);
+
+const getDefaultSlug = (file: TFile) =>
+	file.basename.toLowerCase().replace(/[^a-z0-9]+/, "-");
