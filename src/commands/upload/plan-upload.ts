@@ -1,17 +1,32 @@
-import { flow, pipe } from "fp-ts/lib/function";
+import { pipe } from "fp-ts/lib/function";
 import * as RTE from "fp-ts/ReaderTaskEither";
 import { getFileListFp } from "src/io/network";
-import { BaseContext, FileStatus, FileType, Item } from "../../shared/types";
+import {
+	BaseContext,
+	FileStatus,
+	FileType,
+	Item,
+	PluginContext,
+} from "../../shared/types";
 import * as A from "fp-ts/Array";
 import * as O from "fp-ts/Option";
 import * as RT from "fp-ts/ReaderTask";
 import { getFile, getFiles } from "src/io/obsidian-fp";
-import { buildItemsRTE } from "./build-items";
 import { getType } from "src/utils";
 import { showErrorNoticeRTE } from "src/shared/notifications";
 import { logForSession } from "src/shared/plugin-data";
+import { TFile } from "obsidian";
+import { Separated } from "fp-ts/lib/Separated";
 
-export const planUpload = () =>
+type FileProcessor = (
+	files: TFile[]
+) => RTE.ReaderTaskEither<
+	BaseContext & PluginContext,
+	never,
+	Separated<Error[], Item[]>
+>;
+
+export const planUpload = (processFiles: FileProcessor) =>
 	pipe(
 		RTE.Do,
 		RTE.apSW(
@@ -21,7 +36,7 @@ export const planUpload = () =>
 				RTE.map(({ posts, assets }) => [...posts, ...assets])
 			)
 		),
-		RTE.apSW("posts", pipe(getSyncCandidateFiles, buildItemsRTE)),
+		RTE.apSW("posts", getPostsToUpload(processFiles)),
 		RTE.let("embeddedAssets", ({ posts: { right } }) =>
 			getEmbeddedAssets(right)
 		),
@@ -31,7 +46,7 @@ export const planUpload = () =>
 				A.map(RTE.fromReaderK(getFile)),
 				RTE.sequenceArray,
 				RTE.map((arr) => A.compact(Array.from(arr))),
-				buildItemsRTE
+				RTE.chainW(processFiles)
 			)
 		),
 		RTE.map(({ posts, assets, serverFiles }) => {
@@ -79,22 +94,21 @@ const logPlanResult = ({ errors, items, toDelete }: LogPlanResultArgs) => {
 	);
 };
 
-const getSyncCandidateFiles = pipe(
-	RTE.ask<BaseContext>(),
-	RTE.chainW(({ blog: { syncFolder } }) =>
-		pipe(
-			getFiles,
-			RTE.fromReader,
-			RTE.map(
-				A.filter(
-					(file) =>
-						getType(file.path) === FileType.POST &&
-						file.path.startsWith(syncFolder)
-				)
+const getPostsToUpload = (processor: FileProcessor) =>
+	pipe(
+		RTE.ask<BaseContext>(),
+		RTE.chainW(({ blog: { syncFolder } }) =>
+			pipe(
+				getFiles,
+				RTE.fromReader,
+				RTE.map(A.filter(isPostAndInsideSyncFolder(syncFolder)))
 			)
-		)
-	)
-);
+		),
+		RTE.chain(processor)
+	);
+
+const isPostAndInsideSyncFolder = (syncFolder: string) => (file: TFile) =>
+	getType(file.path) === FileType.POST && file.path.startsWith(syncFolder);
 
 const getEmbeddedAssets = (items: Item[]) => {
 	const embeddedAssets = new Set<string>();

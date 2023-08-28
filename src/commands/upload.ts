@@ -10,6 +10,7 @@ import { showNotice } from "src/io/obsidian-fp";
 import { deleteFiles } from "src/io/network";
 import { showErrorNoticeRTE } from "src/shared/notifications";
 import { logForSession, setNewUploadSession } from "src/shared/plugin-data";
+import { buildItemsRTE } from "./upload/build-items";
 
 export const upload = async (
 	context: Omit<BaseContext, "pluginConfig"> & PluginContext
@@ -19,7 +20,7 @@ export const upload = async (
 
 	const res = await pipe(
 		setNewUploadSession,
-		RTE.chainW(() => planUpload()),
+		RTE.chainW(() => planUpload(buildItemsRTE)),
 		// IMPROVEMENT: return delete result
 		RTE.tap(({ toDelete }) => deleteFiles({ keys: toDelete })),
 		RTE.chainW(({ items }) => uploadItems(items)),
