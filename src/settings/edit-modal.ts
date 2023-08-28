@@ -11,7 +11,7 @@ import { pingBlogFP } from "../io/network";
 import { buildPluginConfig } from "src/plugin-config";
 import { upsertBlog } from "../shared/plugin-data";
 import { DecodeError } from "src/shared/errors";
-import { showNotice } from "src/io/obsidian-fp";
+import { showNotice } from "src/shared/obsidian-fp";
 import BlogSync from "main";
 
 export type FormField = {

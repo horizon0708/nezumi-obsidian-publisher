@@ -3,7 +3,7 @@ import * as RTE from "fp-ts/ReaderTaskEither";
 import * as A from "fp-ts/Array";
 import { Asset, FileStatus, FileType, Item, Post } from "../../shared/types";
 import { uploadAsset, uploadPost } from "src/io/network";
-import { cachedRead, readBinary } from "src/io/obsidian-fp";
+import { cachedRead, readBinary } from "src/shared/obsidian-fp";
 import { getCurrentUploadSessionIdRTE } from "src/shared/plugin-data/upload-session";
 import { logForSession } from "src/shared/plugin-data";
 import { setItemStatus } from "./build-items";

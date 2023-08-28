@@ -6,7 +6,7 @@ import * as RTE from "fp-ts/ReaderTaskEither";
 
 import * as A from "fp-ts/Array";
 import { uploadItems } from "./upload/upload-items";
-import { showNotice } from "src/io/obsidian-fp";
+import { showNotice } from "src/shared/obsidian-fp";
 import { deleteFiles } from "src/io/network";
 import { showErrorNoticeRTE } from "src/shared/notifications";
 import { logForSession, setNewUploadSession } from "src/shared/plugin-data";

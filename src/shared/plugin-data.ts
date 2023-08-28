@@ -1,6 +1,6 @@
 import * as RTE from "fp-ts/ReaderTaskEither";
 import { pipe } from "fp-ts/lib/function";
-import { loadData, saveData } from "../io/obsidian-fp";
+import { loadData, saveData } from "./obsidian-fp";
 import * as t from "io-ts";
 import * as RT from "fp-ts/ReaderTask";
 import {
