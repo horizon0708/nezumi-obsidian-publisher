@@ -12,6 +12,7 @@ import {
 } from "./plugin-data/upload-session";
 import * as B from "./plugin-data/blog";
 import { LogLevel } from "./plugin-data/upload-session/log";
+import { PluginContext } from "./types";
 
 const pluginData = t.type({
 	blogs: t.array(B.savedBlogSchema),
@@ -38,15 +39,29 @@ const savePluginData = (newData: PluginData) =>
 		})
 	);
 
-export const maybeInitialisePluginData = () => {
+const defaultData: PluginData = { blogs: [], uploadSessions: [] };
+export const maybeInitialisePluginData = (seed: PluginData = defaultData) => {
 	return pipe(
 		loadData,
 		RTE.map((data) => {
-			return !data ? { blogs: [], uploadSessions: [] } : data;
+			return !data ? seed : data;
 		}),
 		RTE.chain(saveData)
 	);
 };
+
+// const maybeInit = (data: any) =>
+// 	pipe(
+// 		RTE.ask<PluginContext>(),
+// 		RTE.map(({ isDev }) => {
+// 			if (data) {
+// 				return data;
+// 			}
+// 			return isDev
+// 				? { blogs: [], uploadSession: [] }
+// 				: import("../../.dev-data.json");
+// 		})
+// 	);
 
 export const clearPluginData = () => pipe(saveData(null));
 

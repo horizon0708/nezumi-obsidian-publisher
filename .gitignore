@@ -26,3 +26,5 @@ data.json
 copy-to-main-vault.sh
 copy.sh
 .hotreload
+
+.seed.json

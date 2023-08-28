@@ -12,5 +12,9 @@ You can install this plugin using [Beta Reviewers Auto-update Tester](https://gi
 
 This is not generally available yet. Keep an eye out!
 
+## Dev
+
+If build fails because of `.seed.json`, create a new `.seed.json` in project root and copy content of `.seed.sample.json` to it.
+
 
 

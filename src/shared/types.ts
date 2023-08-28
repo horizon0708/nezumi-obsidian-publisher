@@ -19,11 +19,13 @@ export type BaseContext = {
 	app: App;
 	blog: SavedBlog;
 	pluginConfig: ReturnType<typeof buildPluginConfig>;
+	isDev?: boolean;
 };
 
 export type PluginContext = {
 	app: App;
 	plugin: BlogSync;
+	isDev?: boolean;
 	// pluginConfig: ReturnType<typeof buildPluginConfig>;
 };
 

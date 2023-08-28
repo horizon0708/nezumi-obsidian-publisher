@@ -16,6 +16,9 @@ esbuild
 			js: banner,
 		},
 		entryPoints: ["main.ts"],
+		define: {
+			'process.env.DEV': prod ? 'false' : 'true',
+		},
 		bundle: true,
 		external: [
 			"obsidian",
