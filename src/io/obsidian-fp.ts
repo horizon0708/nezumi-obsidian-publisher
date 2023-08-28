@@ -21,13 +21,19 @@ export const saveData =
 	({ plugin }: PluginContext) =>
 		TE.tryCatch(
 			() => plugin.saveData(data),
-			(e) => e
+			(e) => {
+				console.log(e);
+				return e;
+			}
 		);
 
 export const loadData = ({ plugin }: PluginContext) =>
 	TE.tryCatch(
 		() => plugin.loadData(),
-		(e) => e
+		(e) => {
+			console.log(e);
+			return e;
+		}
 	);
 
 export const getFM = (file: TFile) =>

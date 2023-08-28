@@ -110,7 +110,6 @@ export class BlogEditModal extends Modal {
 								apiKey: form.apiKey,
 								endpoint: form.endpoint,
 								syncFolder: form.syncFolder,
-								logs: [],
 							}))
 						)
 					),

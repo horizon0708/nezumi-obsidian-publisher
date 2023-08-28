@@ -1,20 +1,24 @@
 import { Plugin } from "obsidian";
 import { TuhuaSettingTab } from "src/settings/settings-tab";
-import { registerBlogCommands } from "src/commands";
+import { registerBlogCommands, registerPluginCommands } from "src/commands";
 import { UploadSession } from "src/shared/plugin-data/upload-session";
+import { maybeInitialisePluginData } from "src/shared/plugin-data";
 
 export default class BlogSync extends Plugin {
 	updateLog: Record<string, boolean>[] = [];
 	currentUploadSession: UploadSession | null = null;
 
 	async onload() {
-		this.addSettingTab(new TuhuaSettingTab(this.app, this));
 		const context = {
 			app: this.app,
 			plugin: this,
 		};
-		const e = await registerBlogCommands()(context)();
-		console.log(e);
+		await maybeInitialisePluginData()(context)();
+		// TODO: think about migration
+
+		this.addSettingTab(new TuhuaSettingTab(this.app, this));
+		await registerPluginCommands()(context)();
+		await registerBlogCommands()(context)();
 	}
 
 	currentSession() {
@@ -22,6 +26,6 @@ export default class BlogSync extends Plugin {
 	}
 
 	onunload() {
-		// INVESTIGATE: can I abort ongoing network requests?
+		this.currentUploadSession = null;
 	}
 }

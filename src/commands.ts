@@ -1,6 +1,11 @@
 import { pipe } from "fp-ts/lib/function";
 import { PluginContext } from "./actions/types";
-import { SavedBlog, clearUploadSessions, getBlogs } from "./shared/plugin-data";
+import {
+	SavedBlog,
+	clearPluginData,
+	clearUploadSessions,
+	getBlogs,
+} from "./shared/plugin-data";
 import * as RTE from "fp-ts/ReaderTaskEither";
 import * as A from "fp-ts/Array";
 import * as RIO from "fp-ts/ReaderIO";
@@ -9,6 +14,7 @@ import { showErrorNoticeRTE } from "./shared/notifications";
 import { deleteCurrentUploadSessionID } from "./shared/plugin-data/upload-session";
 
 type BlogCommand = (blog: SavedBlog) => RIO.ReaderIO<PluginContext, void>;
+type PluginCommand = RIO.ReaderIO<PluginContext, void>;
 
 export const registerBlogCommands = (
 	blogCommands: BlogCommand[] = [
@@ -34,6 +40,17 @@ export const registerBlogCommands = (
 				RTE.rightReaderIO
 			)
 		),
+		RTE.tapError(showErrorNoticeRTE)
+	);
+};
+
+export const registerPluginCommands = (
+	commands: PluginCommand[] = [debugClearAllData]
+) => {
+	return pipe(
+		commands,
+		RIO.sequenceArray,
+		RTE.rightReaderIO,
 		RTE.tapError(showErrorNoticeRTE)
 	);
 };
@@ -70,3 +87,15 @@ const addDebugSessionClearCommand =
 			},
 		});
 	};
+
+const debugClearAllData: PluginCommand = (ctx: PluginContext) => () => {
+	ctx.plugin.addCommand({
+		id: `debug-clear-all-data`,
+		name: `DEBUG clear all data`,
+		callback: async () => {
+			await clearPluginData()({ ...ctx })();
+			console.log("cleared all plugin data:");
+			console.log(await ctx.plugin.loadData());
+		},
+	});
+};

@@ -11,7 +11,7 @@ import {
 	uploadSessionSchema,
 } from "./plugin-data/upload-session";
 import * as B from "./plugin-data/blog";
-import { Log, LogLevel } from "./plugin-data/upload-session/log";
+import { LogLevel } from "./plugin-data/upload-session/log";
 
 const pluginData = t.type({
 	blogs: t.array(B.savedBlogSchema),
@@ -19,17 +19,36 @@ const pluginData = t.type({
 });
 export type PluginData = t.TypeOf<typeof pluginData>;
 
-const loadPluginData = pipe(
-	loadData,
-	RTE.chainEitherKW(pluginData.decode),
-	RTE.mapLeft(() => new Error("plugin data is corrupted"))
-);
+const loadPluginData = () =>
+	pipe(
+		loadData,
+		RTE.chainEitherKW(pluginData.decode),
+		RTE.mapLeft((e) => {
+			console.error(e);
+			return new Error("plugin data is corrupted");
+		})
+	);
 
 const savePluginData = (newData: PluginData) =>
 	pipe(
 		saveData(newData),
-		RTE.mapLeft(() => new Error("Could not save plugin data"))
+		RTE.mapLeft((e) => {
+			console.error(e);
+			return new Error("Could not save plugin data");
+		})
 	);
+
+export const maybeInitialisePluginData = () => {
+	return pipe(
+		loadData,
+		RTE.map((data) => {
+			return !data ? { blogs: [], uploadSessions: [] } : data;
+		}),
+		RTE.chain(saveData)
+	);
+};
+
+export const clearPluginData = () => pipe(saveData(null));
 
 // ----------------
 // Blogs
@@ -37,7 +56,7 @@ const savePluginData = (newData: PluginData) =>
 export const deleteBlog = (id: string) =>
 	pipe(
 		RTE.Do,
-		RTE.apSW("data", loadPluginData),
+		RTE.apSW("data", loadPluginData()),
 		RTE.bindW("blogs", ({ data: { blogs } }) =>
 			pipe(
 				B.deleteBlog(blogs, id),
@@ -49,7 +68,7 @@ export const deleteBlog = (id: string) =>
 
 export const upsertBlog = (blog: B.SavedBlog) =>
 	pipe(
-		loadPluginData,
+		loadPluginData(),
 		RTE.map(({ blogs, ...rest }) => {
 			return {
 				blogs: B.upsertBlog(blogs, blog),
@@ -61,7 +80,7 @@ export const upsertBlog = (blog: B.SavedBlog) =>
 
 export const getBlog = (id: string) =>
 	pipe(
-		loadPluginData,
+		loadPluginData(),
 		RTE.chainW((data) =>
 			pipe(
 				B.getBlog(data.blogs, id),
@@ -71,7 +90,7 @@ export const getBlog = (id: string) =>
 	);
 
 export const getBlogs = pipe(
-	loadPluginData,
+	loadPluginData(),
 	RTE.map((data) => data.blogs as B.SavedBlog[])
 );
 
@@ -79,7 +98,7 @@ export const getBlogs = pipe(
 // sessions
 // ----------------
 export const setNewUploadSession = pipe(
-	loadPluginData,
+	loadPluginData(),
 	RTE.chainW((pluginData) =>
 		pipe(
 			pluginData.uploadSessions,
@@ -91,7 +110,7 @@ export const setNewUploadSession = pipe(
 );
 
 export const clearUploadSessions = pipe(
-	loadPluginData,
+	loadPluginData(),
 	RTE.map((pluginData) => ({
 		...pluginData,
 		uploadSessions: [],
@@ -106,7 +125,7 @@ export const logForSession = (message: string, level: LogLevel = "info") =>
 	pipe(
 		RTE.Do,
 		RTE.apSW("sessionId", getCurrentUploadSessionIdRTE),
-		RTE.apSW("pluginData", pipe(loadPluginData)),
+		RTE.apSW("pluginData", pipe(loadPluginData())),
 		RTE.map(({ sessionId, pluginData }) => {
 			return {
 				...pluginData,
@@ -128,7 +147,7 @@ export const logForSession = (message: string, level: LogLevel = "info") =>
 
 export const getLogsForSession = (sessionId: string) =>
 	pipe(
-		loadPluginData,
+		loadPluginData(),
 		RTE.chainW((pluginData) =>
 			pipe(
 				pluginData.uploadSessions,
