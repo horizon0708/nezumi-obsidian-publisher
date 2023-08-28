@@ -1,6 +1,6 @@
 import { pipe } from "fp-ts/lib/function";
 import * as RTE from "fp-ts/ReaderTaskEither";
-import { getFileListFp } from "src/io/network";
+import { getFileListFp } from "src/shared/network";
 import {
 	BaseContext,
 	FileStatus,

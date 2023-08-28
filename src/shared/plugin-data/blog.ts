@@ -1,6 +1,6 @@
 import { pipe } from "fp-ts/lib/function";
 import * as t from "io-ts";
-import { blogSchema } from "src/io/network";
+import { blogSchema } from "src/shared/network";
 import * as A from "fp-ts/Array";
 import * as O from "fp-ts/Option";
 

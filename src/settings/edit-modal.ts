@@ -7,7 +7,7 @@ import * as t from "io-ts";
 import * as O from "fp-ts/Option";
 import { pipe } from "fp-ts/lib/function";
 import { blogModalFormSchema } from "src/settings/modal-config";
-import { pingBlogFP } from "../io/network";
+import { pingBlogFP } from "../shared/network";
 import { buildPluginConfig } from "src/plugin-config";
 import { upsertBlog } from "../shared/plugin-data";
 import { DecodeError } from "src/shared/errors";

@@ -8,7 +8,7 @@ import * as t from "io-ts";
 import { Semigroup } from "fp-ts/lib/string";
 import { concatAll } from "fp-ts/lib/Monoid";
 import { successResultM, errorResultM, resultM } from "../utils";
-import { buildFormDataBodyTE, fetchUrl } from "../shared/obsidian-fp";
+import { buildFormDataBodyTE, fetchUrl } from "./obsidian-fp";
 import { AppContext, BaseContext } from "src/shared/types";
 import { DecodeError } from "src/shared/errors";
 

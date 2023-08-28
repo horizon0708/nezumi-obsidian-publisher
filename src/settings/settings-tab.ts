@@ -3,7 +3,7 @@ import * as RIO from "fp-ts/ReaderIO";
 import * as RTE from "fp-ts/ReaderTaskEither";
 import * as A from "fp-ts/Array";
 import { pipe } from "fp-ts/lib/function";
-import { Blog } from "../io/network";
+import { Blog } from "../shared/network";
 import { deleteBlog, getBlog, getBlogs } from "../shared/plugin-data";
 import { BlogEditModal } from "./edit-modal";
 import { blogModalFormFields, buildUpdateFormFields } from "./modal-config";
