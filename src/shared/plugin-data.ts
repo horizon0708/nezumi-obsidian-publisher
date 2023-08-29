@@ -12,7 +12,7 @@ import {
 } from "./plugin-data/upload-session";
 import * as B from "./plugin-data/blog";
 import { LogLevel } from "./plugin-data/upload-session/log";
-import { PluginContext } from "./types";
+import { BlogContext, PluginContext } from "./types";
 
 const pluginData = t.type({
 	blogs: t.array(B.savedBlogSchema),
@@ -93,7 +93,7 @@ export const upsertBlog = (blog: B.SavedBlog) =>
 		RTE.tap(savePluginData)
 	);
 
-export const getBlog = (id: string) =>
+export const getBlogById = (id: string) =>
 	pipe(
 		loadPluginData(),
 		RTE.chainW((data) =>
@@ -102,6 +102,13 @@ export const getBlog = (id: string) =>
 				RTE.fromOption(() => new Error("blog not found"))
 			)
 		)
+	);
+
+// get blog from env
+export const getCurrentBlog = () =>
+	pipe(
+		RTE.ask<BlogContext>(),
+		RTE.chainW(({ blog }) => getBlogById(blog.id))
 	);
 
 export const getBlogs = pipe(
@@ -123,6 +130,16 @@ export const setNewUploadSession = pipe(
 	),
 	RTE.chainW(savePluginData)
 );
+
+export const getBlogUploadSessions = (blogId: string) =>
+	pipe(
+		loadPluginData(),
+		RTE.map((pluginData) =>
+			pluginData.uploadSessions.filter(
+				(session) => session.blogId == blogId
+			)
+		)
+	);
 
 export const clearUploadSessions = pipe(
 	loadPluginData(),
@@ -185,3 +202,4 @@ const foldRTE = <A>(a: A) =>
 
 export type { SavedBlog } from "./plugin-data/blog";
 export type { Log, LogLevel } from "./plugin-data/upload-session/log";
+export type { UploadSession } from "./plugin-data/upload-session";

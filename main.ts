@@ -17,7 +17,7 @@ export default class BlogSync extends Plugin {
 
 		let seed: PluginData | undefined = undefined;
 		// Set using esbuild define. See https://esbuild.github.io/api/#define
-		// Don't wrap the boolean as we use it to dynamically import the seeding data
+		// Esbuilds uses this variable to dynamically import the seeding data
 		if (process.env.DEV) {
 			const seedJson = await import("./.seed.json");
 			seed = seedJson.default;

@@ -10,20 +10,32 @@ import * as A from "fp-ts/Array";
 
 export type UploadSession = t.TypeOf<typeof uploadSessionSchema>;
 
-export const uploadSessionSchema = t.type({
-	id: t.string,
-	blogId: t.string,
-	date: t.string,
-	logs: t.array(logSchema),
-});
+export const uploadSessionSchema = t.intersection([
+	t.type({
+		id: t.string,
+		blogId: t.string,
+		startedAt: t.string,
+		logs: t.array(logSchema),
+		uploadCount: t.number,
+		errorCount: t.number,
+		skipCount: t.number,
+	}),
+	t.partial({
+		finishedAt: t.string,
+		cancelledAt: t.string,
+	}),
+]);
 
 const buildNewUploadSession = (blogId: string): UploadSession => {
 	// use iso date for id for now
 	return {
 		id: new Date().toISOString(),
 		blogId,
-		date: new Date().toISOString(),
+		startedAt: new Date().toISOString(),
 		logs: [],
+		uploadCount: 0,
+		errorCount: 0,
+		skipCount: 0,
 	};
 };
 

@@ -11,6 +11,10 @@ button[disabled]{
 	flex-direction: column;
 	padding: 0;
 }
+.log-modal .log-header {
+	padding-bottom: 1rem;
+}
+
 
 .log-container {
 	overflow: scroll;
@@ -22,6 +26,13 @@ button[disabled]{
     border-top: 1px solid var(--background-modifier-border);
     border-bottom: 1px solid var(--background-modifier-border);
 	background-color: var(--background-secondary);
+}
+
+.empty-list {
+	text-align: center;
+	color: var(--text-muted);
+	padding-top: 5rem;
+	padding-bottom: 5rem;
 }
 
 .error-message {

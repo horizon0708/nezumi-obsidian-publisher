@@ -4,7 +4,7 @@ import * as RTE from "fp-ts/ReaderTaskEither";
 import * as A from "fp-ts/Array";
 import { pipe } from "fp-ts/lib/function";
 import { Blog } from "./shared/network";
-import { deleteBlog, getBlog, getBlogs } from "./shared/plugin-data";
+import { deleteBlog, getBlogById, getBlogs } from "./shared/plugin-data";
 import { BlogEditModal } from "./settings/edit-modal";
 import {
 	blogModalFormFields,
@@ -14,7 +14,7 @@ import { buildPluginConfig } from "src/shared/plugin-config";
 import { PluginContext } from "src/shared/types";
 import { showErrorNoticeRTE } from "src/shared/notifications";
 import BlogSync from "main";
-import { LogsModal } from "./settings/logs-modal";
+import { SessionsModal } from "./settings/sessions-modal";
 
 type BlogListContext = {
 	containerEl: HTMLElement;
@@ -35,7 +35,7 @@ export class TuhuaSettingTab extends PluginSettingTab {
 		this.containerEl.empty();
 		const pluginContext = { app: this.app, plugin: this.plugin };
 		const modal = new BlogEditModal(this.app, this.plugin);
-		const logModal = new LogsModal(this.app, this.plugin);
+		const sessionsMondal = new SessionsModal(this.app, this.plugin);
 
 		const context: BlogListContext & PluginContext = {
 			containerEl: this.containerEl,
@@ -48,7 +48,7 @@ export class TuhuaSettingTab extends PluginSettingTab {
 			},
 			onEdit: async (id) => {
 				await pipe(
-					getBlog(id),
+					getBlogById(id),
 					RTE.map(buildUpdateFormFields),
 					RTE.tapIO((fields) => () => {
 						modal.render({
@@ -70,8 +70,8 @@ export class TuhuaSettingTab extends PluginSettingTab {
 				modal.open();
 			},
 			onViewLog: async (id) => {
-				await logModal.render(id);
-				logModal.open();
+				await sessionsMondal.render(id);
+				sessionsMondal.open();
 			},
 			...pluginContext,
 		};
@@ -114,7 +114,7 @@ const createBlogItemList = (blogs: Blog[]) => {
 				.setName(blog.name)
 				.setDesc(el)
 				.addButton((btn) => {
-					btn.setButtonText("logs").onClick(async () => {
+					btn.setButtonText("history").onClick(async () => {
 						await onViewLog(blog.id);
 					});
 				})
