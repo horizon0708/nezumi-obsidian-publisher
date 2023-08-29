@@ -7,7 +7,6 @@ import { uploadAsset, uploadPost } from "src/shared/network";
 import { cachedRead, readBinary } from "src/shared/obsidian-fp";
 import { getCurrentUploadSessionIdRTE } from "src/shared/plugin-data/upload-session";
 import { logForSession } from "src/shared/plugin-data";
-import { setItemStatus } from "./build-items";
 
 export const uploadItems = (items: Item[]) =>
 	pipe(
@@ -137,3 +136,10 @@ const buildLog = (item: Item) => {
 			return `ERROR: unexpected status ${item.file.path} ${item.status}`;
 	}
 };
+
+const setItemStatus =
+	(status: FileStatus) =>
+	(item: Item): Item => ({
+		...item,
+		status,
+	});

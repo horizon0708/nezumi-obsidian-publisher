@@ -40,13 +40,6 @@ export const buildItems = (files: TFile[]) =>
 	);
 export const buildItemsRTE = RTE.fromReaderTaskK(buildItems);
 
-export const setItemStatus =
-	(status: FileStatus) =>
-	(item: Item): Item => ({
-		...item,
-		status,
-	});
-
 const buildItem = (file: TFile) =>
 	pipe(
 		{

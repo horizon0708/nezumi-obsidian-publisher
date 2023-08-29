@@ -9,7 +9,7 @@ import {
 import * as RTE from "fp-ts/ReaderTaskEither";
 import * as A from "fp-ts/Array";
 import * as RIO from "fp-ts/ReaderIO";
-import { planUploadAndShowConfirmation } from "./commands/upload";
+import { confirmPushChanges } from "./commands/confirm-push-changes";
 import { showErrorNoticeRTE } from "./shared/notifications";
 import { deleteCurrentUploadSessionID } from "./shared/plugin-data/upload-session";
 
@@ -61,7 +61,7 @@ const addBlogUploadCommand =
 			id: `test-upload-blog-${blog.id}`,
 			name: `Test upload ${blog.name}`,
 			callback: async () => {
-				await planUploadAndShowConfirmation({ ...ctx, blog });
+				await confirmPushChanges({ ...ctx, blog });
 			},
 		});
 	};
