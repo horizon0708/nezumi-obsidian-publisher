@@ -22,32 +22,27 @@ export const confirmPushChanges = async (
 
 	const res = await pipe(
 		setNewUploadSession,
-		RTE.chainW(() => planUpload(buildItemsRTE)),
-		RTE.chainW(
-			RTE.fromPredicate(
-				hasItemsToUpload,
-				(plan) =>
-					new Error(
-						plan.toSkip
-							? "No changes to upload"
-							: "Couldn't find any files to upload!"
-					)
-			)
-		),
+		RTE.flatMap(() => planUpload(buildItemsRTE)),
+		RTE.flatMap(checkForChanges),
 		RTE.tapIO((plan) => () => {
-			if (plan.toUpload.length > 0) {
-				confirmationModal.render(plan, pushChanges);
-				confirmationModal.open();
-			}
+			confirmationModal.render(plan, pushChanges);
+			confirmationModal.open();
 		}),
 		RTE.tapError(showErrorNoticeRTE)
-		// IMPROVEMENT: return delete result
 	)(deps)();
 
 	return res;
 };
 
-const hasItemsToUpload = (plan: UploadPlan) => plan.toUpload.length > 0;
+const checkForChanges = RTE.fromPredicate(
+	(plan: UploadPlan) => plan.toUpload.length > 0 || plan.toDelete.length > 0,
+	(plan) =>
+		new Error(
+			plan.toSkip
+				? "No changes to upload"
+				: "Couldn't find any files to upload!"
+		)
+);
 
 const pushChanges = (plan: UploadPlan) => {
 	return pipe(
