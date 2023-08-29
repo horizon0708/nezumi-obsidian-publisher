@@ -1,16 +1,32 @@
 import { pipe } from "fp-ts/function";
-import { Notice, TFile, getBlobArrayBuffer, requestUrl } from "obsidian";
+import {
+	MarkdownRenderer,
+	Notice,
+	TFile,
+	getBlobArrayBuffer,
+	requestUrl,
+} from "obsidian";
 import * as O from "fp-ts/Option";
 import * as R from "fp-ts/Reader";
 import { BaseContext, PluginContext } from "src/shared/types";
 import * as RTE from "fp-ts/ReaderTaskEither";
 import * as TE from "fp-ts/TaskEither";
+import * as RIO from "fp-ts/ReaderIO";
 import { FileError, NetworkError } from "src/shared/errors";
 
 /*
  * This module is a **thin** wrapper for the Obsidian API
  *
  */
+
+export const renderMarkdown =
+	(elment: HTMLElement) =>
+	(markdown: string) =>
+	({ app, plugin }: BaseContext & PluginContext) =>
+	() => {
+		console.log(app, markdown, elment);
+		MarkdownRenderer.render(app, markdown, elment, "", plugin);
+	};
 
 export const showNotice = (message: string) => {
 	new Notice(message);

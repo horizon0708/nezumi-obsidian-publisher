@@ -28,7 +28,10 @@ export const confirmPushChanges = async (
 			confirmationModal.render(plan, pushChanges);
 			confirmationModal.open();
 		}),
-		RTE.tapError(showErrorNoticeRTE)
+		RTE.tapError(showErrorNoticeRTE),
+		RTE.tapError((e) =>
+			RTE.rightReaderTask(logForSession(e.message, "error"))
+		)
 	)(deps)();
 
 	return res;
