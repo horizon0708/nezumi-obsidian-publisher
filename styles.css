@@ -15,7 +15,6 @@ button[disabled]{
 	padding-bottom: 1rem;
 }
 
-
 .log-container {
 	overflow: scroll;
     flex-grow: 1;

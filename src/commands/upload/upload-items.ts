@@ -1,5 +1,6 @@
 import { pipe } from "fp-ts/lib/function";
 import * as RTE from "fp-ts/ReaderTaskEither";
+import * as RT from "fp-ts/ReaderTask";
 import * as A from "fp-ts/Array";
 import { Asset, FileStatus, FileType, Item, Post } from "../../shared/types";
 import { uploadAsset, uploadPost } from "src/shared/network";
@@ -10,29 +11,38 @@ import { setItemStatus } from "./build-items";
 
 export const uploadItems = (items: Item[]) =>
 	pipe(
-		items,
-		A.partition((item) => item.status === FileStatus.PENDING),
-		({ left: skipped, right: pending }) =>
-			pipe(
-				logForSession(
-					`Starting upload. Skipping ${skipped.length} files and uploading ${pending.length} items.`
-				),
-				RTE.rightReaderTask,
-				// Is it worth prioitising post uploads over asset uploads?
-				RTE.chainW(() =>
-					pipe(A.map(uploadItem)(pending), RTE.sequenceSeqArray)
-				),
-				// sequential for now. Look into batching later.
-				// I don't want to run 100s of uploads at once
-				RTE.tap((uploaded) =>
-					pipe(
-						[...uploaded],
-						A.map(logUploadResult),
-						RTE.sequenceSeqArray
-					)
-				),
-				RTE.map((uploaded) => [uploaded, skipped])
-			)
+		RT.of(items),
+		RT.tap(() => logForSession(`Starting upload ${items.length} items.`)),
+		RTE.rightReaderTask,
+		RTE.map(A.map(uploadItem)),
+		RTE.chain(RTE.sequenceSeqArray),
+		// sequential for now. Look into batching later.
+		// I don't want to run 100s of uploads at once
+		RTE.tap((uploaded) =>
+			pipe([...uploaded], A.map(logUploadResult), RTE.sequenceSeqArray)
+		)
+		// A.partition((item) => item.status === FileStatus.PENDING),
+		// ({ left: skipped, right: pending }) =>
+		// 	pipe(
+		// 		logForSession(
+		// 			`Starting upload ${pending.length} items.`
+		// 		),
+		// 		RTE.rightReaderTask,
+		// 		// Is it worth prioitising post uploads over asset uploads?
+		// 		RTE.chainW(() =>
+		// 			pipe(A.map(uploadItem)(pending), RTE.sequenceSeqArray)
+		// 		),
+		// 		// sequential for now. Look into batching later.
+		// 		// I don't want to run 100s of uploads at once
+		// 		RTE.tap((uploaded) =>
+		// 			pipe(
+		// 				[...uploaded],
+		// 				A.map(logUploadResult),
+		// 				RTE.sequenceSeqArray
+		// 			)
+		// 		),
+		// 		RTE.map((uploaded) => [uploaded, skipped])
+		// 	)
 	);
 
 const uploadItem = (item: Item) => {

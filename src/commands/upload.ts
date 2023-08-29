@@ -1,7 +1,7 @@
 import { buildPluginConfig } from "src/shared/plugin-config";
-import { BaseContext, FileStatus, PluginContext } from "../shared/types";
+import { BaseContext, FileStatus, Item, PluginContext } from "../shared/types";
 import { pipe } from "fp-ts/lib/function";
-import { planUpload } from "./upload/plan-upload";
+import { UploadPlan, planUpload } from "./upload/plan-upload";
 import * as RTE from "fp-ts/ReaderTaskEither";
 
 import * as A from "fp-ts/Array";
@@ -11,34 +11,56 @@ import { deleteFiles } from "src/shared/network";
 import { showErrorNoticeRTE } from "src/shared/notifications";
 import { logForSession, setNewUploadSession } from "src/shared/plugin-data";
 import { buildItemsRTE } from "./upload/build-items";
+import { ConfirmationModal } from "./upload/confirmation-modal";
 
-export const upload = async (
+export const planUploadAndShowConfirmation = async (
 	context: Omit<BaseContext, "pluginConfig"> & PluginContext
 ) => {
 	const pluginConfig = buildPluginConfig();
 	const deps = { ...context, pluginConfig };
+	const confirmationModal = new ConfirmationModal(deps);
 
 	const res = await pipe(
 		setNewUploadSession,
 		RTE.chainW(() => planUpload(buildItemsRTE)),
+		RTE.chainW(
+			RTE.fromPredicate(
+				hasItemsToUpload,
+				(plan) =>
+					new Error(
+						plan.toSkip
+							? "No changes to upload"
+							: "Couldn't find any files to upload!"
+					)
+			)
+		),
+		RTE.tapIO((plan) => () => {
+			if (plan.toUpload.length > 0) {
+				confirmationModal.render(plan);
+				confirmationModal.open();
+			}
+		}),
+		RTE.tapError(showErrorNoticeRTE)
 		// IMPROVEMENT: return delete result
+	)(deps)();
+
+	return res;
+};
+
+const hasItemsToUpload = (plan: UploadPlan) => plan.toUpload.length > 0;
+
+export const pushChanges = (plan: UploadPlan) => {
+	return pipe(
+		RTE.of(plan),
 		RTE.tap(({ toDelete }) => deleteFiles({ keys: toDelete })),
-		RTE.chainW(({ items }) => uploadItems(items)),
-		RTE.map(([r, skipped]) =>
+		RTE.chainW(({ toUpload, toSkip }) =>
 			pipe(
-				Array.from(r),
-				A.partition((e) => e.status === FileStatus.UPLOAD_SUCCESS),
-				(e) => {
-					console.log(e);
-					return e;
-				},
-				({ left, right }) => {
-					return {
-						successCount: right.length,
-						errorCount: left.length,
-						skippedCount: skipped.length,
-					};
-				}
+				uploadItems(toUpload),
+				RTE.map(uploadedItemToResult),
+				RTE.map((result) => ({
+					...result,
+					skippedCount: toSkip.length,
+				}))
 			)
 		),
 		RTE.tapReaderTask((result) =>
@@ -48,7 +70,15 @@ export const upload = async (
 		),
 		RTE.tapError(showErrorNoticeRTE),
 		RTE.tapIO((e) => () => showNotice(JSON.stringify(e)))
-	)(deps)();
-
-	return res;
+	);
 };
+
+const uploadedItemToResult = (items: readonly Item[]) =>
+	pipe(
+		Array.from(items),
+		A.partition((item) => item.status === FileStatus.UPLOAD_SUCCESS),
+		({ left, right }) => ({
+			successCount: right.length,
+			errorCount: left.length,
+		})
+	);

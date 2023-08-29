@@ -26,6 +26,13 @@ type FileProcessor = (
 	Separated<Error[], Item[]>
 >;
 
+export type UploadPlan = {
+	errors: Error[];
+	toSkip: Item[];
+	toUpload: Item[];
+	toDelete: string[];
+};
+
 export const planUpload = (processFiles: FileProcessor) =>
 	pipe(
 		RTE.Do,
@@ -61,13 +68,19 @@ export const planUpload = (processFiles: FileProcessor) =>
 				...assets.right,
 			]);
 
+			const { left: toSkip, right: toUpload } = A.partition(
+				(item: Item) => item.status === FileStatus.PENDING
+			)(items);
+
 			return {
 				errors: [...posts.left, ...assets.left],
 				items,
+				toSkip,
+				toUpload,
 				toDelete: Array.from(serverMap.keys()),
 			};
 		}),
-		RTE.tap(logPlanResult),
+		// RTE.tap(logPlanResult),
 		RTE.tapError(showErrorNoticeRTE)
 	);
 
