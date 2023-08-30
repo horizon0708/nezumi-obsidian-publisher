@@ -1,13 +1,7 @@
 import { pipe } from "fp-ts/lib/function";
 import * as RTE from "fp-ts/ReaderTaskEither";
 import { getFileListFp } from "src/shared/network";
-import {
-	BlogContext,
-	FileStatus,
-	FileType,
-	Item,
-	TuhuaBlogContext,
-} from "../../shared/types";
+import { BlogContext, FileStatus, FileType, Item } from "../../shared/types";
 import * as A from "fp-ts/Array";
 import * as O from "fp-ts/Option";
 import * as RT from "fp-ts/ReaderTask";
@@ -17,10 +11,15 @@ import { showErrorNoticeRTE } from "src/shared/obsidian-fp/notifications";
 import { logForSession } from "src/shared/plugin-data";
 import { TFile } from "obsidian";
 import { Separated } from "fp-ts/lib/Separated";
+import { ConfirmPushChangesContext } from "../confirm-push-changes";
 
 type FileProcessor = (
 	files: TFile[]
-) => RTE.ReaderTaskEither<TuhuaBlogContext, never, Separated<Error[], Item[]>>;
+) => RTE.ReaderTaskEither<
+	ConfirmPushChangesContext,
+	never,
+	Separated<Error[], Item[]>
+>;
 
 export type UploadPlan = {
 	errors: Error[];

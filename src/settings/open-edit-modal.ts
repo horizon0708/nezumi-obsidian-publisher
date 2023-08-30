@@ -33,7 +33,7 @@ type ModalProps = {
 	onSubmit: () => void;
 };
 
-type EditModalContext = AppContext &
+export type OpenEditModalContext = AppContext &
 	PluginContextC &
 	ModalContext &
 	PluginConfigContext;
@@ -47,7 +47,7 @@ export const openEditModal = (props: ModalProps) =>
 		RIO.tapIO((p) => () => p.hiddenDiv.hide()),
 		RIO.bindW("submitSetting", () => renderModalSetting),
 		RIO.tapIO((ctx) => renderSettingErrorSpan(ctx.submitSetting)),
-		RIO.bindW("parentContext", () => RIO.ask<EditModalContext>()),
+		RIO.bindW("parentContext", () => RIO.ask<OpenEditModalContext>()),
 		RIO.flatMapIO((context) => {
 			const { formDiv, hiddenDiv, submitSetting, parentContext } =
 				context;

@@ -16,7 +16,6 @@ import {
 	ItemType,
 	PluginConfigContext,
 	Post,
-	TuhuaBlogContext,
 } from "../../shared/types";
 import { separatedMonoid } from "../../shared/separated-monoid";
 import { concatAll } from "fp-ts/lib/Monoid";
@@ -30,6 +29,7 @@ import { getType, liftRT } from "src/shared/utils";
 import SparkMD5 from "spark-md5";
 import { getCurrentUploadSessionIdRTE } from "src/shared/plugin-data/upload-session";
 import { FileError } from "src/shared/errors";
+import { ConfirmPushChangesContext } from "../confirm-push-changes";
 
 const eitherMonoid = separatedMonoid<Error, Item>();
 
@@ -94,7 +94,11 @@ const getEmbeddedAssets = (path: string) =>
 	);
 const getEmbeededAssetsRTE = RTE.fromReaderK(getEmbeddedAssets);
 
-type RTEBuilder<A> = RTE.ReaderTaskEither<TuhuaBlogContext, FileError, A>;
+type RTEBuilder<A> = RTE.ReaderTaskEither<
+	ConfirmPushChangesContext,
+	FileError,
+	A
+>;
 const buildPostOrAsset = (baseItem: BaseItem): RTEBuilder<Post | Asset> => {
 	if (baseItem.type === FileType.ASSET) {
 		return RTE.of({

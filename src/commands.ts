@@ -1,9 +1,5 @@
 import { pipe } from "fp-ts/lib/function";
-import {
-	AppContext,
-	PluginContextC,
-	TuhuaCommandContext,
-} from "./shared/types";
+import { AppContext, PluginContextC } from "./shared/types";
 import {
 	SavedBlog,
 	clearPluginData,
@@ -17,10 +13,10 @@ import { confirmPushChanges } from "./commands/confirm-push-changes";
 import { showErrorNoticeRTE } from "./shared/obsidian-fp/notifications";
 import { deleteCurrentUploadSessionID } from "./shared/plugin-data/upload-session";
 
-type BlogCommand = (
-	blog: SavedBlog
-) => RIO.ReaderIO<AppContext & PluginContextC, void>;
+type BlogCommandContext = AppContext & PluginContextC;
+
 type PluginCommand = RIO.ReaderIO<PluginContextC, void>;
+type BlogCommand = (blog: SavedBlog) => RIO.ReaderIO<BlogCommandContext, void>;
 
 export const registerBlogCommands = (
 	blogCommands: BlogCommand[] = [
@@ -62,7 +58,7 @@ export const registerPluginCommands = (
 };
 
 const addBlogUploadCommand =
-	(blog: SavedBlog) => (ctx: TuhuaCommandContext) => () => {
+	(blog: SavedBlog) => (ctx: BlogCommandContext) => () => {
 		ctx.plugin.addCommand({
 			id: `test-upload-blog-${blog.id}`,
 			name: `Test upload ${blog.name}`,

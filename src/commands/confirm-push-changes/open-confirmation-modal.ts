@@ -1,6 +1,6 @@
 import { Setting } from "obsidian";
 import { UploadPlan } from "./plan-upload";
-import { FileStatus, ModalContext, TuhuaBlogContext } from "src/shared/types";
+import { FileStatus, ModalContext } from "src/shared/types";
 import * as RT from "fp-ts/ReaderTask";
 import * as RIO from "fp-ts/ReaderIO";
 import * as A from "fp-ts/Array";
@@ -13,8 +13,11 @@ import {
 	renderModalHeader,
 	renderModalSpan,
 } from "src/shared/obsidian-fp/modal";
+import { ConfirmPushChangesContext } from "../confirm-push-changes";
 
-type PushChanges = (plan: UploadPlan) => RT.ReaderTask<TuhuaBlogContext, void>;
+type PushChanges = (
+	plan: UploadPlan
+) => RT.ReaderTask<ConfirmPushChangesContext, void>;
 
 export const openConfirmationModal = (
 	uploadPlan: UploadPlan,
@@ -36,7 +39,7 @@ export const openConfirmationModal = (
 			)
 		),
 		RIO.tap(() => renderContent(uploadPlan)),
-		RIO.flatMap(() => RIO.ask<TuhuaBlogContext>()),
+		RIO.flatMap(() => RIO.ask<ConfirmPushChangesContext>()),
 		RIO.tap((ctx) => renderFooterbuttons(pushChanges(uploadPlan)(ctx))),
 		RIO.tap(openModal)
 	);
@@ -46,7 +49,7 @@ const renderContent = (uploadPlan: UploadPlan) => {
 	return pipe(
 		RIO.Do,
 		RIO.apSW("element", renderModalDiv()),
-		RIO.apSW("context", RIO.ask<TuhuaBlogContext>()),
+		RIO.apSW("context", RIO.ask<ConfirmPushChangesContext>()),
 		RIO.chainIOK(({ element, context }) =>
 			pipe(
 				[

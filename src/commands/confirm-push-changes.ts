@@ -3,6 +3,7 @@ import {
 	BlogContext,
 	FileStatus,
 	Item,
+	PluginConfigContext,
 	PluginContextC,
 } from "../shared/types";
 import { pipe } from "fp-ts/lib/function";
@@ -20,10 +21,13 @@ import { openConfirmationModal } from "./confirm-push-changes/open-confirmation-
 import { Modal } from "obsidian";
 import { DEFAULT_CONFIG } from "src/shared/plugin-data/plugin-config";
 
-type ConfirmPushChangesContext = AppContext & BlogContext & PluginContextC;
+export type ConfirmPushChangesContext = AppContext &
+	BlogContext &
+	PluginContextC &
+	PluginConfigContext;
 
 export const confirmPushChanges = async (
-	context: ConfirmPushChangesContext
+	context: Omit<ConfirmPushChangesContext, "pluginConfig">
 ) => {
 	const deps = {
 		...context,

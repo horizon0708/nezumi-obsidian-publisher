@@ -1,9 +1,6 @@
-import { App, TFile, Plugin, Modal } from "obsidian";
-import { buildPluginConfig } from "src/shared/plugin-config";
+import { App, TFile, Modal } from "obsidian";
 import * as O from "fp-ts/Option";
-import * as RTE from "fp-ts/ReaderTaskEither";
 import { SavedBlog } from "src/shared/plugin-data";
-import { FileError } from "src/shared/errors";
 import BlogSync from "main";
 import { PluginConfigT } from "./plugin-data/plugin-config";
 
@@ -26,10 +23,6 @@ export type PluginContextC = {
 	plugin: BlogSync;
 };
 
-export type TuhuaContext = AppContext & PluginContextC & PluginConfigContext;
-export type TuhuaCommandContext = AppContext & PluginContextC;
-export type TuhuaBlogContext = TuhuaContext & BlogContext;
-
 export enum FileStatus {
 	NOOP = "NOOP",
 	PENDING = "PENDING",
@@ -43,7 +36,6 @@ export enum FileStatus {
 }
 
 export type ItemType = FileType.POST | FileType.ASSET;
-
 export enum FileType {
 	POST = "post",
 	ASSET = "asset",

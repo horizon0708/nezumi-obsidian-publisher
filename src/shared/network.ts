@@ -2,11 +2,7 @@ import { flow, pipe } from "fp-ts/function";
 import { concatAll } from "fp-ts/lib/Monoid";
 import { successResultM, errorResultM, resultM } from "./utils";
 import { fetchUrl } from "./obsidian-fp";
-import {
-	AppContext,
-	PluginConfigContext,
-	TuhuaBlogContext,
-} from "src/shared/types";
+import { AppContext, BlogContext, PluginConfigContext } from "src/shared/types";
 import { DecodeError } from "src/shared/errors";
 import { getBlobArrayBuffer } from "obsidian";
 import { FORM_DATA_DELIMITER } from "./constants";
@@ -24,7 +20,7 @@ const formDataContentType = (formDataBoundaryString: string) => ({
 });
 const jsonContentType = { ["Content-Type"]: "application/json" };
 
-const getFetchEnv = R.asks((d: TuhuaBlogContext) => ({
+const getFetchEnv = R.asks((d: BlogContext & PluginConfigContext) => ({
 	baseUrl: d.blog.endpoint,
 	apiKey: d.blog.apiKey,
 	apiKeyHeader: d.pluginConfig.apiKeyHeader,
