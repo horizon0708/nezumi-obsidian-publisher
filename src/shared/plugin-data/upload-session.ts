@@ -104,17 +104,7 @@ export const _updateCurrentUploadSession =
 			RTE.map((id) =>
 				pipe(
 					sessions,
-					(e) => {
-						console.log(e, id);
-						return e;
-					},
 					A.map((session) => {
-						console.log(
-							session.id,
-							id,
-							session.id === id,
-							updatedSession
-						);
 						return session.id === id
 							? { ...session, ...updatedSession }
 							: session;

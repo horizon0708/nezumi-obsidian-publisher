@@ -132,7 +132,6 @@ export class BlogEditModal extends Modal {
 				});
 
 				const e = await onSubmit();
-				console.log(e);
 			});
 		});
 	}

@@ -35,10 +35,8 @@ export const renderSubmitButton = (form: SK[]) =>
 		RIO.tapIO((ctx) => () => {
 			ctx.submitSetting.addButton((btn) => {
 				btn.setButtonText("Submit").onClick(async () => {
-					console.log("clicked");
 					const submit = submitForm(form);
 					const e = await submit(ctx)();
-					console.log(e);
 					ctx.onSubmit();
 				});
 			});

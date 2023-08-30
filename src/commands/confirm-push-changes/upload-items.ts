@@ -53,9 +53,12 @@ const uploadItem = (item: Item) => {
 	const cancelledItem = setItemStatus(FileStatus.UPLOAD_CANCELLED)(item);
 
 	const checkSessionEqual = RTE.fromPredicate(
-		(sessionId: string) =>
-			item.sessionId._tag === "Some" &&
-			item.sessionId.value === sessionId,
+		(sessionId: string) => {
+			return (
+				item.sessionId._tag === "Some" &&
+				item.sessionId.value === sessionId
+			);
+		},
 		() => cancelledItem
 	);
 

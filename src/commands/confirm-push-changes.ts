@@ -24,6 +24,8 @@ import { buildItemsRTE } from "./confirm-push-changes/build-items";
 import { openConfirmationModal } from "./confirm-push-changes/open-confirmation-modal";
 import { Modal } from "obsidian";
 import { DEFAULT_CONFIG } from "src/shared/plugin-data/plugin-config";
+import { getCurrentUploadSessionIdRTE } from "src/shared/plugin-data/upload-session";
+import { O } from "src/shared/fp";
 
 export type ConfirmPushChangesContext = AppContext &
 	BlogContext &
@@ -63,10 +65,13 @@ const pushChanges = (plan: UploadPlan) => {
 	return pipe(
 		RTE.of(plan),
 		RTE.tap(() => setNewUploadSession),
+		RTE.bindW("sessionId", () => getCurrentUploadSessionIdRTE),
 		RTE.tap(({ toDelete }) => deleteFiles({ keys: toDelete })),
-		RTE.chainW(({ toUpload, toSkip }) =>
+		RTE.chainW(({ toUpload, toSkip, sessionId }) =>
 			pipe(
-				uploadItems(toUpload),
+				toUpload,
+				A.map((x) => ({ ...x, sessionId: O.some(sessionId) })),
+				uploadItems,
 				RTE.map(uploadedItemToResult),
 				RTE.map((result) => ({
 					...result,

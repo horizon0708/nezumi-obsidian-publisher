@@ -170,7 +170,7 @@ export const uploadPost = (p: UploadPostPayload) =>
 				[apiKeyHeader]: apiKey,
 			},
 			body: JSON.stringify(p),
-			url: baseUrl + "/files",
+			url: baseUrl + "/posts",
 			method: HttpMethod.POST,
 		})),
 		RTE.rightReader,

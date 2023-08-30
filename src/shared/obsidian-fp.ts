@@ -23,7 +23,6 @@ export const renderMarkdown =
 		element,
 	}: AppContext & PluginContextC & { element: HTMLElement }) =>
 	() => {
-		console.log(app, markdown, element);
 		MarkdownRenderer.render(app, markdown, element, "", plugin);
 	};
 
@@ -37,7 +36,6 @@ export const saveData =
 		TE.tryCatch(
 			() => plugin.saveData(data),
 			(e) => {
-				console.log(e);
 				return e;
 			}
 		);
@@ -46,7 +44,6 @@ export const loadData = ({ plugin }: PluginContextC) =>
 	TE.tryCatch(
 		() => plugin.loadData(),
 		(e) => {
-			console.log(e);
 			return e;
 		}
 	);

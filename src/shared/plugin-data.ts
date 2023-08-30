@@ -117,7 +117,7 @@ export const setNewUploadSession = pipe(
 			RTE.map((uploadSessions) => ({ ...pluginData, uploadSessions }))
 		)
 	),
-	RTE.chainW(savePluginData)
+	RTE.tap(savePluginData)
 );
 
 export const updateCurrentUploadSession = (

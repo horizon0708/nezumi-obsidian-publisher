@@ -66,7 +66,6 @@ export class SessionsModal extends Modal {
 }
 
 const getSessionStatus = (session: UploadSession) => {
-	console.log(session);
 	if (session.finishedAt) {
 		const errorCount =
 			session.errorCount > 0
@@ -120,7 +119,7 @@ const renderLogHeader =
 	(session: UploadSession) =>
 	() => {
 		new Setting(container)
-			.setName("Skipped")
+			.setName(getSessionStatus(session))
 			.setDesc(session.startedAt)
 			.addButton((btn) => {
 				btn.setButtonText("Go back to sessions");
