@@ -1,4 +1,5 @@
-import { ModalContext } from "./types";
+import { Setting } from "obsidian";
+import { ModalContext } from "../types";
 import * as RIO from "fp-ts/ReaderIO";
 
 export const emptyModalContent: RIO.ReaderIO<ModalContext, void> =
@@ -11,6 +12,12 @@ export const openModal: RIO.ReaderIO<ModalContext, void> =
 	({ modal }) =>
 	() => {
 		modal.open();
+	};
+
+export const closeModal: RIO.ReaderIO<ModalContext, void> =
+	({ modal }) =>
+	() => {
+		modal.close();
 	};
 
 export const renderModalHeader =
@@ -33,4 +40,10 @@ export const renderModalDiv =
 	({ modal }: ModalContext) =>
 	() => {
 		return modal.contentEl.createDiv({ cls });
+	};
+
+export const renderModalSetting =
+	({ modal }: ModalContext) =>
+	() => {
+		return new Setting(modal.contentEl);
 	};

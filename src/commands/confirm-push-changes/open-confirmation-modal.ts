@@ -17,7 +17,7 @@ import {
 	renderModalDiv,
 	renderModalHeader,
 	renderModalSpan,
-} from "src/shared/modal";
+} from "src/shared/obsidian-fp/modal";
 
 type PushChanges = (
 	plan: UploadPlan

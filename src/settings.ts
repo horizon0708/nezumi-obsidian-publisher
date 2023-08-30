@@ -1,4 +1,4 @@
-import { App, Plugin, PluginSettingTab, Setting } from "obsidian";
+import { App, Modal, Plugin, PluginSettingTab, Setting } from "obsidian";
 import * as RIO from "fp-ts/ReaderIO";
 import * as RTE from "fp-ts/ReaderTaskEither";
 import * as A from "fp-ts/Array";
@@ -9,12 +9,14 @@ import { BlogEditModal } from "./settings/edit-modal";
 import {
 	blogModalFormFields,
 	buildUpdateFormFields,
-} from "./settings/modal-config";
+} from "./settings/open-edit-modal/modal-config";
 import { buildPluginConfig } from "src/shared/plugin-config";
 import { PluginContext } from "src/shared/types";
 import { showErrorNoticeRTE } from "src/shared/notifications";
 import BlogSync from "main";
 import { SessionsModal } from "./settings/sessions-modal";
+import { openEditModal } from "./settings/open-edit-modal";
+import { openModal } from "./shared/obsidian-fp/modal";
 
 type BlogListContext = {
 	containerEl: HTMLElement;
@@ -33,9 +35,14 @@ export class TuhuaSettingTab extends PluginSettingTab {
 
 	async display() {
 		this.containerEl.empty();
-		const pluginContext = { app: this.app, plugin: this.plugin };
+		const pluginContext = {
+			app: this.app,
+			plugin: this.plugin,
+			pluginConfig: buildPluginConfig(),
+		};
 		const modal = new BlogEditModal(this.app, this.plugin);
 		const sessionsMondal = new SessionsModal(this.app, this.plugin);
+		const m = new Modal(this.app);
 
 		const context: BlogListContext & PluginContext = {
 			containerEl: this.containerEl,
@@ -50,16 +57,28 @@ export class TuhuaSettingTab extends PluginSettingTab {
 				await pipe(
 					getBlogById(id),
 					RTE.map(buildUpdateFormFields),
-					RTE.tapIO((fields) => () => {
-						modal.render({
-							title: "Edit blog",
-							fields: fields,
-							onSubmit: () => this.display(),
-						});
-						modal.open();
-					}),
-					RTE.tapError(showErrorNoticeRTE)
-				)(pluginContext)();
+					RTE.map((fields) => ({
+						title: "Edit blog",
+						fields,
+						onSubmit: () => this.display(),
+					})),
+					RTE.tapReaderIO(openEditModal),
+					RTE.tapReaderIO(() => openModal)
+				)({ modal: m, ...pluginContext })();
+
+				// await pipe(
+				// 	getBlogById(id),
+				// 	RTE.map(buildUpdateFormFields),
+				// 	RTE.tapIO((fields) => () => {
+				// 		modal.render({
+				// 			title: "Edit blog",
+				// 			fields: fields,
+				// 			onSubmit: () => this.display(),
+				// 		});
+				// 		modal.open();
+				// 	}),
+				// 	RTE.tapError(showErrorNoticeRTE)
+				// )(pluginContext)();
 			},
 			onAdd: () => {
 				modal.render({

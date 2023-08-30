@@ -6,7 +6,7 @@ import * as E from "fp-ts/Either";
 import * as t from "io-ts";
 import * as O from "fp-ts/Option";
 import { pipe } from "fp-ts/lib/function";
-import { blogModalFormSchema } from "src/settings/modal-config";
+import { blogModalFormSchema } from "src/settings/open-edit-modal/modal-config";
 import { pingBlogFP } from "../shared/network";
 import { buildPluginConfig } from "src/shared/plugin-config";
 import { upsertBlog } from "../shared/plugin-data";
