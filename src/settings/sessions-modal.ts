@@ -65,6 +65,21 @@ export class SessionsModal extends Modal {
 	}
 }
 
+const getSessionStatus = (session: UploadSession) => {
+	console.log(session);
+	if (session.finishedAt) {
+		const errorCount =
+			session.errorCount > 0
+				? ` (with ${session.errorCount} error(s))`
+				: "";
+		return "Completed" + errorCount;
+	} else if (session.cancelledAt) {
+		return "Cancelled";
+	} else {
+		return "In progress";
+	}
+};
+
 // NIT: refactor these to use Reader monad
 const renderEmptyScreen =
 	(listContainer: HTMLDivElement) => (sessions: UploadSession[]) => () => {
@@ -87,7 +102,7 @@ const renderSessions =
 			const logContainer = listContainer.createDiv();
 
 			new Setting(logContainer)
-				.setName("Skipped")
+				.setName(getSessionStatus(session))
 				.setDesc(session.startedAt)
 				.addButton((btn) => {
 					btn.setButtonText("View logs");

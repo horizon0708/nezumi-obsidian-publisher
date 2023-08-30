@@ -53,7 +53,7 @@ export type BaseItem = ErroredItem & {
 	embeddedAssets: Set<string>;
 	serverMd5: O.Option<string>;
 	type: FileType;
-	sessionId: string;
+	sessionId: O.Option<string>;
 };
 
 export type Post = BaseItem & {

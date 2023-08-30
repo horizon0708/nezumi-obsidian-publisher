@@ -4,6 +4,8 @@ import { loadData, saveData } from "./obsidian-fp";
 import * as t from "io-ts";
 import * as RT from "fp-ts/ReaderTask";
 import {
+	UploadSession,
+	_updateCurrentUploadSession,
 	appendNewUploadSession,
 	appendToSessionLog,
 	getCurrentUploadSessionIdRTE,
@@ -117,6 +119,21 @@ export const setNewUploadSession = pipe(
 	),
 	RTE.chainW(savePluginData)
 );
+
+export const updateCurrentUploadSession = (
+	updatedSession: Partial<UploadSession>
+) =>
+	pipe(
+		loadPluginData(),
+		RTE.chain((pluginData) =>
+			pipe(
+				pluginData.uploadSessions,
+				_updateCurrentUploadSession(updatedSession),
+				RTE.map((uploadSessions) => ({ ...pluginData, uploadSessions }))
+			)
+		),
+		RTE.chainW(savePluginData)
+	);
 
 export const getBlogUploadSessions = (blogId: string) =>
 	pipe(

@@ -15,7 +15,11 @@ import { uploadItems } from "./confirm-push-changes/upload-items";
 import { showNotice } from "src/shared/obsidian-fp";
 import { deleteFiles } from "src/shared/network";
 import { showErrorNoticeRTE } from "src/shared/obsidian-fp/notifications";
-import { logForSession, setNewUploadSession } from "src/shared/plugin-data";
+import {
+	logForSession,
+	setNewUploadSession,
+	updateCurrentUploadSession,
+} from "src/shared/plugin-data";
 import { buildItemsRTE } from "./confirm-push-changes/build-items";
 import { openConfirmationModal } from "./confirm-push-changes/open-confirmation-modal";
 import { Modal } from "obsidian";
@@ -36,14 +40,10 @@ export const confirmPushChanges = async (
 	};
 
 	const res = await pipe(
-		setNewUploadSession,
-		RTE.flatMap(() => planUpload(buildItemsRTE)),
+		planUpload(buildItemsRTE),
 		RTE.flatMap(checkForChanges),
 		RTE.tapReaderIO((plan) => openConfirmationModal(plan, pushChanges)),
-		RTE.tapError(showErrorNoticeRTE),
-		RTE.tapError((e) =>
-			RTE.rightReaderTask(logForSession(e.message, "error"))
-		)
+		RTE.tapError(showErrorNoticeRTE)
 	)(deps)();
 
 	return res;
@@ -62,6 +62,7 @@ const checkForChanges = RTE.fromPredicate(
 const pushChanges = (plan: UploadPlan) => {
 	return pipe(
 		RTE.of(plan),
+		RTE.tap(() => setNewUploadSession),
 		RTE.tap(({ toDelete }) => deleteFiles({ keys: toDelete })),
 		RTE.chainW(({ toUpload, toSkip }) =>
 			pipe(
@@ -77,6 +78,11 @@ const pushChanges = (plan: UploadPlan) => {
 			logForSession(
 				`Upload complete. ${result.successCount} files uploaded, ${result.errorCount} errors, ${result.skippedCount} skipped.`
 			)
+		),
+		RTE.tap((e) =>
+			updateCurrentUploadSession({
+				finishedAt: new Date().toISOString(),
+			})
 		),
 		RTE.tapError(showErrorNoticeRTE),
 		RTE.tapIO((e) => () => showNotice(JSON.stringify(e))),

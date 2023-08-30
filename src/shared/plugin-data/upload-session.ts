@@ -96,6 +96,33 @@ export const getUploadSessionIO =
 	() => {
 		return O.fromNullable(plugin.currentUploadSession);
 	};
+
+export const _updateCurrentUploadSession =
+	(updatedSession: Partial<UploadSession>) => (sessions: UploadSession[]) =>
+		pipe(
+			getCurrentUploadSessionIdRTE,
+			RTE.map((id) =>
+				pipe(
+					sessions,
+					(e) => {
+						console.log(e, id);
+						return e;
+					},
+					A.map((session) => {
+						console.log(
+							session.id,
+							id,
+							session.id === id,
+							updatedSession
+						);
+						return session.id === id
+							? { ...session, ...updatedSession }
+							: session;
+					})
+				)
+			)
+		);
+
 export const getCurrentUploadSessionIdRTE = ({ plugin }: PluginContextC) =>
 	pipe(
 		// Investigate: how does this work when wrapped in a promise?

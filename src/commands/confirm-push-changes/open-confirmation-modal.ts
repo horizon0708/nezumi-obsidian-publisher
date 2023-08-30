@@ -23,6 +23,7 @@ export const openConfirmationModal = (
 	uploadPlan: UploadPlan,
 	pushChanges: PushChanges
 ) => {
+	console.log(uploadPlan);
 	return pipe(
 		emptyModalContent(),
 		RIO.tap(() => renderModalHeader("Upload confirmation")),

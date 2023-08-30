@@ -4,11 +4,9 @@ import { getFileListFp } from "src/shared/network";
 import { BlogContext, FileStatus, FileType, Item } from "../../shared/types";
 import * as A from "fp-ts/Array";
 import * as O from "fp-ts/Option";
-import * as RT from "fp-ts/ReaderTask";
 import { getFile, getFiles } from "src/shared/obsidian-fp";
 import { getType } from "src/shared/utils";
 import { showErrorNoticeRTE } from "src/shared/obsidian-fp/notifications";
-import { logForSession } from "src/shared/plugin-data";
 import { TFile } from "obsidian";
 import { Separated } from "fp-ts/lib/Separated";
 import { ConfirmPushChangesContext } from "../confirm-push-changes";
@@ -78,29 +76,6 @@ export const planUpload = (processFiles: FileProcessor) =>
 		// RTE.tap(logPlanResult),
 		RTE.tapError(showErrorNoticeRTE)
 	);
-
-type LogPlanResultArgs = { errors: Error[]; items: Item[]; toDelete: string[] };
-const logPlanResult = ({ errors, items, toDelete }: LogPlanResultArgs) => {
-	const errorStrings = errors.map((e) => e.message);
-	const itemStrings = items.map((i) => `${i.file.path} - ${i.status}`);
-	const deleteString = `deleting ${
-		toDelete.length
-	} files from server: ${toDelete.join(", ")}`;
-	const logString = [
-		"--- Upload Plan Start ---",
-		...errorStrings,
-		...itemStrings,
-		deleteString,
-		"--- Upload Plan End ---",
-	];
-
-	return pipe(
-		logString,
-		A.map(logForSession),
-		RT.sequenceArray,
-		RTE.rightReaderTask
-	);
-};
 
 const getPostsToUpload = (processor: FileProcessor) =>
 	pipe(
