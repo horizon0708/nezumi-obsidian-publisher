@@ -8,7 +8,7 @@ import * as A from "fp-ts/Array";
 import { uploadItems } from "./confirm-push-changes/upload-items";
 import { showNotice } from "src/shared/obsidian-fp";
 import { deleteFiles } from "src/shared/network";
-import { showErrorNoticeRTE } from "src/shared/notifications";
+import { showErrorNoticeRTE } from "src/shared/obsidian-fp/notifications";
 import { logForSession, setNewUploadSession } from "src/shared/plugin-data";
 import { buildItemsRTE } from "./confirm-push-changes/build-items";
 import { openConfirmationModal } from "./confirm-push-changes/open-confirmation-modal";

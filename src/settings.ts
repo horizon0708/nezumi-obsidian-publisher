@@ -12,7 +12,7 @@ import {
 } from "./settings/open-edit-modal/modal-config";
 import { buildPluginConfig } from "src/shared/plugin-config";
 import { PluginContext } from "src/shared/types";
-import { showErrorNoticeRTE } from "src/shared/notifications";
+import { showErrorNoticeRTE } from "src/shared/obsidian-fp/notifications";
 import BlogSync from "main";
 import { SessionsModal } from "./settings/sessions-modal";
 import { openEditModal } from "./settings/open-edit-modal";

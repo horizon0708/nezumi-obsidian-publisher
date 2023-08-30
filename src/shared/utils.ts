@@ -31,24 +31,6 @@ export const resultM = <E, A>(): Monoid<ResultMonoid<E, A>> => ({
 	empty: [[], []],
 });
 
-export const liftRightRTE = <R, A, B>(
-	f: (a: A) => B
-): ((a: A) => RTE.ReaderTaskEither<R, never, B>) => {
-	return (a: A) => RTE.right(f(a));
-};
-
-export const liftRightRE = <R, A, B>(
-	f: (a: A) => B
-): ((a: A) => RE.ReaderEither<R, never, B>) => {
-	return (a: A) => RE.right(f(a));
-};
-
-export const liftRightE = <A, B>(
-	f: (a: A) => B
-): ((a: A) => E.Either<never, B>) => {
-	return (a: A) => E.right(f(a));
-};
-
 export const liftRT =
 	<R, A, B>(f: (a: A) => B): ((a: A) => RT.ReaderTask<R, B>) =>
 	(a: A) =>

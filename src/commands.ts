@@ -10,7 +10,7 @@ import * as RTE from "fp-ts/ReaderTaskEither";
 import * as A from "fp-ts/Array";
 import * as RIO from "fp-ts/ReaderIO";
 import { confirmPushChanges } from "./commands/confirm-push-changes";
-import { showErrorNoticeRTE } from "./shared/notifications";
+import { showErrorNoticeRTE } from "./shared/obsidian-fp/notifications";
 import { deleteCurrentUploadSessionID } from "./shared/plugin-data/upload-session";
 
 type BlogCommand = (blog: SavedBlog) => RIO.ReaderIO<PluginContext, void>;

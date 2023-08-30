@@ -6,13 +6,9 @@ import {
 	getBlobArrayBuffer,
 	requestUrl,
 } from "obsidian";
-import * as O from "fp-ts/Option";
-import * as R from "fp-ts/Reader";
-import { BaseContext, PluginContext } from "src/shared/types";
-import * as RTE from "fp-ts/ReaderTaskEither";
-import * as TE from "fp-ts/TaskEither";
-import * as RIO from "fp-ts/ReaderIO";
-import { FileError, NetworkError } from "src/shared/errors";
+import { AppContext, PluginContext } from "src/shared/types";
+import { FileError, NetworkError } from "./errors";
+import { TE, O, RTE, R } from "./fp";
 
 /*
  * This module is a **thin** wrapper for the Obsidian API
@@ -25,7 +21,7 @@ export const renderMarkdown =
 		app,
 		plugin,
 		element,
-	}: BaseContext & PluginContext & { element: HTMLElement }) =>
+	}: AppContext & PluginContext & { element: HTMLElement }) =>
 	() => {
 		console.log(app, markdown, element);
 		MarkdownRenderer.render(app, markdown, element, "", plugin);
@@ -56,12 +52,12 @@ export const loadData = ({ plugin }: PluginContext) =>
 	);
 
 export const getFM = (file: TFile) =>
-	R.asks(({ app }: BaseContext) =>
+	R.asks(({ app }: AppContext) =>
 		pipe(app.metadataCache.getFileCache(file)?.frontmatter, O.fromNullable)
 	);
 
 export const buildFmUpdater = (processFn: (fm: any) => void) => (file: TFile) =>
-	RTE.asksReaderTaskEither(({ app }: BaseContext) =>
+	RTE.asksReaderTaskEither(({ app }: AppContext) =>
 		pipe(
 			TE.tryCatch(
 				() => app.fileManager.processFrontMatter(file, processFn),
@@ -73,7 +69,7 @@ export const buildFmUpdater = (processFn: (fm: any) => void) => (file: TFile) =>
 
 export const cachedRead =
 	(file: TFile) =>
-	({ app }: BaseContext) =>
+	({ app }: AppContext) =>
 		TE.tryCatch(
 			() => app.vault.cachedRead(file),
 			() => new FileError("Failed to read file", file.path)
@@ -81,7 +77,7 @@ export const cachedRead =
 
 export const readBinary =
 	(file: TFile) =>
-	({ app }: BaseContext) =>
+	({ app }: AppContext) =>
 		TE.tryCatch(
 			() => app.vault.readBinary(file),
 			() => new FileError("Failed to read file", file.path)
@@ -89,12 +85,12 @@ export const readBinary =
 
 export const getResolvedLinks =
 	(path: string) =>
-	({ app }: BaseContext) =>
+	({ app }: AppContext) =>
 		app.metadataCache.resolvedLinks[path] ?? [];
 
 export const getFile =
 	(path: string) =>
-	({ app }: BaseContext) => {
+	({ app }: AppContext) => {
 		const file = app.vault.getAbstractFileByPath(path);
 		if (file instanceof TFile) {
 			return O.some(file);
@@ -103,7 +99,7 @@ export const getFile =
 	};
 
 export const getFiles = pipe(
-	R.ask<BaseContext>(),
+	R.ask<AppContext>(),
 	R.map(({ app }) => app.vault.getFiles())
 );
 

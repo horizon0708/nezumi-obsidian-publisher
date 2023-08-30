@@ -34,8 +34,8 @@ export const openEditModal = (props: ModalProps) =>
 	pipe(
 		emptyModalContent(),
 		RIO.tap(() => renderModalHeader(props.title)),
-		RIO.bind("formDiv", () => renderModalDiv()),
-		RIO.bind("hiddenDiv", () => renderModalDiv()),
+		RIO.apSW("formDiv", renderModalDiv()),
+		RIO.apSW("hiddenDiv", renderModalDiv()),
 		RIO.tapIO((p) => () => p.hiddenDiv.hide()),
 		RIO.bindW("submitSetting", () => renderModalSetting),
 		RIO.tapIO((ctx) => renderSettingErrorSpan(ctx.submitSetting)),

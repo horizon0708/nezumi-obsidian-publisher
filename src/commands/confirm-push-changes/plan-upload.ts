@@ -13,7 +13,7 @@ import * as O from "fp-ts/Option";
 import * as RT from "fp-ts/ReaderTask";
 import { getFile, getFiles } from "src/shared/obsidian-fp";
 import { getType } from "src/shared/utils";
-import { showErrorNoticeRTE } from "src/shared/notifications";
+import { showErrorNoticeRTE } from "src/shared/obsidian-fp/notifications";
 import { logForSession } from "src/shared/plugin-data";
 import { TFile } from "obsidian";
 import { Separated } from "fp-ts/lib/Separated";
