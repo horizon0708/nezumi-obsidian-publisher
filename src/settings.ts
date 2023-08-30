@@ -11,7 +11,7 @@ import {
 	buildUpdateFormFields,
 } from "./settings/open-edit-modal/modal-config";
 import { buildPluginConfig } from "src/shared/plugin-config";
-import { PluginContext } from "src/shared/types";
+import { PluginContextC } from "src/shared/types";
 import { showErrorNoticeRTE } from "src/shared/obsidian-fp/notifications";
 import BlogSync from "main";
 import { SessionsModal } from "./settings/sessions-modal";
@@ -43,7 +43,7 @@ export class TuhuaSettingTab extends PluginSettingTab {
 		const sessionsMondal = new SessionsModal(this.app, this.plugin);
 		const modal = new Modal(this.app);
 
-		const context: BlogListContext & PluginContext = {
+		const context: BlogListContext & PluginContextC = {
 			containerEl: this.containerEl,
 			onDelete: async (id) => {
 				await pipe(

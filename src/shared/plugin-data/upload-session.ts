@@ -1,4 +1,4 @@
-import { BlogContext, PluginContext } from "src/shared/types";
+import { BlogContext, PluginContextC } from "src/shared/types";
 import * as IO from "fp-ts/IO";
 import * as O from "fp-ts/Option";
 import * as RTE from "fp-ts/ReaderTaskEither";
@@ -41,7 +41,7 @@ const buildNewUploadSession = (blogId: string): UploadSession => {
 
 export const appendNewUploadSession = (sessions: UploadSession[]) => {
 	return pipe(
-		RTE.ask<PluginContext & BlogContext>(),
+		RTE.ask<PluginContextC & BlogContext>(),
 		RTE.chainW(({ plugin, blog }) =>
 			pipe(
 				buildNewUploadSession(blog.id),
@@ -86,17 +86,17 @@ export const getSession = (sessionId: string) => (sessions: UploadSession[]) =>
 	);
 
 export const deleteCurrentUploadSessionID =
-	({ plugin }: PluginContext): IO.IO<void> =>
+	({ plugin }: PluginContextC): IO.IO<void> =>
 	() => {
 		plugin.currentUploadSession = null;
 	};
 
 export const getUploadSessionIO =
-	({ plugin }: PluginContext): IO.IO<O.Option<UploadSession>> =>
+	({ plugin }: PluginContextC): IO.IO<O.Option<UploadSession>> =>
 	() => {
 		return O.fromNullable(plugin.currentUploadSession);
 	};
-export const getCurrentUploadSessionIdRTE = ({ plugin }: PluginContext) =>
+export const getCurrentUploadSessionIdRTE = ({ plugin }: PluginContextC) =>
 	pipe(
 		// Investigate: how does this work when wrapped in a promise?
 		// I have a vague intuition on why it works, but want to confirm it.

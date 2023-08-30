@@ -1,5 +1,10 @@
-import { buildPluginConfig } from "src/shared/plugin-config";
-import { BaseContext, FileStatus, Item, PluginContext } from "../shared/types";
+import {
+	AppContext,
+	BlogContext,
+	FileStatus,
+	Item,
+	PluginContextC,
+} from "../shared/types";
 import { pipe } from "fp-ts/lib/function";
 import { UploadPlan, planUpload } from "./confirm-push-changes/plan-upload";
 import * as RTE from "fp-ts/ReaderTaskEither";
@@ -13,12 +18,18 @@ import { logForSession, setNewUploadSession } from "src/shared/plugin-data";
 import { buildItemsRTE } from "./confirm-push-changes/build-items";
 import { openConfirmationModal } from "./confirm-push-changes/open-confirmation-modal";
 import { Modal } from "obsidian";
+import { DEFAULT_CONFIG } from "src/shared/plugin-data/plugin-config";
+
+type ConfirmPushChangesContext = AppContext & BlogContext & PluginContextC;
 
 export const confirmPushChanges = async (
-	context: Omit<BaseContext, "pluginConfig"> & PluginContext
+	context: ConfirmPushChangesContext
 ) => {
-	const pluginConfig = buildPluginConfig();
-	const deps = { ...context, pluginConfig, modal: new Modal(context.app) };
+	const deps = {
+		...context,
+		pluginConfig: DEFAULT_CONFIG,
+		modal: new Modal(context.app),
+	};
 
 	const res = await pipe(
 		setNewUploadSession,

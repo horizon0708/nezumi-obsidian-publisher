@@ -5,7 +5,12 @@ import {
 	renderModalHeader,
 	renderModalSetting,
 } from "src/shared/obsidian-fp/modal";
-import { AppContext, ModalContext, PluginContext } from "src/shared/types";
+import {
+	AppContext,
+	ModalContext,
+	PluginConfigContext,
+	PluginContextC,
+} from "src/shared/types";
 import { RIO } from "src/shared/fp";
 import { renderSettingErrorSpan } from "src/shared/obsidian-fp/setting";
 import { renderForm } from "./open-edit-modal/render-form";
@@ -28,7 +33,10 @@ type ModalProps = {
 	onSubmit: () => void;
 };
 
-type EditModalContext = AppContext & PluginContext & ModalContext;
+type EditModalContext = AppContext &
+	PluginContextC &
+	ModalContext &
+	PluginConfigContext;
 
 export const openEditModal = (props: ModalProps) =>
 	pipe(

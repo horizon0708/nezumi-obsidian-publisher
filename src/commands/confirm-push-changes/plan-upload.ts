@@ -2,11 +2,11 @@ import { pipe } from "fp-ts/lib/function";
 import * as RTE from "fp-ts/ReaderTaskEither";
 import { getFileListFp } from "src/shared/network";
 import {
-	BaseContext,
+	BlogContext,
 	FileStatus,
 	FileType,
 	Item,
-	PluginContext,
+	TuhuaBlogContext,
 } from "../../shared/types";
 import * as A from "fp-ts/Array";
 import * as O from "fp-ts/Option";
@@ -20,11 +20,7 @@ import { Separated } from "fp-ts/lib/Separated";
 
 type FileProcessor = (
 	files: TFile[]
-) => RTE.ReaderTaskEither<
-	BaseContext & PluginContext,
-	never,
-	Separated<Error[], Item[]>
->;
+) => RTE.ReaderTaskEither<TuhuaBlogContext, never, Separated<Error[], Item[]>>;
 
 export type UploadPlan = {
 	errors: Error[];
@@ -109,7 +105,7 @@ const logPlanResult = ({ errors, items, toDelete }: LogPlanResultArgs) => {
 
 const getPostsToUpload = (processor: FileProcessor) =>
 	pipe(
-		RTE.ask<BaseContext>(),
+		RTE.ask<BlogContext>(),
 		RTE.chainW(({ blog: { syncFolder } }) =>
 			pipe(
 				getFiles,

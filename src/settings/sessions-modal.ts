@@ -36,7 +36,6 @@ export class SessionsModal extends Modal {
 			),
 			RTE.tapIO(renderEmptyScreen(list))
 		)({
-			app: this.app,
 			plugin: this.plugin,
 		})();
 	}
@@ -61,7 +60,6 @@ export class SessionsModal extends Modal {
 			),
 			RTE.tapIO(renderLog(list))
 		)({
-			app: this.app,
 			plugin: this.plugin,
 		})();
 	}

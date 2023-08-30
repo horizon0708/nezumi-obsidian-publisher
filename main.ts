@@ -12,7 +12,6 @@ export default class BlogSync extends Plugin {
 		const context = {
 			app: this.app,
 			plugin: this,
-			isDev: Boolean(process.env.DEV),
 		};
 
 		let seed: PluginData | undefined = undefined;

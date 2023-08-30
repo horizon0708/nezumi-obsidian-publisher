@@ -5,37 +5,30 @@ import * as RTE from "fp-ts/ReaderTaskEither";
 import { SavedBlog } from "src/shared/plugin-data";
 import { FileError } from "src/shared/errors";
 import BlogSync from "main";
+import { PluginConfigT } from "./plugin-data/plugin-config";
 
 export type AppContext = {
 	app: App;
-	pluginConfig: ReturnType<typeof buildPluginConfig>;
 };
-
 export type BlogContext = {
 	blog: SavedBlog;
 };
-
 export type ModalContext = {
 	modal: Modal;
 };
-
 export type DivContext = {
 	div: HTMLDivElement;
 };
-
-export type BaseContext = {
-	app: App;
-	blog: SavedBlog;
-	pluginConfig: ReturnType<typeof buildPluginConfig>;
-	isDev?: boolean;
+export type PluginConfigContext = {
+	pluginConfig: PluginConfigT;
 };
-
-export type PluginContext = {
-	app: App;
+export type PluginContextC = {
 	plugin: BlogSync;
-	isDev?: boolean;
-	// pluginConfig: ReturnType<typeof buildPluginConfig>;
 };
+
+export type TuhuaContext = AppContext & PluginContextC & PluginConfigContext;
+export type TuhuaCommandContext = AppContext & PluginContextC;
+export type TuhuaBlogContext = TuhuaContext & BlogContext;
 
 export enum FileStatus {
 	NOOP = "NOOP",
@@ -86,5 +79,3 @@ export type ServerFileState = {
 	md5: string;
 	hasLocalCopy: boolean;
 };
-
-export type RTEBuilder<A> = RTE.ReaderTaskEither<BaseContext, FileError, A>;

@@ -8,14 +8,15 @@ import * as R from "fp-ts/Reader";
 import * as r from "fp-ts/Record";
 import {
 	Asset,
-	BaseContext,
 	BaseItem,
+	BlogContext,
 	FileStatus,
 	FileType,
 	Item,
 	ItemType,
+	PluginConfigContext,
 	Post,
-	RTEBuilder,
+	TuhuaBlogContext,
 } from "../../shared/types";
 import { separatedMonoid } from "../../shared/separated-monoid";
 import { concatAll } from "fp-ts/lib/Monoid";
@@ -28,6 +29,7 @@ import {
 import { getType, liftRT } from "src/shared/utils";
 import SparkMD5 from "spark-md5";
 import { getCurrentUploadSessionIdRTE } from "src/shared/plugin-data/upload-session";
+import { FileError } from "src/shared/errors";
 
 const eitherMonoid = separatedMonoid<Error, Item>();
 
@@ -67,7 +69,7 @@ const getFileMd5 = (file: TFile, type: ItemType) => {
 
 const getServerPath =
 	(path: string) =>
-	({ blog }: BaseContext) => {
+	({ blog }: BlogContext) => {
 		if (getType(path) === FileType.ASSET) {
 			return path;
 		}
@@ -92,6 +94,7 @@ const getEmbeddedAssets = (path: string) =>
 	);
 const getEmbeededAssetsRTE = RTE.fromReaderK(getEmbeddedAssets);
 
+type RTEBuilder<A> = RTE.ReaderTaskEither<TuhuaBlogContext, FileError, A>;
 const buildPostOrAsset = (baseItem: BaseItem): RTEBuilder<Post | Asset> => {
 	if (baseItem.type === FileType.ASSET) {
 		return RTE.of({
@@ -110,13 +113,13 @@ const buildPostOrAsset = (baseItem: BaseItem): RTEBuilder<Post | Asset> => {
 const getSlug = (file: TFile) =>
 	pipe(
 		getFM(file),
-		R.chain(maybeGetSlug),
+		R.flatMap(maybeGetSlug),
 		R.map(O.getOrElse(() => getDefaultSlug(file)))
 	);
 
 const maybeGetSlug =
 	(maybeFm: O.Option<Record<string, any>>) =>
-	({ pluginConfig: { slugKey } }: BaseContext) =>
+	({ pluginConfig: { slugKey } }: PluginConfigContext) =>
 		pipe(
 			maybeFm,
 			O.map((fm) => fm[slugKey] as string)

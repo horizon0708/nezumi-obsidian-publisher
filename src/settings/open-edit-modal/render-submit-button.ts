@@ -1,6 +1,11 @@
 import { pipe } from "fp-ts/lib/function";
 import { A, IO, O, RE, RIO, RTE, t } from "src/shared/fp";
-import { PluginContext, AppContext, ModalContext } from "src/shared/types";
+import {
+	PluginContextC,
+	AppContext,
+	ModalContext,
+	PluginConfigContext,
+} from "src/shared/types";
 import { RenderFormContext } from "./render-form";
 import { Setting } from "obsidian";
 import { DecodeError } from "src/shared/errors";
@@ -14,8 +19,9 @@ import {
 } from "src/shared/obsidian-fp/setting";
 
 type SubmitContext = RenderFormContext &
-	PluginContext &
+	PluginContextC &
 	AppContext &
+	PluginConfigContext &
 	ModalContext;
 
 type SK = {

@@ -12,7 +12,7 @@ import {
 } from "./plugin-data/upload-session";
 import * as B from "./plugin-data/blog";
 import { LogLevel } from "./plugin-data/upload-session/log";
-import { BlogContext, PluginContext } from "./types";
+import { BlogContext, PluginContextC } from "./types";
 
 const pluginData = t.type({
 	blogs: t.array(B.savedBlogSchema),
@@ -49,19 +49,6 @@ export const maybeInitialisePluginData = (seed: PluginData = defaultData) => {
 		RTE.chain(saveData)
 	);
 };
-
-// const maybeInit = (data: any) =>
-// 	pipe(
-// 		RTE.ask<PluginContext>(),
-// 		RTE.map(({ isDev }) => {
-// 			if (data) {
-// 				return data;
-// 			}
-// 			return isDev
-// 				? { blogs: [], uploadSession: [] }
-// 				: import("../../.dev-data.json");
-// 		})
-// 	);
 
 export const clearPluginData = () => pipe(saveData(null));
 

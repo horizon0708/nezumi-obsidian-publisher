@@ -2,7 +2,11 @@ import { flow, pipe } from "fp-ts/function";
 import { concatAll } from "fp-ts/lib/Monoid";
 import { successResultM, errorResultM, resultM } from "./utils";
 import { fetchUrl } from "./obsidian-fp";
-import { AppContext, BaseContext, BlogContext } from "src/shared/types";
+import {
+	AppContext,
+	PluginConfigContext,
+	TuhuaBlogContext,
+} from "src/shared/types";
 import { DecodeError } from "src/shared/errors";
 import { getBlobArrayBuffer } from "obsidian";
 import { FORM_DATA_DELIMITER } from "./constants";
@@ -20,7 +24,7 @@ const formDataContentType = (formDataBoundaryString: string) => ({
 });
 const jsonContentType = { ["Content-Type"]: "application/json" };
 
-const getFetchEnv = R.asks((d: BaseContext) => ({
+const getFetchEnv = R.asks((d: TuhuaBlogContext) => ({
 	baseUrl: d.blog.endpoint,
 	apiKey: d.blog.apiKey,
 	apiKeyHeader: d.pluginConfig.apiKeyHeader,
@@ -68,7 +72,9 @@ type PingBlogPayload = {
 
 export const pingBlogFP = (payload: PingBlogPayload) =>
 	pipe(
-		RTE.asks((d: AppContext) => d.pluginConfig.apiKeyHeader),
+		RTE.asks(
+			(d: AppContext & PluginConfigContext) => d.pluginConfig.apiKeyHeader
+		),
 		RTE.let("headers", (apiKeyHeader) => ({
 			["Content-Type"]: "application/json",
 			[apiKeyHeader]: payload.apiKey,

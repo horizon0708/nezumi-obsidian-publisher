@@ -1,5 +1,9 @@
 import { pipe } from "fp-ts/lib/function";
-import { PluginContext } from "./shared/types";
+import {
+	AppContext,
+	PluginContextC,
+	TuhuaCommandContext,
+} from "./shared/types";
 import {
 	SavedBlog,
 	clearPluginData,
@@ -13,8 +17,10 @@ import { confirmPushChanges } from "./commands/confirm-push-changes";
 import { showErrorNoticeRTE } from "./shared/obsidian-fp/notifications";
 import { deleteCurrentUploadSessionID } from "./shared/plugin-data/upload-session";
 
-type BlogCommand = (blog: SavedBlog) => RIO.ReaderIO<PluginContext, void>;
-type PluginCommand = RIO.ReaderIO<PluginContext, void>;
+type BlogCommand = (
+	blog: SavedBlog
+) => RIO.ReaderIO<AppContext & PluginContextC, void>;
+type PluginCommand = RIO.ReaderIO<PluginContextC, void>;
 
 export const registerBlogCommands = (
 	blogCommands: BlogCommand[] = [
@@ -56,7 +62,7 @@ export const registerPluginCommands = (
 };
 
 const addBlogUploadCommand =
-	(blog: SavedBlog) => (ctx: PluginContext) => () => {
+	(blog: SavedBlog) => (ctx: TuhuaCommandContext) => () => {
 		ctx.plugin.addCommand({
 			id: `test-upload-blog-${blog.id}`,
 			name: `Test upload ${blog.name}`,
@@ -66,7 +72,7 @@ const addBlogUploadCommand =
 		});
 	};
 
-const stopUploadCommand = (blog: SavedBlog) => (ctx: PluginContext) => () => {
+const stopUploadCommand = (blog: SavedBlog) => (ctx: PluginContextC) => () => {
 	ctx.plugin.addCommand({
 		id: `stop-upload-blog-${blog.id}`,
 		name: `Stop upload ${blog.name}`,
@@ -78,7 +84,7 @@ const stopUploadCommand = (blog: SavedBlog) => (ctx: PluginContext) => () => {
 };
 
 const addDebugSessionClearCommand =
-	(blog: SavedBlog) => (ctx: PluginContext) => () => {
+	(blog: SavedBlog) => (ctx: PluginContextC) => () => {
 		ctx.plugin.addCommand({
 			id: `debug-blog-session-clear-${blog.id}`,
 			name: `clear all sessions`,
@@ -88,7 +94,7 @@ const addDebugSessionClearCommand =
 		});
 	};
 
-const debugClearAllData: PluginCommand = (ctx: PluginContext) => () => {
+const debugClearAllData: PluginCommand = (ctx: PluginContextC) => () => {
 	ctx.plugin.addCommand({
 		id: `debug-clear-all-data`,
 		name: `DEBUG clear all data`,

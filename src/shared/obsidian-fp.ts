@@ -6,7 +6,7 @@ import {
 	getBlobArrayBuffer,
 	requestUrl,
 } from "obsidian";
-import { AppContext, PluginContext } from "src/shared/types";
+import { AppContext, PluginContextC } from "src/shared/types";
 import { FileError, NetworkError } from "./errors";
 import { TE, O, RTE, R } from "./fp";
 
@@ -21,7 +21,7 @@ export const renderMarkdown =
 		app,
 		plugin,
 		element,
-	}: AppContext & PluginContext & { element: HTMLElement }) =>
+	}: AppContext & PluginContextC & { element: HTMLElement }) =>
 	() => {
 		console.log(app, markdown, element);
 		MarkdownRenderer.render(app, markdown, element, "", plugin);
@@ -33,7 +33,7 @@ export const showNotice = (message: string) => {
 
 export const saveData =
 	<T>(data: T) =>
-	({ plugin }: PluginContext) =>
+	({ plugin }: PluginContextC) =>
 		TE.tryCatch(
 			() => plugin.saveData(data),
 			(e) => {
@@ -42,7 +42,7 @@ export const saveData =
 			}
 		);
 
-export const loadData = ({ plugin }: PluginContext) =>
+export const loadData = ({ plugin }: PluginContextC) =>
 	TE.tryCatch(
 		() => plugin.loadData(),
 		(e) => {
