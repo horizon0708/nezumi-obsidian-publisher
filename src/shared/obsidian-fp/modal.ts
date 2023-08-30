@@ -2,13 +2,15 @@ import { Setting } from "obsidian";
 import { ModalContext } from "../types";
 import * as RIO from "fp-ts/ReaderIO";
 
-export const emptyModalContent: RIO.ReaderIO<ModalContext, void> =
+export const emptyModalContent: () => RIO.ReaderIO<ModalContext, void> =
+	() =>
 	({ modal }: ModalContext) =>
 	() => {
 		modal.contentEl.empty();
 	};
 
-export const openModal: RIO.ReaderIO<ModalContext, void> =
+export const openModal: () => RIO.ReaderIO<ModalContext, void> =
+	() =>
 	({ modal }) =>
 	() => {
 		modal.open();

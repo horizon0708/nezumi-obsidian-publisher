@@ -28,7 +28,7 @@ export const openConfirmationModal = (
 	pushChanges: PushChanges
 ) => {
 	return pipe(
-		emptyModalContent,
+		emptyModalContent(),
 		RIO.tap(() => renderModalHeader("Upload confirmation")),
 		RIO.map(
 			() =>
@@ -47,7 +47,7 @@ export const openConfirmationModal = (
 		RIO.tap((baseContext) =>
 			renderFooterbuttons(pushChanges(uploadPlan)(baseContext))
 		),
-		RIO.tap(() => openModal)
+		RIO.tap(openModal)
 	);
 };
 

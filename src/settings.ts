@@ -40,9 +40,8 @@ export class TuhuaSettingTab extends PluginSettingTab {
 			plugin: this.plugin,
 			pluginConfig: buildPluginConfig(),
 		};
-		const modal = new BlogEditModal(this.app, this.plugin);
 		const sessionsMondal = new SessionsModal(this.app, this.plugin);
-		const m = new Modal(this.app);
+		const modal = new Modal(this.app);
 
 		const context: BlogListContext & PluginContext = {
 			containerEl: this.containerEl,
@@ -63,30 +62,19 @@ export class TuhuaSettingTab extends PluginSettingTab {
 						onSubmit: () => this.display(),
 					})),
 					RTE.tapReaderIO(openEditModal),
-					RTE.tapReaderIO(() => openModal)
-				)({ modal: m, ...pluginContext })();
-
-				// await pipe(
-				// 	getBlogById(id),
-				// 	RTE.map(buildUpdateFormFields),
-				// 	RTE.tapIO((fields) => () => {
-				// 		modal.render({
-				// 			title: "Edit blog",
-				// 			fields: fields,
-				// 			onSubmit: () => this.display(),
-				// 		});
-				// 		modal.open();
-				// 	}),
-				// 	RTE.tapError(showErrorNoticeRTE)
-				// )(pluginContext)();
+					RTE.tapReaderIO(openModal)
+				)({ modal, ...pluginContext })();
 			},
 			onAdd: () => {
-				modal.render({
-					title: "Connect new blog",
-					fields: blogModalFormFields,
-					onSubmit: () => this.display(),
-				});
-				modal.open();
+				pipe(
+					{
+						title: "Connect new blog",
+						fields: blogModalFormFields,
+						onSubmit: () => this.display(),
+					},
+					openEditModal,
+					RIO.tap(openModal)
+				)({ modal, ...pluginContext })();
 			},
 			onViewLog: async (id) => {
 				await sessionsMondal.render(id);

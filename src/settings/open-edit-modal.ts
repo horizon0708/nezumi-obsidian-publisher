@@ -32,7 +32,7 @@ type EditModalContext = AppContext & PluginContext & ModalContext;
 
 export const openEditModal = (props: ModalProps) =>
 	pipe(
-		emptyModalContent,
+		emptyModalContent(),
 		RIO.tap(() => renderModalHeader(props.title)),
 		RIO.bind("formDiv", () => renderModalDiv()),
 		RIO.bind("hiddenDiv", () => renderModalDiv()),
