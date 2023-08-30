@@ -70,6 +70,7 @@ const buildInfoProps = (plan: UploadPlan) => ({
 	title: `Following ${plan.toUpload.length} file(s) will be uploaded to your blog`,
 	lines: [],
 	items: plan.toUpload.map((x) => x.file.path),
+	show: plan.toUpload.length > 0,
 });
 const buildWarningProps = (plan: UploadPlan) => {
 	const colliding = plan.toSkip.filter(
