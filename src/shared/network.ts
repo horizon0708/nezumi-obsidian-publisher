@@ -1,16 +1,12 @@
-import * as r from "fp-ts/Record";
-import * as A from "fp-ts/Array";
-import * as E from "fp-ts/Either";
-import * as TE from "fp-ts/TaskEither";
-import * as RTE from "fp-ts/ReaderTaskEither";
 import { flow, pipe } from "fp-ts/function";
-import * as t from "io-ts";
-import { Semigroup } from "fp-ts/lib/string";
 import { concatAll } from "fp-ts/lib/Monoid";
 import { successResultM, errorResultM, resultM } from "./utils";
-import { buildFormDataBodyTE, fetchUrl } from "./obsidian-fp";
-import { AppContext, BaseContext } from "src/shared/types";
+import { fetchUrl } from "./obsidian-fp";
+import { AppContext, BaseContext, BlogContext } from "src/shared/types";
 import { DecodeError } from "src/shared/errors";
+import { getBlobArrayBuffer } from "obsidian";
+import { FORM_DATA_DELIMITER } from "./constants";
+import { A, R, RTE, TE, t, E } from "./fp";
 
 enum HttpMethod {
 	GET = "GET",
@@ -19,41 +15,16 @@ enum HttpMethod {
 	DELETE = "DELETE",
 }
 
-const headers = pipe(
-	{
-		jsonContentType: (d: BaseContext) => ({
-			["Content-Type"]: "application/json",
-		}),
-		formDataContentType: (d: BaseContext) => ({
-			["Content-Type"]: `multipart/form-data; boundary=----${d.pluginConfig.formDataBoundaryString}`,
-		}),
-		apiKey: (d: BaseContext) => ({
-			[d.pluginConfig.apiKeyHeader]: d.blog.apiKey,
-		}),
-	},
-	r.map(RTE.asks)
-);
+const formDataContentType = (formDataBoundaryString: string) => ({
+	["Content-Type"]: `multipart/form-data; boundary=----${formDataBoundaryString}`,
+});
+const jsonContentType = { ["Content-Type"]: "application/json" };
 
-const headersFromPayload = ({ path, md5 }: { path: string; md5: string }) =>
-	pipe(
-		{
-			path: { ["x-file-path"]: path },
-			md5: { ["x-file-md5"]: md5 },
-		},
-		r.map(RTE.of)
-	);
-
-const buildHeaders = <T>(
-	builders: RTE.ReaderTaskEither<T, never, Record<string, string>>[]
-) =>
-	pipe(
-		builders,
-		RTE.sequenceArray,
-		RTE.map(concatAll(r.getMonoid(Semigroup)))
-	);
-
-const buildUrl = (ep: string) =>
-	RTE.asks((d: BaseContext) => d.blog.endpoint + "/" + ep);
+const getFetchEnv = R.asks((d: BaseContext) => ({
+	baseUrl: d.blog.endpoint,
+	apiKey: d.blog.apiKey,
+	apiKeyHeader: d.pluginConfig.apiKeyHeader,
+}));
 
 const sendRequest = <T extends t.Props>(r: t.TypeC<T>) =>
 	flow(
@@ -131,15 +102,44 @@ const getFilesResponse = t.type({
 });
 
 export const getFileListFp = pipe(
-	RTE.Do,
-	RTE.apSW("url", buildUrl("files")),
-	RTE.apSW(
-		"headers",
-		buildHeaders([headers.jsonContentType, headers.apiKey])
-	),
-	RTE.apSW("method", RTE.of(HttpMethod.GET)),
+	getFetchEnv,
+	R.map(({ baseUrl, apiKey, apiKeyHeader }) => ({
+		headers: {
+			...jsonContentType,
+			[apiKeyHeader]: apiKey,
+		},
+		url: baseUrl + "/files",
+		method: HttpMethod.GET,
+	})),
+	RTE.rightReader,
 	RTE.chainTaskEitherK(sendRequest(getFilesResponse))
 );
+
+/**
+ *
+ *  Delete files
+ *
+ */
+
+type DeletePayload = {
+	keys: string[];
+};
+
+export const deleteFiles = (p: DeletePayload) =>
+	pipe(
+		getFetchEnv,
+		R.map(({ baseUrl, apiKey, apiKeyHeader }) => ({
+			headers: {
+				...jsonContentType,
+				[apiKeyHeader]: apiKey,
+			},
+			body: JSON.stringify(p),
+			url: baseUrl + "/files",
+			method: HttpMethod.DELETE,
+		})),
+		RTE.rightReader,
+		RTE.chainW(flow(fetchUrl, RTE.fromTaskEither))
+	);
 
 /**
  *
@@ -161,14 +161,17 @@ const uploadPostResponse = t.type({
 
 export const uploadPost = (p: UploadPostPayload) =>
 	pipe(
-		RTE.Do,
-		RTE.apSW("body", RTE.of(JSON.stringify(p))),
-		RTE.apSW("url", buildUrl("posts")),
-		RTE.apSW(
-			"headers",
-			buildHeaders([headers.jsonContentType, headers.apiKey])
-		),
-		RTE.apSW("method", RTE.of(HttpMethod.POST)),
+		getFetchEnv,
+		R.map(({ baseUrl, apiKey, apiKeyHeader }) => ({
+			headers: {
+				...jsonContentType,
+				[apiKeyHeader]: apiKey,
+			},
+			body: JSON.stringify(p),
+			url: baseUrl + "/files",
+			method: HttpMethod.POST,
+		})),
+		RTE.rightReader,
 		RTE.chainTaskEitherK(sendRequest(uploadPostResponse))
 	);
 
@@ -180,8 +183,10 @@ const buildUploadMany =
 			A.map((p) =>
 				pipe(
 					rte(p),
-					RTE.chain(() => RTE.of(successResultM<T, T>(p))),
-					RTE.orElse(() => RTE.of(errorResultM(p)))
+					RTE.bimap(
+						() => errorResultM(p),
+						() => successResultM<T, T>(p)
+					)
 				)
 			),
 			// sequentially for now. Look into batching later
@@ -204,59 +209,68 @@ type UploadAssetPayload = {
 	md5: string;
 };
 
-const buildAssetBody = (p: UploadAssetPayload) =>
-	pipe(
-		RTE.ask<BaseContext>(),
-		RTE.chainW((d) =>
-			pipe(
-				buildFormDataBodyTE(
-					p.content,
-					d.pluginConfig.formDataBoundaryString
-				),
-				RTE.fromTaskEither
-			)
-		)
-	);
+export const uploadAsset = (p: UploadAssetPayload) => {
+	const formDataBoundaryString =
+		buildFormDataBoundaryString(FORM_DATA_DELIMITER);
 
-export const uploadAsset = (p: UploadAssetPayload) =>
-	pipe(
-		RTE.Do,
-		RTE.apSW("body", buildAssetBody(p)),
-		RTE.apSW("url", buildUrl("assets")),
-		RTE.apSW(
-			"headers",
-			buildHeaders([
-				headers.formDataContentType,
-				headers.apiKey,
-				headersFromPayload(p).path,
-				headersFromPayload(p).md5,
-			])
-		),
-		RTE.apSW("method", RTE.of(HttpMethod.POST)),
-		RTE.chainTaskEitherKW(fetchUrl)
+	return pipe(
+		getFetchEnv,
+		R.map(({ baseUrl, apiKey, apiKeyHeader }) => ({
+			headers: {
+				...formDataContentType(formDataBoundaryString),
+				[apiKeyHeader]: apiKey,
+				["x-file-path"]: p.path,
+				["x-file-md5"]: p.md5,
+			},
+			url: baseUrl + "/assets",
+			method: HttpMethod.POST,
+		})),
+		RTE.rightReader,
+		RTE.apSW("body", buildFormDataBody(p.content, formDataBoundaryString)),
+		RTE.chainTaskEitherK(fetchUrl)
 	);
+};
+
+const buildFormDataBoundaryString = (boundary: string, N: number = 16) => {
+	return (
+		boundary +
+		Array(N + 1)
+			.join(
+				(Math.random().toString(36) + "00000000000000000").slice(2, 18)
+			)
+			.slice(0, N)
+	);
+};
 
 export const uploadAssets = buildUploadMany(uploadAsset);
 
-/**
- *
- *  Delete files
- *
- */
+// IMPROVEMENT: This should be in a separate module
+export async function encodeFormDataBody(
+	payload: ArrayBuffer,
+	randomBoundryString: string,
+	mimeType: string = "application/octet-stream"
+) {
+	// Construct the form data payload as a string
+	const pre_string = `------${randomBoundryString}\r\nContent-Disposition: form-data; name="file"; filename="blob"\r\nContent-Type: "${mimeType}"\r\n\r\n`;
+	const post_string = `\r\n------${randomBoundryString}--`;
 
-type DeletePayload = {
-	keys: string[];
-};
+	// Convert the form data payload to a blob by concatenating the pre_string, the file data, and the post_string, and then return the blob as an array buffer
+	const pre_string_encoded = new TextEncoder().encode(pre_string);
+	const data = new Blob([payload]);
+	const post_string_encoded = new TextEncoder().encode(post_string);
+	return await new Blob([
+		pre_string_encoded,
+		await getBlobArrayBuffer(data),
+		post_string_encoded,
+	]).arrayBuffer();
+}
 
-export const deleteFiles = (p: DeletePayload) =>
-	pipe(
-		RTE.Do,
-		RTE.apSW("body", RTE.of(JSON.stringify(p))),
-		RTE.apSW("url", buildUrl("files")),
-		RTE.apSW(
-			"headers",
-			buildHeaders([headers.jsonContentType, headers.apiKey])
-		),
-		RTE.apSW("method", RTE.of(HttpMethod.DELETE)),
-		RTE.chainW(flow(fetchUrl, RTE.fromTaskEither))
-	);
+export const buildFormDataBody = pipe(
+	TE.tryCatchK(encodeFormDataBody, (e) => {
+		if (e instanceof Error) {
+			return e;
+		}
+		return new Error("Encode form data faield");
+	}),
+	RTE.fromTaskEitherK
+);

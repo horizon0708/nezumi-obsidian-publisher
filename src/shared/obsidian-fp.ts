@@ -113,31 +113,3 @@ export const fetchUrl = TE.tryCatchK(
 		return new Error("Unhandled error");
 	}
 );
-
-// IMPROVEMENT: This should be in a separate module
-export async function encodeFormDataBody(
-	payload: ArrayBuffer,
-	randomBoundryString: string,
-	mimeType: string = "application/octet-stream"
-) {
-	// Construct the form data payload as a string
-	const pre_string = `------${randomBoundryString}\r\nContent-Disposition: form-data; name="file"; filename="blob"\r\nContent-Type: "${mimeType}"\r\n\r\n`;
-	const post_string = `\r\n------${randomBoundryString}--`;
-
-	// Convert the form data payload to a blob by concatenating the pre_string, the file data, and the post_string, and then return the blob as an array buffer
-	const pre_string_encoded = new TextEncoder().encode(pre_string);
-	const data = new Blob([payload]);
-	const post_string_encoded = new TextEncoder().encode(post_string);
-	return await new Blob([
-		pre_string_encoded,
-		await getBlobArrayBuffer(data),
-		post_string_encoded,
-	]).arrayBuffer();
-}
-
-export const buildFormDataBodyTE = TE.tryCatchK(encodeFormDataBody, (e) => {
-	if (e instanceof Error) {
-		return e;
-	}
-	return new Error("Encode form data faield");
-});
