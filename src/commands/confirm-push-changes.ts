@@ -66,8 +66,9 @@ const pushChanges = (plan: UploadPlan) => {
 		RTE.of(plan),
 		RTE.tap(() => setNewUploadSession),
 		RTE.bindW("sessionId", () => getCurrentUploadSessionIdRTE),
+		// TODO: check deleted file success
 		RTE.tap(({ toDelete }) => deleteFiles({ keys: toDelete })),
-		RTE.chainW(({ toUpload, toSkip, sessionId }) =>
+		RTE.chainW(({ toUpload, toSkip, sessionId, toDelete }) =>
 			pipe(
 				toUpload,
 				A.map((x) => ({ ...x, sessionId: O.some(sessionId) })),
@@ -76,6 +77,7 @@ const pushChanges = (plan: UploadPlan) => {
 				RTE.map((result) => ({
 					...result,
 					skippedCount: toSkip.length,
+					deleteCount: toDelete.length,
 				}))
 			)
 		),
@@ -84,9 +86,13 @@ const pushChanges = (plan: UploadPlan) => {
 				`Upload complete. ${result.successCount} files uploaded, ${result.errorCount} errors, ${result.skippedCount} skipped.`
 			)
 		),
-		RTE.tap((e) =>
+		RTE.tap((result) =>
 			updateCurrentUploadSession({
 				finishedAt: new Date().toISOString(),
+				uploadCount: result.successCount,
+				errorCount: result.errorCount,
+				skipCount: result.skippedCount,
+				deleteCount: result.deleteCount,
 			})
 		),
 		RTE.tapError(showErrorNoticeRTE),

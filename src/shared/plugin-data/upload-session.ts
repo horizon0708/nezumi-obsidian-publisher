@@ -19,6 +19,7 @@ export const uploadSessionSchema = t.intersection([
 		uploadCount: t.number,
 		errorCount: t.number,
 		skipCount: t.number,
+		deleteCount: t.number,
 	}),
 	t.partial({
 		finishedAt: t.string,
@@ -36,6 +37,7 @@ const buildNewUploadSession = (blogId: string): UploadSession => {
 		uploadCount: 0,
 		errorCount: 0,
 		skipCount: 0,
+		deleteCount: 0,
 	};
 };
 

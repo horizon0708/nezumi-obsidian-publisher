@@ -10,6 +10,7 @@ import * as RTE from "fp-ts/ReaderTaskEither";
 import * as IO from "fp-ts/IO";
 import * as A from "fp-ts/Array";
 import BlogSync from "main";
+import { formatDateTime } from "src/shared/moment";
 
 export class SessionsModal extends Modal {
 	private plugin: BlogSync;
@@ -91,6 +92,18 @@ const renderEmptyScreen =
 		});
 	};
 
+const desc = (session: UploadSession) => {
+	const el = new DocumentFragment();
+	el.createDiv({
+		text: getSessionStatus(session),
+		cls: "session-status-text",
+	});
+	el.createDiv({ text: `Uploaded: ${session.uploadCount}` });
+	el.createDiv({ text: `Deleted: ${session.deleteCount}` });
+	el.createDiv({ text: `Errored: ${session.errorCount}` });
+	return el;
+};
+
 const renderSessions =
 	(
 		listContainer: HTMLDivElement,
@@ -101,8 +114,9 @@ const renderSessions =
 			const logContainer = listContainer.createDiv();
 
 			new Setting(logContainer)
-				.setName(getSessionStatus(session))
-				.setDesc(session.startedAt)
+				.setClass("session-item")
+				.setName(formatDateTime(session.startedAt))
+				.setDesc(desc(session))
 				.addButton((btn) => {
 					btn.setButtonText("View logs");
 					btn.onClick(async () => {
@@ -119,8 +133,8 @@ const renderLogHeader =
 	(session: UploadSession) =>
 	() => {
 		new Setting(container)
-			.setName(getSessionStatus(session))
-			.setDesc(session.startedAt)
+			.setName(formatDateTime(session.startedAt))
+			.setDesc(desc(session))
 			.addButton((btn) => {
 				btn.setButtonText("Go back to sessions");
 				btn.onClick(async () => {

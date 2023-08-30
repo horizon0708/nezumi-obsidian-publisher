@@ -15,6 +15,16 @@ button[disabled]{
 	padding-bottom: 1rem;
 }
 
+.session-item {
+	padding-top: 1rem;
+	padding-bottom: 1rem;
+	color: #ff3333;
+}
+.session-status-text {
+	color: var(--link-color);
+	padding-bottom: 0.5rem;
+}
+
 .log-container {
 	overflow: scroll;
     flex-grow: 1;
