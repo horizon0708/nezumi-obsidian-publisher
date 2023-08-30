@@ -20,12 +20,15 @@ import { FileError, NetworkError } from "src/shared/errors";
  */
 
 export const renderMarkdown =
-	(elment: HTMLElement) =>
 	(markdown: string) =>
-	({ app, plugin }: BaseContext & PluginContext) =>
+	({
+		app,
+		plugin,
+		element,
+	}: BaseContext & PluginContext & { element: HTMLElement }) =>
 	() => {
-		console.log(app, markdown, elment);
-		MarkdownRenderer.render(app, markdown, elment, "", plugin);
+		console.log(app, markdown, element);
+		MarkdownRenderer.render(app, markdown, element, "", plugin);
 	};
 
 export const showNotice = (message: string) => {

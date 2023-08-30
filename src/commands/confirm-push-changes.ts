@@ -11,23 +11,20 @@ import { deleteFiles } from "src/shared/network";
 import { showErrorNoticeRTE } from "src/shared/notifications";
 import { logForSession, setNewUploadSession } from "src/shared/plugin-data";
 import { buildItemsRTE } from "./confirm-push-changes/build-items";
-import { ConfirmationModal } from "./confirm-push-changes/confirmation-modal";
+import { openConfirmationModal } from "./confirm-push-changes/open-confirmation-modal";
+import { Modal } from "obsidian";
 
 export const confirmPushChanges = async (
 	context: Omit<BaseContext, "pluginConfig"> & PluginContext
 ) => {
 	const pluginConfig = buildPluginConfig();
-	const deps = { ...context, pluginConfig };
-	const confirmationModal = new ConfirmationModal(deps);
+	const deps = { ...context, pluginConfig, modal: new Modal(context.app) };
 
 	const res = await pipe(
 		setNewUploadSession,
 		RTE.flatMap(() => planUpload(buildItemsRTE)),
 		RTE.flatMap(checkForChanges),
-		RTE.tapIO((plan) => () => {
-			confirmationModal.render(plan, pushChanges);
-			confirmationModal.open();
-		}),
+		RTE.tapReaderIO((plan) => openConfirmationModal(plan, pushChanges)),
 		RTE.tapError(showErrorNoticeRTE),
 		RTE.tapError((e) =>
 			RTE.rightReaderTask(logForSession(e.message, "error"))

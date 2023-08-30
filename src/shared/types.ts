@@ -1,4 +1,4 @@
-import { App, TFile, Plugin } from "obsidian";
+import { App, TFile, Plugin, Modal } from "obsidian";
 import { buildPluginConfig } from "src/shared/plugin-config";
 import * as O from "fp-ts/Option";
 import * as RTE from "fp-ts/ReaderTaskEither";
@@ -13,6 +13,14 @@ export type AppContext = {
 
 export type BlogContext = {
 	blog: SavedBlog;
+};
+
+export type ModalContext = {
+	modal: Modal;
+};
+
+export type DivContext = {
+	div: HTMLDivElement;
 };
 
 export type BaseContext = {
