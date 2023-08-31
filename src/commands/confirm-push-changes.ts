@@ -6,8 +6,8 @@ import {
 	PluginConfigContext,
 	PluginContextC,
 } from "../shared/types";
-import { pipe } from "fp-ts/lib/function";
-import { UploadPlan, sortItems } from "./confirm-push-changes/sort-items";
+import { flow, pipe } from "fp-ts/lib/function";
+import { UploadPlan, planUpload } from "./confirm-push-changes/plan-upload";
 import * as RTE from "fp-ts/ReaderTaskEither";
 import * as RT from "fp-ts/ReaderTask";
 import { uploadItems } from "./confirm-push-changes/upload-items";
@@ -24,7 +24,7 @@ import { openConfirmationModal } from "./confirm-push-changes/open-confirmation-
 import { Modal } from "obsidian";
 import { DEFAULT_CONFIG } from "src/shared/plugin-data/plugin-config";
 import { getCurrentUploadSessionIdRTE } from "src/shared/plugin-data/upload-session";
-import { O, A } from "src/shared/fp";
+import { O, A, E } from "src/shared/fp";
 import { getFilesToCheck } from "./confirm-push-changes/get-files-to-check";
 
 export type ConfirmPushChangesContext = AppContext &
@@ -46,8 +46,7 @@ export const confirmPushChanges = async (
 		RT.fromReader,
 		RT.chain(buildItems),
 		RTE.rightReaderTask,
-		RTE.flatMap(sortItems),
-		RTE.flatMap(checkForChanges),
+		RTE.flatMap(planUpload),
 		RTE.tapReaderIO(openConfirmationModal(pushChanges)),
 		RTE.tapError(showErrorNoticeRTE)
 	)(deps)();
@@ -55,15 +54,9 @@ export const confirmPushChanges = async (
 	return res;
 };
 
-const checkForChanges = RTE.fromPredicate(
-	(plan: UploadPlan) => plan.toUpload.length > 0 || plan.toDelete.length > 0,
-	(plan) =>
-		new Error(
-			plan.toSkip
-				? "No changes to upload"
-				: "Couldn't find any files to upload!"
-		)
-);
+declare const a: (args: Map<string, string>) => UploadPlan;
+declare const b: (plan: UploadPlan) => string;
+const c = flow(a, b);
 
 const pushChanges = (plan: UploadPlan) => {
 	return pipe(
@@ -72,18 +65,20 @@ const pushChanges = (plan: UploadPlan) => {
 		RTE.bindW("sessionId", () => getCurrentUploadSessionIdRTE),
 		// TODO: check deleted file success
 		RTE.tap(({ toDelete }) => deleteFiles({ keys: toDelete })),
-		RTE.chainW(({ toUpload, toSkip, sessionId, toDelete }) =>
-			pipe(
-				toUpload,
-				A.map((x) => ({ ...x, sessionId: O.some(sessionId) })),
-				uploadItems,
-				RTE.map(uploadedItemToResult),
-				RTE.map((result) => ({
-					...result,
-					skippedCount: toSkip.length,
-					deleteCount: toDelete.length,
-				}))
-			)
+		RTE.chainW(
+			({ pending, md5Collision, slugCollision, sessionId, toDelete }) =>
+				pipe(
+					pending,
+					A.map((x) => ({ ...x, sessionId: O.some(sessionId) })),
+					uploadItems,
+					RTE.map(uploadedItemToResult),
+					RTE.map((result) => ({
+						...result,
+						skippedCount: [...md5Collision, ...slugCollision]
+							.length,
+						deleteCount: toDelete.length,
+					}))
+				)
 		),
 		RTE.tapReaderTask((result) =>
 			logForSession(

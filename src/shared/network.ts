@@ -114,8 +114,19 @@ export const getFileListFp = pipe(
 		method: HttpMethod.GET,
 	})),
 	RTE.rightReader,
-	RTE.chainTaskEitherK(sendRequest(getFilesResponse))
+	RTE.chainTaskEitherK(sendRequest(getFilesResponse)),
+	RTE.map(({ posts, assets }) => createServerMap([...posts, ...assets]))
 );
+
+const createServerMap = (serverFiles: ServerFile[]) => {
+	const serverMap = new Map<string, string>();
+	serverFiles.forEach(({ path, md5 }) => {
+		if (path) {
+			serverMap.set(path, md5);
+		}
+	});
+	return serverMap;
+};
 
 /**
  *

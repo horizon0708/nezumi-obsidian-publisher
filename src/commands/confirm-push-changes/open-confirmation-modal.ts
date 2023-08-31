@@ -1,5 +1,5 @@
 import { Setting } from "obsidian";
-import { UploadPlan } from "./sort-items";
+import { UploadPlan } from "./plan-upload";
 import { FileStatus, ModalContext } from "src/shared/types";
 import * as RT from "fp-ts/ReaderTask";
 import * as RIO from "fp-ts/ReaderIO";
@@ -24,16 +24,9 @@ export const openConfirmationModal =
 		return pipe(
 			emptyModalContent(),
 			RIO.tap(() => renderModalHeader("Upload confirmation")),
-			RIO.map(
-				() =>
-					uploadPlan.toUpload.length +
-					uploadPlan.toSkip.length +
-					uploadPlan.errors.length +
-					uploadPlan.toDelete.length
-			),
-			RIO.tap((allFileCount) =>
+			RIO.tap(() =>
 				renderModalSpan(
-					`${allFileCount} file(s) have been checked for changes`
+					`${uploadPlan.totalCount} file(s) have been checked for changes`
 				)
 			),
 			RIO.tap(() => renderContent(uploadPlan)),
@@ -65,23 +58,20 @@ const renderContent = (uploadPlan: UploadPlan) => {
 
 const buildInfoProps = (plan: UploadPlan) => ({
 	type: "success" as const,
-	title: `Following ${plan.toUpload.length} file(s) will be uploaded to your blog`,
+	title: `Following ${plan.pending.length} file(s) will be uploaded to your blog`,
 	lines: [],
-	items: plan.toUpload.map((x) => x.file.path),
-	show: plan.toUpload.length > 0,
+	items: plan.pending.map((x) => x.file.path),
+	show: plan.pending.length > 0,
 });
 const buildWarningProps = (plan: UploadPlan) => {
-	const colliding = plan.toSkip.filter(
-		(x) => x.status === FileStatus.SLUG_COLLISION
-	);
 	return {
 		type: "warning" as const,
-		title: `Following ${colliding.length} file(s) have colliding slugs and will be skipped`,
+		title: `Following ${plan.slugCollision.length} file(s) have colliding slugs and will be skipped`,
 		lines: [
 			"You may need to set slugs manually in the frontmatter to resolve the conflicts.",
 		],
-		items: colliding.map((x) => x.file.path),
-		show: colliding.length > 0,
+		items: plan.slugCollision.map((x) => x.file.path),
+		show: plan.slugCollision.length > 0,
 	};
 };
 const buildDeleteProps = (plan: UploadPlan) => ({
