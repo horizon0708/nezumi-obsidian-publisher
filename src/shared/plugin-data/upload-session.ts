@@ -7,6 +7,7 @@ import { pipe } from "fp-ts/lib/function";
 import * as t from "io-ts";
 import { Log, LogLevel, appendLog, logSchema } from "./upload-session/log";
 import * as A from "fp-ts/Array";
+import { SessionMismatchError } from "../errors";
 
 export type UploadSession = t.TypeOf<typeof uploadSessionSchema>;
 
@@ -20,6 +21,7 @@ export const uploadSessionSchema = t.intersection([
 		errorCount: t.number,
 		skipCount: t.number,
 		deleteCount: t.number,
+		cancelCount: t.number,
 	}),
 	t.partial({
 		finishedAt: t.string,
@@ -38,6 +40,7 @@ const buildNewUploadSession = (blogId: string): UploadSession => {
 		errorCount: 0,
 		skipCount: 0,
 		deleteCount: 0,
+		cancelCount: 0,
 	};
 };
 

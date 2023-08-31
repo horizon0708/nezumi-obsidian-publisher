@@ -43,6 +43,7 @@ const buildItem = (file: TFile) =>
 			type: getType(file.path) as ItemType,
 			serverMd5: O.none,
 			sessionId: O.none,
+			logs: [],
 		},
 		R.of,
 		R.apSW("serverPath", getServerPath(file.path)),

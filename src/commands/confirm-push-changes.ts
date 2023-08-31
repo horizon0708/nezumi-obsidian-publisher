@@ -26,6 +26,7 @@ import { DEFAULT_CONFIG } from "src/shared/plugin-data/plugin-config";
 import { getCurrentUploadSessionIdRTE } from "src/shared/plugin-data/upload-session";
 import { O, A, E } from "src/shared/fp";
 import { getFilesToCheck } from "./confirm-push-changes/get-files-to-check";
+import { newLog } from "src/shared/plugin-data/upload-session/log";
 
 export type ConfirmPushChangesContext = AppContext &
 	BlogContext &
@@ -62,40 +63,62 @@ const pushChanges = (plan: UploadPlan) => {
 		RTE.flatMap(() => getCurrentUploadSessionIdRTE),
 		// TODO: check deleted file success
 		RTE.tap(() => deleteFiles({ keys: plan.toDelete })),
-		RTE.flatMap((sessionId) =>
+		RTE.flatMapReaderTask((sessionId) =>
 			pipe(
 				pending,
 				A.map((x) => ({ ...x, sessionId: O.some(sessionId) })),
 				uploadItems,
-				RTE.map(uploadedItemToResult),
-				RTE.map((result) => ({
-					...result,
-					skippedCount: [...md5Collision, ...slugCollision].length,
-					deleteCount: toDelete.length,
-				}))
+				RT.map(aggregateUploadResults)
 			)
 		),
-		RTE.tapReaderTask((result) =>
-			logForSession(
-				`Upload complete. ${result.successCount} files uploaded, ${result.errorCount} errors, ${result.skippedCount} skipped.`
-			)
-		),
-		RTE.tap((result) =>
+		RTE.map((result) => ({
+			...result,
+			logs: [
+				...result.logs,
+				newLog(`Upload complete. Uploaded: ${result.uploadCount}.`),
+			],
+		})),
+		RTE.tap(({ uploadCount, errorCount, cancelCount, logs }) =>
 			updateCurrentUploadSession({
 				finishedAt: new Date().toISOString(),
-				uploadCount: result.successCount,
-				errorCount: result.errorCount,
-				skipCount: result.skippedCount,
-				deleteCount: result.deleteCount,
+				uploadCount,
+				errorCount,
+				cancelCount,
+				skipCount: md5Collision.length + slugCollision.length,
+				deleteCount: toDelete.length,
+				logs,
 			})
 		),
 		RTE.tapError(showErrorNoticeRTE),
-		RTE.tapIO((e) => () => showNotice(JSON.stringify(e))),
+		RTE.tapIO(
+			(e) => () => showNotice("[Tuhua Publisher] Upload complete!")
+		),
 		RTE.fold(
 			() => RT.of(undefined as void),
 			() => RT.of(undefined as void)
 		)
 	);
+};
+
+const aggregateUploadResults = (items: Item[]) => {
+	// TODO: sort here?
+	const logs = items.flatMap((item) => item.logs);
+	const uploadCount = items.filter(
+		(item) => item.status === FileStatus.UPLOAD_SUCCESS
+	).length;
+	const cancelCount = items.filter(
+		(item) => item.status === FileStatus.UPLOAD_CANCELLED
+	).length;
+	const errorCount = items.filter(
+		(item) => item.status === FileStatus.UPLOAD_ERROR
+	).length;
+
+	return {
+		logs,
+		uploadCount,
+		cancelCount,
+		errorCount,
+	};
 };
 
 const uploadedItemToResult = (items: readonly Item[]) =>

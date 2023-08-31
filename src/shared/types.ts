@@ -1,6 +1,6 @@
 import { App, TFile, Modal } from "obsidian";
 import * as O from "fp-ts/Option";
-import { SavedBlog } from "src/shared/plugin-data";
+import { Log, SavedBlog } from "src/shared/plugin-data";
 import BlogSync from "main";
 import { PluginConfigT } from "./plugin-data/plugin-config";
 
@@ -55,6 +55,7 @@ export type BaseItem = ErroredItem & {
 	serverMd5: O.Option<string>;
 	type: FileType;
 	sessionId: O.Option<string>;
+	logs: Log[];
 };
 
 export type Post = BaseItem & {

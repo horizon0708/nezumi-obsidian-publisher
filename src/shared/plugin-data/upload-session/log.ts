@@ -32,3 +32,9 @@ export const appendLog = (message: string, level: LogLevel) => (logs: Log[]) =>
 			level,
 		},
 	];
+
+export const newLog = (message: string, level: LogLevel = "info") => ({
+	timestamp: new Date().toISOString(),
+	message,
+	level,
+});

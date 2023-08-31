@@ -52,3 +52,10 @@ export class FileError extends Error {
 		this.path = path;
 	}
 }
+
+export class SessionMismatchError extends Error {
+	constructor(currentSession: string, fileSession: string) {
+		const message = `Session ID mismatch. Current Session: ${currentSession} / File ${fileSession} `;
+		super(message);
+	}
+}

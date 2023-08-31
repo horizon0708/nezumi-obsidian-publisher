@@ -23,15 +23,25 @@ export const openConfirmationModal =
 	(pushChanges: PushChanges) => (uploadPlan: UploadPlan) => {
 		return pipe(
 			emptyModalContent(),
-			RIO.tap(() => renderModalHeader("Upload confirmation")),
-			RIO.tap(() =>
+			RIO.map(() => isWarningModal(uploadPlan)),
+			RIO.tap((isWarning) =>
+				renderModalHeader(
+					!isWarning ? "Upload confirmation" : "No changes to push..."
+				)
+			),
+			RIO.tap((isWarning) =>
 				renderModalSpan(
-					`${uploadPlan.totalCount} file(s) have been checked for changes`
+					!isWarning
+						? `${uploadPlan.totalCount} file(s) have been checked for changes`
+						: `No changes have been detected from ${uploadPlan.totalCount} file(s). This may be because of the following reason(s)`
 				)
 			),
 			RIO.tap(() => renderContent(uploadPlan)),
-			RIO.flatMap(() => RIO.ask<ConfirmPushChangesContext>()),
-			RIO.tap((ctx) => renderFooterbuttons(pushChanges(uploadPlan)(ctx))),
+			RIO.bindTo("isWarning"),
+			RIO.bindW("context", () => RIO.ask<ConfirmPushChangesContext>()),
+			RIO.tap(({ context, isWarning }) =>
+				renderFooterbuttons(pushChanges(uploadPlan)(context), isWarning)
+			),
 			RIO.tap(openModal)
 		);
 	};
@@ -66,7 +76,7 @@ const buildInfoProps = (plan: UploadPlan) => ({
 const buildWarningProps = (plan: UploadPlan) => {
 	return {
 		type: "warning" as const,
-		title: `Following ${plan.slugCollision.length} file(s) have colliding slugs and will be skipped`,
+		title: `Following ${plan.slugCollision.length} file(s) have colliding slugs and are skipped`,
 		lines: [
 			"You may need to set slugs manually in the frontmatter to resolve the conflicts.",
 		],
@@ -93,6 +103,9 @@ const buildErrorProps = (plan: UploadPlan) => ({
 	show: plan.errors.length > 0,
 });
 
+const isWarningModal = (plan: UploadPlan) =>
+	plan.pending.length === 0 && plan.toDelete.length === 0;
+
 type UploadPlanContext = {
 	uploadPlan: UploadPlan;
 };
@@ -107,9 +120,13 @@ const renderCallout = (
 	);
 
 const renderFooterbuttons =
-	(onUpload: () => Promise<void>) =>
+	(onUpload: () => Promise<void>, isWarning: boolean) =>
 	({ modal }: ModalContext) =>
 	() => {
+		if (isWarning) {
+			return;
+		}
+
 		new Setting(modal.contentEl)
 			.addButton((btn) => {
 				btn.setButtonText("Cancel").onClick(() => {
