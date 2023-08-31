@@ -7,10 +7,9 @@ import {
 	PluginContextC,
 } from "../shared/types";
 import { pipe } from "fp-ts/lib/function";
-import { UploadPlan, planUpload } from "./confirm-push-changes/plan-upload";
+import { UploadPlan, sortItems } from "./confirm-push-changes/sort-items";
 import * as RTE from "fp-ts/ReaderTaskEither";
 import * as RT from "fp-ts/ReaderTask";
-import * as A from "fp-ts/Array";
 import { uploadItems } from "./confirm-push-changes/upload-items";
 import { showNotice } from "src/shared/obsidian-fp";
 import { deleteFiles } from "src/shared/network";
@@ -20,12 +19,13 @@ import {
 	setNewUploadSession,
 	updateCurrentUploadSession,
 } from "src/shared/plugin-data";
-import { buildItemsRTE } from "./confirm-push-changes/build-items";
+import { buildItems } from "./confirm-push-changes/build-items";
 import { openConfirmationModal } from "./confirm-push-changes/open-confirmation-modal";
 import { Modal } from "obsidian";
 import { DEFAULT_CONFIG } from "src/shared/plugin-data/plugin-config";
 import { getCurrentUploadSessionIdRTE } from "src/shared/plugin-data/upload-session";
-import { O } from "src/shared/fp";
+import { O, A } from "src/shared/fp";
+import { getFilesToCheck } from "./confirm-push-changes/get-files-to-check";
 
 export type ConfirmPushChangesContext = AppContext &
 	BlogContext &
@@ -42,9 +42,13 @@ export const confirmPushChanges = async (
 	};
 
 	const res = await pipe(
-		planUpload(buildItemsRTE),
+		getFilesToCheck(),
+		RT.fromReader,
+		RT.chain(buildItems),
+		RTE.rightReaderTask,
+		RTE.flatMap(sortItems),
 		RTE.flatMap(checkForChanges),
-		RTE.tapReaderIO((plan) => openConfirmationModal(plan, pushChanges)),
+		RTE.tapReaderIO(openConfirmationModal(pushChanges)),
 		RTE.tapError(showErrorNoticeRTE)
 	)(deps)();
 

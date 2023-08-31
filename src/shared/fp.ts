@@ -7,7 +7,8 @@ import * as O from "fp-ts/Option";
 import * as IO from "fp-ts/IO";
 import * as TE from "fp-ts/TaskEither";
 import * as R from "fp-ts/Reader";
+import * as r from "fp-ts/Record";
 import * as t from "io-ts";
 import { pipe } from "fp-ts/lib/function";
 
-export { RTE, RE, RIO, A, O, IO, t, pipe, TE, R, E };
+export { RTE, RE, RIO, A, O, IO, t, pipe, TE, R, E, r };

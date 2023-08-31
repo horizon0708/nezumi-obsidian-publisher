@@ -1,5 +1,5 @@
 import { Setting } from "obsidian";
-import { UploadPlan } from "./plan-upload";
+import { UploadPlan } from "./sort-items";
 import { FileStatus, ModalContext } from "src/shared/types";
 import * as RT from "fp-ts/ReaderTask";
 import * as RIO from "fp-ts/ReaderIO";
@@ -19,31 +19,29 @@ type PushChanges = (
 	plan: UploadPlan
 ) => RT.ReaderTask<ConfirmPushChangesContext, void>;
 
-export const openConfirmationModal = (
-	uploadPlan: UploadPlan,
-	pushChanges: PushChanges
-) => {
-	return pipe(
-		emptyModalContent(),
-		RIO.tap(() => renderModalHeader("Upload confirmation")),
-		RIO.map(
-			() =>
-				uploadPlan.toUpload.length +
-				uploadPlan.toSkip.length +
-				uploadPlan.errors.length +
-				uploadPlan.toDelete.length
-		),
-		RIO.tap((allFileCount) =>
-			renderModalSpan(
-				`${allFileCount} file(s) have been checked for changes`
-			)
-		),
-		RIO.tap(() => renderContent(uploadPlan)),
-		RIO.flatMap(() => RIO.ask<ConfirmPushChangesContext>()),
-		RIO.tap((ctx) => renderFooterbuttons(pushChanges(uploadPlan)(ctx))),
-		RIO.tap(openModal)
-	);
-};
+export const openConfirmationModal =
+	(pushChanges: PushChanges) => (uploadPlan: UploadPlan) => {
+		return pipe(
+			emptyModalContent(),
+			RIO.tap(() => renderModalHeader("Upload confirmation")),
+			RIO.map(
+				() =>
+					uploadPlan.toUpload.length +
+					uploadPlan.toSkip.length +
+					uploadPlan.errors.length +
+					uploadPlan.toDelete.length
+			),
+			RIO.tap((allFileCount) =>
+				renderModalSpan(
+					`${allFileCount} file(s) have been checked for changes`
+				)
+			),
+			RIO.tap(() => renderContent(uploadPlan)),
+			RIO.flatMap(() => RIO.ask<ConfirmPushChangesContext>()),
+			RIO.tap((ctx) => renderFooterbuttons(pushChanges(uploadPlan)(ctx))),
+			RIO.tap(openModal)
+		);
+	};
 
 const renderContent = (uploadPlan: UploadPlan) => {
 	return pipe(

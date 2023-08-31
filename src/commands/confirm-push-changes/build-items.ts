@@ -7,15 +7,12 @@ import * as A from "fp-ts/Array";
 import * as R from "fp-ts/Reader";
 import * as r from "fp-ts/Record";
 import {
-	Asset,
-	BaseItem,
 	BlogContext,
 	FileStatus,
 	FileType,
 	Item,
 	ItemType,
 	PluginConfigContext,
-	Post,
 } from "../../shared/types";
 import { separatedMonoid } from "../../shared/separated-monoid";
 import { concatAll } from "fp-ts/lib/Monoid";
@@ -27,10 +24,6 @@ import {
 } from "src/shared/obsidian-fp";
 import { getType, liftRT } from "src/shared/utils";
 import SparkMD5 from "spark-md5";
-import { FileError } from "src/shared/errors";
-import { ConfirmPushChangesContext } from "../confirm-push-changes";
-
-const eitherMonoid = separatedMonoid<Error, Item>();
 
 export const buildItems = (files: TFile[]) =>
 	pipe(
@@ -47,17 +40,20 @@ const buildItem = (file: TFile) =>
 			file,
 			status: FileStatus.PENDING,
 			message: O.none,
+			type: getType(file.path) as ItemType,
 			serverMd5: O.none,
-			type: getType(file.path),
+			sessionId: O.none,
 		},
-		RTE.of,
-		RTE.bind("md5", ({ type }) => getFileMd5(file, type)),
-		RTE.apSW("serverPath", getServerPathRTE(file.path)),
-		RTE.apSW("embeddedAssets", getEmbeededAssetsRTE(file.path)),
-		RTE.let("sessionId", () => O.none),
-		RTE.chainW(buildPostOrAsset),
+		R.of,
+		R.apSW("serverPath", getServerPath(file.path)),
+		R.apSW("embeddedAssets", getEmbeddedAssets(file.path)),
+		R.apSW("slug", getSlug(file)),
+		RTE.rightReader,
+		RTE.bindW("md5", ({ type }) => getFileMd5(file, type)),
 		RTE.foldW(liftRT(eitherMonoid.fromLeft), liftRT(eitherMonoid.fromRight))
 	);
+
+const eitherMonoid = separatedMonoid<Error, Item>();
 
 const getFileMd5 = (file: TFile, type: ItemType) => {
 	if (type === FileType.POST) {
@@ -76,7 +72,6 @@ const getServerPath =
 			? path
 			: path.slice(blog.syncFolder.length + 1);
 	};
-const getServerPathRTE = RTE.fromReaderK(getServerPath);
 
 const getEmbeddedAssets = (path: string) =>
 	pipe(
@@ -91,27 +86,6 @@ const getEmbeddedAssets = (path: string) =>
 			)
 		)
 	);
-const getEmbeededAssetsRTE = RTE.fromReaderK(getEmbeddedAssets);
-
-type RTEBuilder<A> = RTE.ReaderTaskEither<
-	ConfirmPushChangesContext,
-	FileError,
-	A
->;
-const buildPostOrAsset = (baseItem: BaseItem): RTEBuilder<Post | Asset> => {
-	if (baseItem.type === FileType.ASSET) {
-		return RTE.of({
-			...baseItem,
-			type: baseItem.type,
-		});
-	}
-
-	return pipe(
-		getSlug(baseItem.file),
-		RTE.rightReader,
-		RTE.map((slug) => ({ ...baseItem, slug, type: FileType.POST }))
-	);
-};
 
 const getSlug = (file: TFile) =>
 	pipe(

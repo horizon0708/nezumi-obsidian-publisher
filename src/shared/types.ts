@@ -37,6 +37,7 @@ export enum FileStatus {
 
 export type ItemType = FileType.POST | FileType.ASSET;
 export enum FileType {
+	INVALID = "invalid",
 	POST = "post",
 	ASSET = "asset",
 }
@@ -63,6 +64,7 @@ export type Post = BaseItem & {
 
 export type Asset = BaseItem & {
 	type: FileType.ASSET;
+	slug: string;
 };
 
 export type Item = Post | Asset;
