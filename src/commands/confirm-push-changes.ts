@@ -54,31 +54,26 @@ export const confirmPushChanges = async (
 	return res;
 };
 
-declare const a: (args: Map<string, string>) => UploadPlan;
-declare const b: (plan: UploadPlan) => string;
-const c = flow(a, b);
-
 const pushChanges = (plan: UploadPlan) => {
+	const { pending, md5Collision, slugCollision, toDelete } = plan;
 	return pipe(
-		RTE.of(plan),
-		RTE.tap(() => setNewUploadSession),
-		RTE.bindW("sessionId", () => getCurrentUploadSessionIdRTE),
+		// TODO session stuff is wonky
+		setNewUploadSession,
+		RTE.flatMap(() => getCurrentUploadSessionIdRTE),
 		// TODO: check deleted file success
-		RTE.tap(({ toDelete }) => deleteFiles({ keys: toDelete })),
-		RTE.chainW(
-			({ pending, md5Collision, slugCollision, sessionId, toDelete }) =>
-				pipe(
-					pending,
-					A.map((x) => ({ ...x, sessionId: O.some(sessionId) })),
-					uploadItems,
-					RTE.map(uploadedItemToResult),
-					RTE.map((result) => ({
-						...result,
-						skippedCount: [...md5Collision, ...slugCollision]
-							.length,
-						deleteCount: toDelete.length,
-					}))
-				)
+		RTE.tap(() => deleteFiles({ keys: plan.toDelete })),
+		RTE.flatMap((sessionId) =>
+			pipe(
+				pending,
+				A.map((x) => ({ ...x, sessionId: O.some(sessionId) })),
+				uploadItems,
+				RTE.map(uploadedItemToResult),
+				RTE.map((result) => ({
+					...result,
+					skippedCount: [...md5Collision, ...slugCollision].length,
+					deleteCount: toDelete.length,
+				}))
+			)
 		),
 		RTE.tapReaderTask((result) =>
 			logForSession(

@@ -22,12 +22,13 @@ const sortItems =
 	({ left: errors, right: items }: Separated<Error[], Item[]>) =>
 	(serverMap: Map<string, string>) => {
 		const slugToPath = new Map<string, string>();
+		// These mutate the maps - but it's contained & necessary evil
 		const updateFileStatus = (item: Item) =>
 			pipe(
 				item,
-				markItemOffFromServerMap,
-				R.flatMap(checkForSlugCollision),
-				R.flatMap(checkForMD5Collision)
+				checkForSlugCollision,
+				R.flatMap(checkForMD5Collision),
+				R.flatMap(markItemOffFromServerMap)
 			)({
 				slugToPath,
 				serverMap,
@@ -60,16 +61,6 @@ type CheckContext = {
 	slugToPath: Map<string, string>;
 };
 
-const markItemOffFromServerMap =
-	(item: Item) =>
-	({ serverMap }: CheckContext) => {
-		const serverMd5 = serverMap.get(item.serverPath);
-		if (serverMd5) {
-			serverMap.delete(item.serverPath);
-		}
-		return item;
-	};
-
 const checkForSlugCollision =
 	(item: Item) =>
 	({ slugToPath }: CheckContext) => {
@@ -100,6 +91,16 @@ const checkForMD5Collision =
 				...item,
 				status: FileStatus.MD5_COLLISION,
 			};
+		}
+		return item;
+	};
+
+const markItemOffFromServerMap =
+	(item: Item) =>
+	({ serverMap }: CheckContext) => {
+		const serverMd5 = serverMap.get(item.serverPath);
+		if (serverMd5) {
+			serverMap.delete(item.serverPath);
 		}
 		return item;
 	};
