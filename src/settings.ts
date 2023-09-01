@@ -1,15 +1,4 @@
-import {
-	App,
-	FuzzySuggestModal,
-	Modal,
-	Notice,
-	Plugin,
-	PluginSettingTab,
-	Setting,
-	SuggestModal,
-	TAbstractFile,
-	TFolder,
-} from "obsidian";
+import { App, PluginSettingTab, Setting } from "obsidian";
 import * as RIO from "fp-ts/ReaderIO";
 import * as RTE from "fp-ts/ReaderTaskEither";
 import * as A from "fp-ts/Array";
@@ -37,28 +26,6 @@ type BlogListContext = {
 	onViewLog: (id: string) => Promise<void>;
 };
 
-export class ExampleModal extends FuzzySuggestModal<TFolder> {
-	getItems(): TFolder[] {
-		const abstractFiles = app.vault.getAllLoadedFiles();
-		const folders: TFolder[] = [];
-
-		abstractFiles.forEach((folder: TAbstractFile) => {
-			if (folder instanceof TFolder) {
-				folders.push(folder);
-			}
-		});
-		return folders;
-	}
-
-	getItemText(folder: TFolder): string {
-		return folder.path;
-	}
-
-	onChooseItem(book: TFolder, evt: MouseEvent | KeyboardEvent) {
-		console.log("selected", book);
-	}
-}
-
 export class TuhuaSettingTab extends PluginSettingTab {
 	plugin: BlogSync;
 	constructor(app: App, plugin: BlogSync) {
@@ -75,7 +42,6 @@ export class TuhuaSettingTab extends PluginSettingTab {
 		};
 
 		const sessionsMondal = new SessionsModal(this.app, this.plugin);
-		const modal = new Modal(this.app);
 
 		const context: BlogListContext & PluginContextC = {
 			containerEl: this.containerEl,
