@@ -1,246 +1,110 @@
-import { App, Modal, Setting, TextComponent, Plugin } from "obsidian";
-import * as RIO from "fp-ts/ReaderIO";
-import * as A from "fp-ts/Array";
-import * as RTE from "fp-ts/ReaderTaskEither";
-import * as E from "fp-ts/Either";
-import * as t from "io-ts";
-import * as O from "fp-ts/Option";
-import { pipe } from "fp-ts/lib/function";
-import { blogModalFormSchema } from "src/settings/open-edit-modal/modal-config";
-import { pingBlogFP } from "../shared/network";
-import { buildPluginConfig } from "src/shared/plugin-config";
-import { upsertBlog } from "../shared/plugin-data";
-import { DecodeError } from "src/shared/errors";
-import { showNotice } from "src/shared/obsidian-fp";
+import { App, Modal, Setting } from "obsidian";
+import { DEFAULT_CONFIG } from "src/shared/plugin-data/plugin-config";
+import { submitForm } from "./edit-modal/submit-form";
 import BlogSync from "main";
+import {
+	TextInputField,
+	TextInputFieldProps,
+} from "./edit-modal/text-input-field";
+import {
+	FolderSelectField,
+	FolderSelectFieldProps,
+} from "./edit-modal/folder-select-field";
 
-export type FormField = {
-	key: string;
-	value: string;
-	initialValue: string;
-	label?: string;
-	description?: string;
-	errorMsg?: string;
-	isHidden: boolean;
-	showRestoreButton: boolean;
-};
+export type ControlProps = FolderSelectFieldProps | TextInputFieldProps;
+export type FormField = { key: string; control: IFormControl };
 
-type FormRenderContext = {
-	containerEl: HTMLElement;
-	hiddenEl: HTMLElement;
-	submitErrorEl: HTMLElement;
-};
+export interface IFormControl {
+	value: string | null;
+	setError: (msg: string) => void;
+	clearError: () => void;
+}
 
-type FormControlContext = {
-	controls: FormControl[];
-	submitErrorEl: HTMLElement;
-	app: App;
-};
-
-// Reader IO will do this :sweat_smile:
-type FormControl = ReturnType<ReturnType<ReturnType<typeof createFormControl>>>;
-
-type ModalViewModel = {
+type EditModalProps = {
 	title: string;
-	fields: FormField[];
-	onSubmit: () => Promise<void>;
+	fields: ControlProps[];
+	hiddenFields: ControlProps[];
+	refreshTab: () => void;
 };
 
-type FormError = { key: string; msg: string | undefined };
-
-export class BlogEditModal extends Modal {
-	private plugin: BlogSync;
-	constructor(app: App, plugin: BlogSync) {
+export class EditModal extends Modal {
+	fields: ControlProps[] = [];
+	hiddenFields: ControlProps[] = [];
+	hiddenEl: HTMLElement | null = null;
+	title: string;
+	refreshTab: () => void;
+	plugin: BlogSync;
+	constructor(app: App, plugin: BlogSync, props: EditModalProps) {
 		super(app);
+		this.title = props.title;
 		this.plugin = plugin;
+		this.fields = props.fields;
+		this.hiddenFields = props.hiddenFields;
+		this.refreshTab = props.refreshTab;
 	}
 
-	render({ title, fields, onSubmit: updateSettingsTab }: ModalViewModel) {
-		// clear existing content on rerender
-		this.contentEl.empty();
+	onOpen(): void {
+		const header = this.contentEl.createDiv();
+		header.createEl("h2", { text: this.title });
 
-		this.contentEl.createEl("h2", { text: title });
+		this.hiddenEl = this.contentEl.createDiv();
+		const fields = createFields(this.fields, this.app, this.contentEl);
+		const hiddenFields = createFields(
+			this.hiddenFields,
+			this.app,
+			this.hiddenEl
+		);
 
-		// Create containers and buttons
-		const formEl = this.contentEl.createEl("form");
-		const hiddenEl = this.contentEl.createEl("div");
-		const submitContainer = new Setting(this.contentEl);
-		const submitErrorEl = submitContainer.controlEl.createEl("span", {
-			text: "controlEl",
+		this.hiddenEl.hide();
+
+		const submitSetting = new Setting(this.contentEl);
+		const submitErrorEl = submitSetting.controlEl.createEl("span", {
 			cls: "error-message",
 		});
-		submitErrorEl.hide();
 
-		// Run the IO computations to render the form fields
-		// This returns references to the Form elements to
-		const controls = pipe(
-			fields,
-			A.map(createFormControl),
-			RIO.sequenceArray,
-			RIO.map((arr) => Array.from(arr))
-		)({
-			containerEl: formEl,
-			hiddenEl,
-			submitErrorEl,
-		})();
-
-		// render toggle button to show hidden fields
-		new Setting(formEl)
-			.setName("Show advanced settings")
-			.addToggle((toggle) => {
-				const defaultShow = false;
-				defaultShow ? hiddenEl.show() : hiddenEl.hide();
-				toggle.setValue(false).onChange((val) => {
-					val ? hiddenEl.show() : hiddenEl.hide();
-				});
-			});
-
-		submitContainer.addButton((btn) => {
-			btn.setButtonText("Save").onClick(async () => {
-				const onSubmit = pipe(
-					submitForm,
-					RTE.fromReaderEither,
-					RTE.tapError(RTE.fromReaderIOK(setFieldErrors)),
-					RTE.chainW((form) =>
-						pipe(
-							pingBlogFP(form),
-							RTE.map(({ blog }) => ({
-								...blog,
-								name: form.alias || blog.name,
-								apiKey: form.apiKey,
-								endpoint: form.endpoint,
-								syncFolder: form.syncFolder,
-							}))
-						)
-					),
-					RTE.tap(upsertBlog),
-					RTE.tapTask(() => updateSettingsTab),
-					RTE.tapError(RTE.fromReaderIOK(setSubmitError)),
-					RTE.tapIO(() => () => this.close()),
-					RTE.tapIO(
-						(blog) => () =>
-							showNotice(
-								`Successfully connected to ${blog.name}!`
-							)
-					)
-				)({
-					controls,
-					submitErrorEl,
+		submitSetting.addButton((btn) => {
+			btn.setButtonText("Submit");
+			btn.onClick(async () => {
+				clearAllErrors(fields);
+				const allFields = [...fields, ...hiddenFields];
+				const e = await submitForm(allFields, {
+					onSuccess: () => {},
+					onError: (e) => {
+						submitErrorEl?.setText(e.message);
+					},
+				})({
 					app: this.app,
-					pluginConfig: buildPluginConfig(),
 					plugin: this.plugin,
-				});
-
-				const e = await onSubmit();
+					pluginConfig: DEFAULT_CONFIG,
+				})();
+				this.refreshTab();
+				this.close();
 			});
 		});
 	}
 }
 
-const setSubmitError =
-	(error: Error) =>
-	({ submitErrorEl }: FormControlContext) =>
-	() => {
-		submitErrorEl.setText(error.message);
-		submitErrorEl.show();
-	};
-
-const submitForm = ({ controls, app }: FormControlContext) =>
-	pipe(
-		controls,
-		A.reduce<FormControl, Record<string, string>>({}, (acc, ctrl) => ({
-			...acc,
-			[ctrl.key]: ctrl.text.getValue(),
-		})),
-		blogModalFormSchema({ app }).decode,
-		E.mapLeft((errors) => new DecodeError(errors))
-	);
-
-const setFieldErrors = (de: DecodeError) => {
-	const transformDecodeErrors = (errors: t.Errors) => {
-		return errors
-			.map((error) =>
-				error.context
-					.filter(({ key }) => key.length > 0)
-					.map(({ key }) => ({ key, msg: error.message }))
-			)
-			.flat();
-	};
-
-	const setFieldError =
-		({ key, msg }: FormError) =>
-		({ controls }: FormControlContext) =>
-		() =>
-			pipe(
-				controls,
-				A.findFirst((c) => c.key === key),
-				O.map((ctrl) => {
-					ctrl.error.textContent = msg ?? "";
-					ctrl.error.show();
-				})
-			);
-
-	return pipe(
-		de.errors,
-		transformDecodeErrors,
-		A.map(setFieldError),
-		RIO.sequenceArray
-	);
+const clearAllErrors = (fields: FormField[]) => {
+	fields.forEach((f) => f.control.clearError());
 };
 
-const createFormControl =
-	(field: FormField) =>
-	({ containerEl, hiddenEl, submitErrorEl }: FormRenderContext) =>
-	() => {
-		const {
-			value,
-			initialValue,
-			label,
-			description,
-			errorMsg,
-			showRestoreButton,
-			isHidden,
-		} = field;
-		const setting = new Setting(isHidden ? hiddenEl : containerEl);
-		if (label) {
-			setting.setName(label);
-		}
-		if (description) {
-			setting.setDesc(description);
-		}
-		let error = setting.controlEl.createEl("span", {
-			cls: "error-message",
-		});
-		if (errorMsg) {
-			error.setText(errorMsg);
-			error.show();
-		}
+const createFields = (
+	props: ControlProps[],
+	app: App,
+	el: HTMLElement
+): FormField[] => {
+	return props.map((p) => ({
+		key: p.key,
+		control: createControl(p, app, el),
+	}));
+};
 
-		let textComponent: TextComponent | null = null;
-		setting.addText((text) => {
-			textComponent = text;
-			text.setValue(value || initialValue).onChange(() => {
-				// when touched, it should remove any error messages
-				error.setText("");
-				error.hide();
-				submitErrorEl.setText("");
-				submitErrorEl.hide();
-			});
-		});
-		if (showRestoreButton) {
-			setting.addButton((btn) => {
-				btn.setIcon("rotate-cw")
-					.setTooltip("Restore default")
-					.onClick(() => {
-						textComponent?.setValue(field.initialValue);
-					});
-			});
-		}
-
-		return {
-			key: field.key,
-			setting,
-			text: textComponent!,
-			error,
-		};
-	};
+const createControl = (props: ControlProps, app: App, el: HTMLElement) => {
+	if (props.type === "input") {
+		return new TextInputField(el, props);
+	}
+	if (props.type === "folderSuggestion") {
+		return new FolderSelectField(app, el, props);
+	}
+	throw new Error(`Undefined control type`);
+};

@@ -1,15 +1,23 @@
-import { App, Modal, Plugin, PluginSettingTab, Setting } from "obsidian";
+import {
+	App,
+	FuzzySuggestModal,
+	Modal,
+	Notice,
+	Plugin,
+	PluginSettingTab,
+	Setting,
+	SuggestModal,
+	TAbstractFile,
+	TFolder,
+} from "obsidian";
 import * as RIO from "fp-ts/ReaderIO";
 import * as RTE from "fp-ts/ReaderTaskEither";
 import * as A from "fp-ts/Array";
 import { pipe } from "fp-ts/lib/function";
 import { Blog } from "./shared/network";
 import { deleteBlog, getBlogById, getBlogs } from "./shared/plugin-data";
-import { BlogEditModal } from "./settings/edit-modal";
-import {
-	blogModalFormFields,
-	buildUpdateFormFields,
-} from "./settings/open-edit-modal/modal-config";
+import { EditModal } from "./settings/edit-modal";
+import { blogModalFormFields } from "./settings/open-edit-modal/modal-config";
 import { buildPluginConfig } from "src/shared/plugin-config";
 import { PluginContextC } from "src/shared/types";
 import { showErrorNoticeRTE } from "src/shared/obsidian-fp/notifications";
@@ -17,6 +25,12 @@ import BlogSync from "main";
 import { SessionsModal } from "./settings/sessions-modal";
 import { openEditModal } from "./settings/open-edit-modal";
 import { openModal } from "./shared/obsidian-fp/modal";
+import {
+	buildUpdateFormFields,
+	buildUpdateHiddenFormFields,
+	editModalFields,
+	editModalHiddenFields,
+} from "./settings/edit-modal/edit-modal-config";
 
 type BlogListContext = {
 	containerEl: HTMLElement;
@@ -25,6 +39,28 @@ type BlogListContext = {
 	onAdd: () => void;
 	onViewLog: (id: string) => Promise<void>;
 };
+
+export class ExampleModal extends FuzzySuggestModal<TFolder> {
+	getItems(): TFolder[] {
+		const abstractFiles = app.vault.getAllLoadedFiles();
+		const folders: TFolder[] = [];
+
+		abstractFiles.forEach((folder: TAbstractFile) => {
+			if (folder instanceof TFolder) {
+				folders.push(folder);
+			}
+		});
+		return folders;
+	}
+
+	getItemText(folder: TFolder): string {
+		return folder.path;
+	}
+
+	onChooseItem(book: TFolder, evt: MouseEvent | KeyboardEvent) {
+		console.log("selected", book);
+	}
+}
 
 export class TuhuaSettingTab extends PluginSettingTab {
 	plugin: BlogSync;
@@ -40,6 +76,7 @@ export class TuhuaSettingTab extends PluginSettingTab {
 			plugin: this.plugin,
 			pluginConfig: buildPluginConfig(),
 		};
+
 		const sessionsMondal = new SessionsModal(this.app, this.plugin);
 		const modal = new Modal(this.app);
 
@@ -53,28 +90,25 @@ export class TuhuaSettingTab extends PluginSettingTab {
 				)(pluginContext)();
 			},
 			onEdit: async (id) => {
-				await pipe(
-					getBlogById(id),
-					RTE.map(buildUpdateFormFields),
-					RTE.map((fields) => ({
-						title: "Edit blog",
-						fields,
-						onSubmit: () => this.display(),
-					})),
-					RTE.tapReaderIO(openEditModal),
-					RTE.tapReaderIO(openModal)
-				)({ modal, ...pluginContext })();
+				const b = await getBlogById(id)({ plugin: this.plugin })();
+				if (b._tag === "Right") {
+					const editModal = new EditModal(this.app, this.plugin, {
+						title: "Edit connection",
+						fields: buildUpdateFormFields(b.right),
+						hiddenFields: buildUpdateHiddenFormFields(b.right),
+						refreshTab: () => this.display(),
+					});
+					editModal.open();
+				}
 			},
 			onAdd: () => {
-				pipe(
-					{
-						title: "Connect new blog",
-						fields: blogModalFormFields,
-						onSubmit: () => this.display(),
-					},
-					openEditModal,
-					RIO.tap(openModal)
-				)({ modal, ...pluginContext })();
+				const addModal = new EditModal(this.app, this.plugin, {
+					title: "Connect new blog!",
+					fields: editModalFields,
+					hiddenFields: editModalHiddenFields,
+					refreshTab: () => this.display(),
+				});
+				addModal.open();
 			},
 			onViewLog: async (id) => {
 				await sessionsMondal.render(id);
