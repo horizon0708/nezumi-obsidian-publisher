@@ -1,12 +1,5 @@
-import { Monoid } from "fp-ts/lib/Monoid";
-import * as RTE from "fp-ts/ReaderTaskEither";
-import * as RT from "fp-ts/ReaderTask";
-import * as RE from "fp-ts/ReaderEither";
-import * as TE from "fp-ts/TaskEither";
-import * as E from "fp-ts/Either";
-import * as R from "fp-ts/Reader";
-import * as T from "fp-ts/Task";
 import { FileType } from "./types";
+import { RT, R, RTE, TE, Monoid, T } from "./fp";
 
 type ResultMonoid<E, A> = [A[], E[]];
 
@@ -19,7 +12,7 @@ export const errorResultM = <E, A>(result: E): ResultMonoid<E, A> => [
 	[result],
 ];
 // There must be a existing monoid similar to this
-export const resultM = <E, A>(): Monoid<ResultMonoid<E, A>> => ({
+export const resultM = <E, A>(): Monoid.Monoid<ResultMonoid<E, A>> => ({
 	concat: (x, y) => {
 		const [xSuccess, xError] = x;
 		const [ySuccess, yError] = y;

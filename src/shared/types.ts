@@ -1,8 +1,8 @@
 import { App, TFile, Modal } from "obsidian";
-import * as O from "fp-ts/Option";
 import { Log, SavedBlog } from "src/shared/plugin-data";
 import BlogSync from "main";
 import { PluginConfigT } from "./plugin-data/plugin-config";
+import { O } from "./fp";
 
 export type AppContext = {
 	app: App;

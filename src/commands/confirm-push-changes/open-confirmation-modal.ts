@@ -1,9 +1,6 @@
 import { Setting } from "obsidian";
 import { UploadPlan } from "./plan-upload";
 import { FileStatus, ModalContext } from "src/shared/types";
-import * as RT from "fp-ts/ReaderTask";
-import * as RIO from "fp-ts/ReaderIO";
-import * as A from "fp-ts/Array";
 import { pipe } from "fp-ts/lib/function";
 import { renderMarkdown } from "src/shared/obsidian-fp";
 import {
@@ -14,6 +11,7 @@ import {
 	renderModalSpan,
 } from "src/shared/obsidian-fp/modal";
 import { ConfirmPushChangesContext } from "../confirm-push-changes";
+import { RT, RIO, A } from "src/shared/fp";
 
 type PushChanges = (
 	plan: UploadPlan

@@ -1,6 +1,5 @@
-import { pipe } from "fp-ts/lib/function";
 import { TFile } from "obsidian";
-import { R, A, r } from "src/shared/fp";
+import { R, A, r, pipe } from "src/shared/fp";
 import { getFiles, getFile, getResolvedLinks } from "src/shared/obsidian-fp";
 import { BlogContext, FileType } from "src/shared/types";
 import { getType } from "src/shared/utils";

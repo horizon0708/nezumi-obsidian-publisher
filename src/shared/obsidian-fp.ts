@@ -1,4 +1,3 @@
-import { pipe } from "fp-ts/function";
 import {
 	MarkdownRenderer,
 	Notice,
@@ -8,7 +7,7 @@ import {
 } from "obsidian";
 import { AppContext, PluginContextC } from "src/shared/types";
 import { FileError, NetworkError } from "./errors";
-import { TE, O, RTE, R } from "./fp";
+import { TE, O, RTE, R, pipe } from "./fp";
 
 /*
  * This module is a **thin** wrapper for the Obsidian API

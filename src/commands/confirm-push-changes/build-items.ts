@@ -1,11 +1,5 @@
-import { pipe } from "fp-ts/lib/function";
 import { TFile } from "obsidian";
-import * as O from "fp-ts/Option";
-import * as RTE from "fp-ts/ReaderTaskEither";
-import * as RT from "fp-ts/ReaderTask";
-import * as A from "fp-ts/Array";
-import * as R from "fp-ts/Reader";
-import * as r from "fp-ts/Record";
+import SparkMD5 from "spark-md5";
 import {
 	BlogContext,
 	FileStatus,
@@ -15,7 +9,6 @@ import {
 	PluginConfigContext,
 } from "../../shared/types";
 import { separatedMonoid } from "../../shared/separated-monoid";
-import { concatAll } from "fp-ts/lib/Monoid";
 import {
 	cachedRead,
 	getFM,
@@ -23,14 +16,14 @@ import {
 	readBinary,
 } from "src/shared/obsidian-fp";
 import { getType, liftRT } from "src/shared/utils";
-import SparkMD5 from "spark-md5";
+import { A, RTE, O, R, r, pipe, RT, Monoid } from "src/shared/fp";
 
 export const buildItems = (files: TFile[]) =>
 	pipe(
 		files,
 		A.map(buildItem),
 		RT.sequenceArray,
-		RT.map((e) => pipe(eitherMonoid, concatAll)(e))
+		RT.map((e) => pipe(eitherMonoid, Monoid.concatAll)(e))
 	);
 export const buildItemsRTE = RTE.fromReaderTaskK(buildItems);
 

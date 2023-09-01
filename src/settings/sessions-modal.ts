@@ -6,11 +6,9 @@ import {
 	getBlogUploadSessions,
 	getLogsForSession,
 } from "src/shared/plugin-data";
-import * as RTE from "fp-ts/ReaderTaskEither";
-import * as IO from "fp-ts/IO";
-import * as A from "fp-ts/Array";
 import BlogSync from "main";
 import { formatDateTime } from "src/shared/moment";
+import { RTE, A, IO } from "src/shared/fp";
 
 export class SessionsModal extends Modal {
 	private plugin: BlogSync;

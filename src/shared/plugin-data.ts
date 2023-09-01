@@ -1,8 +1,4 @@
-import * as RTE from "fp-ts/ReaderTaskEither";
-import { pipe } from "fp-ts/lib/function";
 import { loadData, saveData } from "./obsidian-fp";
-import * as t from "io-ts";
-import * as RT from "fp-ts/ReaderTask";
 import {
 	UploadSession,
 	_updateCurrentUploadSession,
@@ -14,7 +10,8 @@ import {
 } from "./plugin-data/upload-session";
 import * as B from "./plugin-data/blog";
 import { LogLevel } from "./plugin-data/upload-session/log";
-import { BlogContext, PluginContextC } from "./types";
+import { BlogContext } from "./types";
+import { RT, RTE, pipe, t } from "./fp";
 
 const pluginData = t.type({
 	blogs: t.array(B.savedBlogSchema),

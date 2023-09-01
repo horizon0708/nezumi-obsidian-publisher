@@ -1,5 +1,4 @@
-import * as t from "io-ts";
-import { UploadSession } from "../upload-session";
+import { t } from "src/shared/fp";
 
 export type Log = t.TypeOf<typeof logSchema>;
 export type LogLevel = t.TypeOf<typeof logLevelSchema>;

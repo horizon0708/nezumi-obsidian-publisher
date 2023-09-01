@@ -1,8 +1,5 @@
-import { pipe } from "fp-ts/lib/function";
-import * as t from "io-ts";
 import { blogSchema } from "src/shared/network";
-import * as A from "fp-ts/Array";
-import * as O from "fp-ts/Option";
+import { t, pipe, A, O } from "../fp";
 
 export type SavedBlog = t.TypeOf<typeof savedBlogSchema>;
 

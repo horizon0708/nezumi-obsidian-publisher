@@ -6,10 +6,7 @@ import {
 	PluginConfigContext,
 	PluginContextC,
 } from "../shared/types";
-import { pipe } from "fp-ts/lib/function";
 import { UploadPlan, planUpload } from "./confirm-push-changes/plan-upload";
-import * as RTE from "fp-ts/ReaderTaskEither";
-import * as RT from "fp-ts/ReaderTask";
 import { uploadItems } from "./confirm-push-changes/upload-items";
 import { showNotice } from "src/shared/obsidian-fp";
 import { deleteFiles } from "src/shared/network";
@@ -23,7 +20,7 @@ import { openConfirmationModal } from "./confirm-push-changes/open-confirmation-
 import { Modal } from "obsidian";
 import { DEFAULT_CONFIG } from "src/shared/plugin-data/plugin-config";
 import { getCurrentUploadSessionIdRTE } from "src/shared/plugin-data/upload-session";
-import { O, A } from "src/shared/fp";
+import { O, A, RT, RTE, pipe } from "src/shared/fp";
 import { getFilesToCheck } from "./confirm-push-changes/get-files-to-check";
 import { newLog } from "src/shared/plugin-data/upload-session/log";
 

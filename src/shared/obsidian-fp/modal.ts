@@ -1,6 +1,6 @@
 import { Setting } from "obsidian";
 import { ModalContext } from "../types";
-import * as RIO from "fp-ts/ReaderIO";
+import { RIO } from "../fp";
 
 export const emptyModalContent: () => RIO.ReaderIO<ModalContext, void> =
 	() =>

@@ -1,12 +1,8 @@
 import { pipe } from "fp-ts/lib/function";
-import * as RTE from "fp-ts/ReaderTaskEither";
-import { ServerFile, getFileListFp } from "src/shared/network";
+import { getFileListFp } from "src/shared/network";
 import { FileStatus, FileType, Item } from "../../shared/types";
-import * as A from "fp-ts/Array";
-import * as O from "fp-ts/Option";
-import * as NEA from "fp-ts/NonEmptyArray";
 import { Separated } from "fp-ts/lib/Separated";
-import { E, R } from "src/shared/fp";
+import { A, E, NEA, O, R, RTE } from "src/shared/fp";
 
 export type UploadPlan = ReturnType<ReturnType<typeof sortItems>>;
 
