@@ -1,7 +1,8 @@
 import { DEFAULT_CONFIG } from "src/shared/plugin-data/plugin-config";
 import { ControlProps } from "../edit-modal";
 import { SavedBlog } from "src/shared/plugin-data";
-import { A } from "src/shared/fp";
+import { A, t, withMessage } from "src/shared/fp";
+import { App, TFolder } from "obsidian";
 
 // If you update the order, update `buildUpdateFormFields` below!
 export const editModalFields: ControlProps[] = [
@@ -53,3 +54,35 @@ export const buildUpdateHiddenFormFields = (blog: SavedBlog): ControlProps[] =>
 		...f1,
 		...f2,
 	}));
+
+export const blogModalFormSchema = ({ app }: { app: App }) =>
+	t.type({
+		apiKey: withMessage(minLength, () => "API key cannot be empty"),
+		syncFolder: withMessage(
+			validPath(app),
+			() => "Sync folder must be a valid folder"
+		),
+		alias: t.string,
+		// TODO: regex valid url
+		endpoint: withMessage(minLength, () => "Endpoint cannot be empty"),
+	});
+
+interface MinimumLength {
+	readonly stringMinLength: unique symbol; // use `unique symbol` here to ensure uniqueness across modules / packages
+}
+const minLength = t.brand(
+	t.string, // a codec representing the type to be refined
+	(n): n is t.Branded<string, MinimumLength> => n.length > 0, // a custom type guard using the build-in helper `Branded`
+	"stringMinLength" // the name must match the readonly field in the brand
+);
+
+interface ValidPath {
+	readonly validPath: unique symbol;
+}
+const validPath = (app: App) =>
+	t.brand(
+		t.string,
+		(n): n is t.Branded<string, ValidPath> =>
+			app.vault.getAbstractFileByPath(n) instanceof TFolder,
+		"validPath"
+	);

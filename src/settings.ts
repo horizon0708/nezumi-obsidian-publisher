@@ -17,14 +17,11 @@ import { pipe } from "fp-ts/lib/function";
 import { Blog } from "./shared/network";
 import { deleteBlog, getBlogById, getBlogs } from "./shared/plugin-data";
 import { EditModal } from "./settings/edit-modal";
-import { blogModalFormFields } from "./settings/open-edit-modal/modal-config";
 import { buildPluginConfig } from "src/shared/plugin-config";
 import { PluginContextC } from "src/shared/types";
 import { showErrorNoticeRTE } from "src/shared/obsidian-fp/notifications";
 import BlogSync from "main";
 import { SessionsModal } from "./settings/sessions-modal";
-import { openEditModal } from "./settings/open-edit-modal";
-import { openModal } from "./shared/obsidian-fp/modal";
 import {
 	buildUpdateFormFields,
 	buildUpdateHiddenFormFields,

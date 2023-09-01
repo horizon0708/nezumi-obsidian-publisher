@@ -26,7 +26,6 @@ export class SessionsModal extends Modal {
 		header.createEl("h2", { text: "Upload history" });
 
 		const list = this.contentEl.createDiv();
-		// list.addClass("log-container");
 
 		return await pipe(
 			getBlogUploadSessions(blogId),
