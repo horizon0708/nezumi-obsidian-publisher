@@ -9,6 +9,8 @@ import * as TE from "fp-ts/TaskEither";
 import * as R from "fp-ts/Reader";
 import * as r from "fp-ts/Record";
 import * as t from "io-ts";
+import * as CS from "fp-ts/Console";
+import * as Debug from "fp-ts-std/Debug";
 import { pipe } from "fp-ts/lib/function";
 
-export { RTE, RE, RIO, A, O, IO, t, pipe, TE, R, E, r };
+export { RTE, RE, RIO, A, O, IO, t, pipe, TE, R, E, r, CS, Debug };

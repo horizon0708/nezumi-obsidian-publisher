@@ -1,6 +1,11 @@
 import { Plugin } from "obsidian";
 import { TuhuaSettingTab } from "src/settings";
-import { registerBlogCommands, registerPluginCommands } from "src/commands";
+import {
+	registerBlogCommands,
+	registerDebugBlogCommands,
+	registerDebugPluginCommands,
+	registerPluginCommands,
+} from "src/commands";
 import { UploadSession } from "src/shared/plugin-data/upload-session";
 import { PluginData, maybeInitialisePluginData } from "src/shared/plugin-data";
 
@@ -23,11 +28,15 @@ export default class BlogSync extends Plugin {
 		}
 
 		await maybeInitialisePluginData(seed)(context)();
-		// TODO: think about migration
+		// TODO: think about plugin data migration
 
 		this.addSettingTab(new TuhuaSettingTab(this.app, this));
 		await registerPluginCommands()(context)();
 		await registerBlogCommands()(context)();
+		if (process.env.DEV) {
+			await registerDebugPluginCommands()(context)();
+			await registerDebugBlogCommands()(context)();
+		}
 	}
 
 	currentSession() {

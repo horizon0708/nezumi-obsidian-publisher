@@ -19,11 +19,7 @@ type PluginCommand = RIO.ReaderIO<PluginContextC, void>;
 type BlogCommand = (blog: SavedBlog) => RIO.ReaderIO<BlogCommandContext, void>;
 
 export const registerBlogCommands = (
-	blogCommands: BlogCommand[] = [
-		addBlogUploadCommand,
-		stopUploadCommand,
-		addDebugSessionClearCommand,
-	]
+	blogCommands: BlogCommand[] = [addBlogUploadCommand, stopUploadCommand]
 ) => {
 	const addCommands = (blog: SavedBlog) =>
 		pipe(
@@ -45,16 +41,21 @@ export const registerBlogCommands = (
 		RTE.tapError(showErrorNoticeRTE)
 	);
 };
+export const registerDebugBlogCommands = () => {
+	return registerBlogCommands([addDebugSessionClearCommand]);
+};
 
-export const registerPluginCommands = (
-	commands: PluginCommand[] = [debugClearAllData]
-) => {
+export const registerPluginCommands = (commands: PluginCommand[] = []) => {
 	return pipe(
 		commands,
 		RIO.sequenceArray,
 		RTE.rightReaderIO,
 		RTE.tapError(showErrorNoticeRTE)
 	);
+};
+
+export const registerDebugPluginCommands = () => {
+	return registerPluginCommands([debugClearAllData]);
 };
 
 const addBlogUploadCommand =
