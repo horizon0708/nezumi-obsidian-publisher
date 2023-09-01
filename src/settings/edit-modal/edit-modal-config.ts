@@ -8,12 +8,13 @@ export const editModalFields: ControlProps[] = [
 	{
 		key: "apiKey",
 		name: "API Key",
-		description: "some Key",
+		description: "The API key for your blog",
 		type: "input",
 	},
 	{
 		key: "syncFolder",
-		name: "Sync Folder",
+		name: "Folder to publish",
+		description: "Set to '/' to publish the entire vault (not recommended)",
 		type: "folderSuggestion",
 		buttonText: "Select Folder",
 	},

@@ -30,7 +30,6 @@ type EditModalProps = {
 export class EditModal extends Modal {
 	fields: ControlProps[] = [];
 	hiddenFields: ControlProps[] = [];
-	hiddenEl: HTMLElement | null = null;
 	title: string;
 	refreshTab: () => void;
 	plugin: BlogSync;
@@ -47,15 +46,25 @@ export class EditModal extends Modal {
 		const header = this.contentEl.createDiv();
 		header.createEl("h2", { text: this.title });
 
-		this.hiddenEl = this.contentEl.createDiv();
-		const fields = createFields(this.fields, this.app, this.contentEl);
+		const formEl = this.contentEl.createDiv();
+		const hiddenEl = this.contentEl.createDiv();
+		const fields = createFields(this.fields, this.app, formEl);
 		const hiddenFields = createFields(
 			this.hiddenFields,
 			this.app,
-			this.hiddenEl
+			hiddenEl
 		);
 
-		this.hiddenEl.hide();
+		hiddenEl.hide();
+
+		new Setting(formEl)
+			.setName("Show advanced settings")
+			.addToggle((toggle) => {
+				toggle.setValue(false);
+				toggle.onChange((val) => {
+					val ? hiddenEl.show() : hiddenEl.hide();
+				});
+			});
 
 		const submitSetting = new Setting(this.contentEl);
 		const submitErrorEl = submitSetting.controlEl.createEl("span", {
@@ -68,7 +77,10 @@ export class EditModal extends Modal {
 				clearAllErrors(fields);
 				const allFields = [...fields, ...hiddenFields];
 				const e = await submitForm(allFields, {
-					onSuccess: () => {},
+					onSuccess: () => {
+						this.refreshTab();
+						this.close();
+					},
 					onError: (e) => {
 						submitErrorEl?.setText(e.message);
 					},
@@ -77,8 +89,6 @@ export class EditModal extends Modal {
 					plugin: this.plugin,
 					pluginConfig: DEFAULT_CONFIG,
 				})();
-				this.refreshTab();
-				this.close();
 			});
 		});
 	}
