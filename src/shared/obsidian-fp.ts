@@ -1,10 +1,4 @@
-import {
-	MarkdownRenderer,
-	Notice,
-	TFile,
-	getBlobArrayBuffer,
-	requestUrl,
-} from "obsidian";
+import { MarkdownRenderer, Notice, TFile, requestUrl } from "obsidian";
 import { AppContext, PluginContextC } from "src/shared/types";
 import { FileError, NetworkError } from "./errors";
 import { TE, O, RTE, R, pipe } from "./fp";
