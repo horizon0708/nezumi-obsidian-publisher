@@ -17,7 +17,7 @@ const pluginConfigSchema = t.type({
 });
 
 export const DEFAULT_CONFIG: PluginConfigT = {
-	slugKey: "nezumi_slug",
+	slugKey: "slug",
 	domain: "tuhua.io",
 	baseUrl: process.env.DEV
 		? `http://localhost:4000/api`

@@ -1,16 +1,16 @@
 {
-	"name": "nezumi-blog-publisher",
-	"version": "0.0.2",
-	"description": "Publish a folder as a blog with Nezumi or with other apps that implements the sync protocol",
+	"name": "tuhua-blog-publisher",
+	"version": "0.0.3",
+	"description": "Publish a folder as a blog with Tuhua or with other apps that implements the sync protocol",
 	"main": "main.js",
 	"scripts": {
 		"dev": "node esbuild.config.mjs",
-		"build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production && npm run copy",
+		"build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
 		"version": "node version-bump.mjs && git add manifest.json versions.json",
 		"copy": "./copy-to-main-vault.sh"
 	},
-	"keywords": [],
-	"author": "",
+	"keywords": ["obsidian", "fp-ts", "typescript", "blog"],
+	"author": "James Kim",
 	"license": "MIT",
 	"devDependencies": {
 		"@types/jest": "^28.1.8",

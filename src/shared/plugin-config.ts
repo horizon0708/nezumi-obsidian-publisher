@@ -12,8 +12,8 @@ export const buildPluginConfig = () => {
 			.slice(0, N);
 
 	return {
-		name: "Nezumi",
-		slugKey: "nezumi_slug",
+		name: "Tuhua",
+		slugKey: "slug",
 		domain: DOMAIN,
 		baseUrl: `http://localhost:4000/api`,
 		// baseUrl: `https://${DOMAIN}/api`,

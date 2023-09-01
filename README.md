@@ -1,8 +1,8 @@
-# Blog Publisher for Nezumi
+# Blog Publisher for Tuhua
 
 **This plugin is an alpha version. It isn't ready to be used generally**
 
-This is an Obsidian plugin to publish your folder as a blog at Nezumi. 
+This is an Obsidian plugin to publish your folder as a blog hosted on Tuhua. 
 
 ## Installation
 
