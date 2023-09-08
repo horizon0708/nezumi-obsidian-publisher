@@ -162,10 +162,12 @@ export const deleteFiles = (p: DeletePayload) =>
 
 type UploadPostPayload = {
 	type: "post";
+	// TODO: remove path
 	path: string;
 	slug: string;
 	content: string;
 	md5: string;
+	links: Record<string, string>;
 };
 
 const uploadPostResponse = t.type({

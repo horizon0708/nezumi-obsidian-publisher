@@ -95,6 +95,7 @@ const callUploadPost = (post: Post) =>
 			path: post.serverPath,
 			slug: post.slug,
 			md5: post.md5,
+			links: post.links,
 		},
 		RTE.of,
 		RTE.bind("content", () => cachedRead(post.file)),
