@@ -31,8 +31,6 @@ export type ConfirmPushChangesContext = AppContext &
 	PluginContextC &
 	PluginConfigContext;
 
-export const test = console.log.bind(console);
-
 export const confirmPushChanges = async (
 	context: Omit<ConfirmPushChangesContext, "pluginConfig">
 ) => {
@@ -109,10 +107,6 @@ const pushChanges = (plan: UploadPlan) => {
 					links: convertPathToSlug(x.links, plan.slugMap),
 				})),
 				uploadItems,
-				RT.tapIO((e) => () => {
-					const hi = e.map((x) => x.links);
-					console.log(hi);
-				}),
 				RT.map(aggregateUploadResults)
 			)
 		),

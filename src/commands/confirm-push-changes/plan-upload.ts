@@ -21,8 +21,6 @@ const sortItems =
 		const slugMap = new SlugMap();
 		// These mutate the maps - but it's contained & necessary evil
 		const updateFileStatus = (item: Item) => {
-			console.log(item.slug, item);
-
 			return pipe(
 				item,
 				checkForSlugCollision,
@@ -67,8 +65,7 @@ const checkForSlugCollision =
 	({ slugMap }: CheckContext) => {
 		if (FileStatus.PENDING) {
 			const path = slugMap.getBySlug(item.slug);
-			console.log(slugMap, item.slug, path);
-			if (path) {
+			if (path && item.type === FileType.POST) {
 				return {
 					...item,
 					status: FileStatus.SLUG_COLLISION,

@@ -42,7 +42,6 @@ const buildItem = (file: TFile) =>
 		RE.let("embeddedAssets", ({ links }) => getEmbeddedAssets(links)),
 		RTE.fromReaderEither,
 		RTE.bindW("md5", ({ type }) => getFileMd5(file, type)),
-		RTE.tapIO((e) => () => console.log(e.links)),
 		RTE.foldW(liftRT(eitherMonoid.fromLeft), liftRT(eitherMonoid.fromRight))
 	);
 
@@ -75,7 +74,6 @@ const getEmbeddedAssets = (links: Record<string, string>) =>
 	);
 
 const getSlug = (file: TFile) => {
-	console.log(file.basename, file.extension);
 	if (file.extension === "md") {
 		return pipe(
 			getFM(file),

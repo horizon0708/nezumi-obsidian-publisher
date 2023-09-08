@@ -96,17 +96,7 @@ const addGeneralDebug =
 		ctx.plugin.addCommand({
 			id: `debug-${blog.id}`,
 			name: `Debug it up!`,
-			callback: async () => {
-				console.log(ctx.app.metadataCache.resolvedLinks);
-				const d = ctx.app.metadataCache.getCache("TestBlog/About.md");
-				console.log(d);
-
-				const e = ctx.app.metadataCache.getFirstLinkpathDest(
-					"Internal Lina",
-					"TestBlog/About.md"
-				);
-				console.log(e);
-			},
+			callback: async () => {},
 		});
 	};
 
