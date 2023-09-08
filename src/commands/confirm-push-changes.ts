@@ -8,7 +8,7 @@ import {
 } from "../shared/types";
 import { UploadPlan, planUpload } from "./confirm-push-changes/plan-upload";
 import { uploadItems } from "./confirm-push-changes/upload-items";
-import { showNotice } from "src/shared/obsidian-fp";
+import { getFile, showNotice } from "src/shared/obsidian-fp";
 import { deleteFiles } from "src/shared/network";
 import { showErrorNoticeRTE } from "src/shared/obsidian-fp/notifications";
 import {
@@ -20,10 +20,11 @@ import { openConfirmationModal } from "./confirm-push-changes/open-confirmation-
 import { Modal } from "obsidian";
 import { DEFAULT_CONFIG } from "src/shared/plugin-data/plugin-config";
 import { getCurrentUploadSessionIdRTE } from "src/shared/plugin-data/upload-session";
-import { O, A, RT, RTE, pipe, r } from "src/shared/fp";
-import { getFilesToCheck } from "./confirm-push-changes/get-files-to-check";
+import { O, A, RT, RTE, pipe, r, R } from "src/shared/fp";
+import { getPostsToCheck } from "./confirm-push-changes/get-posts-to-check";
 import { newLog } from "src/shared/plugin-data/upload-session/log";
 import { SlugMap } from "./confirm-push-changes/plan-upload/slug-map";
+import { Separated } from "fp-ts/lib/Separated";
 
 export type ConfirmPushChangesContext = AppContext &
 	BlogContext &
@@ -42,9 +43,12 @@ export const confirmPushChanges = async (
 	};
 
 	const res = await pipe(
-		getFilesToCheck(),
+		getPostsToCheck(),
 		RT.fromReader,
 		RT.chain(buildItems),
+		RT.chain((result) =>
+			pipe(result.right, gatherAssets, RT.map(mergeSeparated(result)))
+		),
 		RTE.rightReaderTask,
 		RTE.flatMap(planUpload),
 		RTE.tapReaderIO(openConfirmationModal(pushChanges)),
@@ -52,6 +56,40 @@ export const confirmPushChanges = async (
 	)(deps)();
 
 	return res;
+};
+
+const gatherAssets = (items: Item[]) => {
+	return pipe(
+		items,
+		A.map((item) => item.embeddedAssets),
+		concatSets,
+		(set) => Array.from(set),
+		A.map(getFile),
+		A.sequence(R.Applicative),
+		R.map(A.compact),
+		RT.fromReader,
+		RT.chain(buildItems)
+	);
+};
+
+type BuildItemResult = Separated<Error[], Item[]>;
+const mergeSeparated = (a: BuildItemResult) => (b: BuildItemResult) => {
+	return {
+		left: [...a.left, ...b.left],
+		right: [...a.right, ...b.right],
+	};
+};
+
+// apparently this is fastest
+// https://stackoverflow.com/a/50296208
+const concatSets = <T>(sets: Set<T>[]) => {
+	const set = new Set<T>();
+	for (const iterable of sets) {
+		for (const item of iterable) {
+			set.add(item);
+		}
+	}
+	return set;
 };
 
 const pushChanges = (plan: UploadPlan) => {

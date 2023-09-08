@@ -19,8 +19,6 @@ const sortItems =
 	({ left: errors, right: items }: Separated<Error[], Item[]>) =>
 	(serverMap: Map<string, string>) => {
 		const slugMap = new SlugMap();
-		console.log(slugMap.slugToPath.size);
-		console.log(slugMap.pathToSlug.size);
 		// These mutate the maps - but it's contained & necessary evil
 		const updateFileStatus = (item: Item) => {
 			console.log(item.slug, item);
