@@ -75,6 +75,7 @@ const getEmbeddedAssets = (links: Record<string, string>) =>
 	);
 
 const getSlug = (file: TFile) => {
+	console.log(file.basename, file.extension);
 	if (file.extension === "md") {
 		return pipe(
 			getFM(file),
@@ -95,7 +96,7 @@ const maybeGetSlug =
 	({ pluginConfig: { slugKey } }: PluginConfigContext) =>
 		pipe(
 			maybeFm,
-			O.map((fm) => fm[slugKey] as string)
+			O.flatMap((fm) => O.fromNullable<string>(fm[slugKey]))
 		);
 
 const getDefaultSlug = (file: TFile) =>

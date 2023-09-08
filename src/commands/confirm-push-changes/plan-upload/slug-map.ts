@@ -2,8 +2,13 @@
  *  Wrapper to map slug <-> path
  */
 export class SlugMap {
-	private slugToPath: Map<string, string> = new Map();
-	private pathToSlug: Map<string, string> = new Map();
+	slugToPath: Map<string, string> = new Map();
+	pathToSlug: Map<string, string> = new Map();
+
+	constructor() {
+		this.slugToPath = new Map();
+		this.pathToSlug = new Map();
+	}
 
 	set(slug: string, path: string) {
 		this.slugToPath.set(slug, path);

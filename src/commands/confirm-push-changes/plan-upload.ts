@@ -19,9 +19,13 @@ const sortItems =
 	({ left: errors, right: items }: Separated<Error[], Item[]>) =>
 	(serverMap: Map<string, string>) => {
 		const slugMap = new SlugMap();
+		console.log(slugMap.slugToPath.size);
+		console.log(slugMap.pathToSlug.size);
 		// These mutate the maps - but it's contained & necessary evil
-		const updateFileStatus = (item: Item) =>
-			pipe(
+		const updateFileStatus = (item: Item) => {
+			console.log(item.slug, item);
+
+			return pipe(
 				item,
 				checkForSlugCollision,
 				R.flatMap(checkForMD5Collision),
@@ -30,6 +34,7 @@ const sortItems =
 				slugMap,
 				serverMap,
 			});
+		};
 
 		const postCount = items.filter(
 			(item) => item.type === FileType.POST
@@ -64,6 +69,7 @@ const checkForSlugCollision =
 	({ slugMap }: CheckContext) => {
 		if (FileStatus.PENDING) {
 			const path = slugMap.getBySlug(item.slug);
+			console.log(slugMap, item.slug, path);
 			if (path) {
 				return {
 					...item,
