@@ -3,6 +3,7 @@ import { getFileListFp } from "src/shared/network";
 import { FileStatus, FileType, Item } from "../../shared/types";
 import { Separated } from "fp-ts/lib/Separated";
 import { A, E, NEA, O, R, RTE } from "src/shared/fp";
+import { SlugMap } from "./plan-upload/slug-map";
 
 export type UploadPlan = ReturnType<ReturnType<typeof sortItems>>;
 
@@ -17,7 +18,7 @@ type ServerFileMap = Map<string, string>;
 const sortItems =
 	({ left: errors, right: items }: Separated<Error[], Item[]>) =>
 	(serverMap: Map<string, string>) => {
-		const slugToPath = new Map<string, string>();
+		const slugMap = new SlugMap();
 		// These mutate the maps - but it's contained & necessary evil
 		const updateFileStatus = (item: Item) =>
 			pipe(
@@ -26,7 +27,7 @@ const sortItems =
 				R.flatMap(checkForMD5Collision),
 				R.flatMap(markItemOffFromServerMap)
 			)({
-				slugToPath,
+				slugMap,
 				serverMap,
 			});
 
@@ -48,20 +49,21 @@ const sortItems =
 				totalCount: items.length,
 				postCount: postCount,
 				assetCount: items.length - postCount,
+				slugMap: slugMap,
 			})
 		);
 	};
 
 type CheckContext = {
 	serverMap: ServerFileMap;
-	slugToPath: Map<string, string>;
+	slugMap: SlugMap;
 };
 
 const checkForSlugCollision =
 	(item: Item) =>
-	({ slugToPath }: CheckContext) => {
-		if (item.type === FileType.POST && FileStatus.PENDING) {
-			const path = slugToPath.get(item.slug);
+	({ slugMap }: CheckContext) => {
+		if (FileStatus.PENDING) {
+			const path = slugMap.getBySlug(item.slug);
 			if (path) {
 				return {
 					...item,
@@ -69,7 +71,7 @@ const checkForSlugCollision =
 					message: O.some(path),
 				};
 			}
-			slugToPath.set(item.slug, item.file.path);
+			slugMap.set(item.slug, item.file.path);
 		}
 		return item;
 	};

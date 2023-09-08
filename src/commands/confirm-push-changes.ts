@@ -20,9 +20,10 @@ import { openConfirmationModal } from "./confirm-push-changes/open-confirmation-
 import { Modal } from "obsidian";
 import { DEFAULT_CONFIG } from "src/shared/plugin-data/plugin-config";
 import { getCurrentUploadSessionIdRTE } from "src/shared/plugin-data/upload-session";
-import { O, A, RT, RTE, pipe } from "src/shared/fp";
+import { O, A, RT, RTE, pipe, r } from "src/shared/fp";
 import { getFilesToCheck } from "./confirm-push-changes/get-files-to-check";
 import { newLog } from "src/shared/plugin-data/upload-session/log";
+import { SlugMap } from "./confirm-push-changes/plan-upload/slug-map";
 
 export type ConfirmPushChangesContext = AppContext &
 	BlogContext &
@@ -64,7 +65,11 @@ const pushChanges = (plan: UploadPlan) => {
 		RTE.flatMapReaderTask((sessionId) =>
 			pipe(
 				pending,
-				A.map((x) => ({ ...x, sessionId: O.some(sessionId) })),
+				A.map((x) => ({
+					...x,
+					sessionId: O.some(sessionId),
+					links: convertPathToSlug(x.links, plan.slugMap),
+				})),
 				uploadItems,
 				RT.map(aggregateUploadResults)
 			)
@@ -96,6 +101,18 @@ const pushChanges = (plan: UploadPlan) => {
 			() => RT.of(undefined as void)
 		)
 	);
+};
+
+const convertPathToSlug = (links: Record<string, string>, slugMap: SlugMap) => {
+	const maybeTuples = Object.entries(links).map(([link, path]) => {
+		const slug = slugMap.getByPath(path);
+		if (!slug) {
+			return O.none;
+		}
+		return O.some([link, slug] as [string, string]);
+	});
+
+	return pipe(maybeTuples, A.compact, r.fromEntries);
 };
 
 const aggregateUploadResults = (items: Item[]) => {

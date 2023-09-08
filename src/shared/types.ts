@@ -56,16 +56,16 @@ export type BaseItem = ErroredItem & {
 	type: FileType;
 	sessionId: O.Option<string>;
 	logs: Log[];
+	slug: string;
+	links: Record<string, string>;
 };
 
 export type Post = BaseItem & {
 	type: FileType.POST;
-	slug: string;
 };
 
 export type Asset = BaseItem & {
 	type: FileType.ASSET;
-	slug: string;
 };
 
 export type Item = Post | Asset;
