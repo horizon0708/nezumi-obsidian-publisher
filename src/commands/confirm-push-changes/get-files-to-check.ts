@@ -44,14 +44,14 @@ const concatSets = <T>(sets: Set<T>[]) => {
 	return set;
 };
 
-const getEmbeddedAssets = (file: { path: string }) =>
+const getEmbeddedAssets = (file: TFile) =>
 	pipe(
 		getResolvedLinks(file.path),
 		R.map((links) =>
 			pipe(
 				links,
 				r.toArray,
-				A.filter(([path, n]) => getType(path) === FileType.ASSET),
+				A.filter(([path, n]) => getType(file) === FileType.ASSET),
 				A.map(([path, n]) => path),
 				(paths) => new Set<string>(paths)
 			)
@@ -59,4 +59,4 @@ const getEmbeddedAssets = (file: { path: string }) =>
 	);
 
 const isPostAndInsideSyncFolder = (syncFolder: string) => (file: TFile) =>
-	getType(file.path) === FileType.POST && file.path.startsWith(syncFolder);
+	getType(file) === FileType.POST && file.path.startsWith(syncFolder);

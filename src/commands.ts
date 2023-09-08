@@ -42,7 +42,7 @@ export const registerBlogCommands = (
 	);
 };
 export const registerDebugBlogCommands = () => {
-	return registerBlogCommands([addDebugSessionClearCommand]);
+	return registerBlogCommands([addDebugSessionClearCommand, addGeneralDebug]);
 };
 
 export const registerPluginCommands = (commands: PluginCommand[] = []) => {
@@ -87,6 +87,25 @@ const addDebugSessionClearCommand =
 			name: `clear all sessions`,
 			callback: async () => {
 				await clearUploadSessions({ ...ctx })();
+			},
+		});
+	};
+
+const addGeneralDebug =
+	(blog: SavedBlog) => (ctx: BlogCommandContext) => () => {
+		ctx.plugin.addCommand({
+			id: `debug-${blog.id}`,
+			name: `Debug it up!`,
+			callback: async () => {
+				console.log(ctx.app.metadataCache.resolvedLinks);
+				const d = ctx.app.metadataCache.getCache("TestBlog/About.md");
+				console.log(d);
+
+				const e = ctx.app.metadataCache.getFirstLinkpathDest(
+					"Internal Lina",
+					"TestBlog/About.md"
+				);
+				console.log(e);
 			},
 		});
 	};

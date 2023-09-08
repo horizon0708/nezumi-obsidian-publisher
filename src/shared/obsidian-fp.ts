@@ -1,7 +1,7 @@
 import { MarkdownRenderer, Notice, TFile, requestUrl } from "obsidian";
 import { AppContext, PluginContextC } from "src/shared/types";
 import { FileError, NetworkError } from "./errors";
-import { TE, O, RTE, R, pipe } from "./fp";
+import { TE, O, RTE, R, pipe, E } from "./fp";
 
 /*
  * This module is a **thin** wrapper for the Obsidian API
@@ -45,6 +45,22 @@ export const getFM = (file: TFile) =>
 	R.asks(({ app }: AppContext) =>
 		pipe(app.metadataCache.getFileCache(file)?.frontmatter, O.fromNullable)
 	);
+
+export const getFileCache =
+	(file: TFile) =>
+	({ app }: AppContext) =>
+		pipe(
+			app.metadataCache.getFileCache(file),
+			E.fromNullable(new Error("File cache not found"))
+		);
+
+export const resolveLink =
+	(link: string, sourcePath: string) =>
+	({ app }: AppContext) =>
+		pipe(
+			app.metadataCache.getFirstLinkpathDest(link, sourcePath),
+			E.fromNullable(new Error("Failed to resolve link"))
+		);
 
 export const buildFmUpdater = (processFn: (fm: any) => void) => (file: TFile) =>
 	RTE.asksReaderTaskEither(({ app }: AppContext) =>
@@ -96,6 +112,12 @@ export const getFiles = pipe(
 export const fetchUrl = TE.tryCatchK(
 	requestUrl,
 	(e: any): NetworkError | Error => {
+		if (e.message.startsWith("net::ERR_CONNECTION_REFUSED")) {
+			return new NetworkError(
+				500,
+				`Could not connect refused to the server. Is the server running?`
+			);
+		}
 		if (e.status) {
 			return new NetworkError(e.status, e.message);
 		}

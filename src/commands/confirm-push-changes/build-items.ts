@@ -9,14 +9,10 @@ import {
 	PluginConfigContext,
 } from "../../shared/types";
 import { separatedMonoid } from "../../shared/separated-monoid";
-import {
-	cachedRead,
-	getFM,
-	getResolvedLinks,
-	readBinary,
-} from "src/shared/obsidian-fp";
+import { cachedRead, getFM, readBinary } from "src/shared/obsidian-fp";
 import { getType, liftRT } from "src/shared/utils";
-import { A, RTE, O, R, r, pipe, RT, Monoid } from "src/shared/fp";
+import { A, RTE, O, R, r, pipe, RT, Monoid, RE } from "src/shared/fp";
+import { getLinksToPaths } from "./build-items/get-link-to-paths";
 
 export const buildItems = (files: TFile[]) =>
 	pipe(
@@ -33,17 +29,20 @@ const buildItem = (file: TFile) =>
 			file,
 			status: FileStatus.PENDING,
 			message: O.none,
-			type: getType(file.path) as ItemType,
+			type: getType(file) as ItemType,
 			serverMd5: O.none,
 			sessionId: O.none,
 			logs: [],
 		},
 		R.of,
-		R.apSW("serverPath", getServerPath(file.path)),
-		R.apSW("embeddedAssets", getEmbeddedAssets(file.path)),
+		R.apSW("serverPath", getServerPath(file)),
 		R.apSW("slug", getSlug(file)),
-		RTE.rightReader,
+		RE.fromReader,
+		RE.apSW("links", getLinksToPaths(file)),
+		RE.let("embeddedAssets", ({ links }) => getEmbeddedAssets(links)),
+		RTE.fromReaderEither,
 		RTE.bindW("md5", ({ type }) => getFileMd5(file, type)),
+		RTE.tapIO((e) => () => console.log(e.links)),
 		RTE.foldW(liftRT(eitherMonoid.fromLeft), liftRT(eitherMonoid.fromRight))
 	);
 
@@ -57,36 +56,39 @@ const getFileMd5 = (file: TFile, type: ItemType) => {
 };
 
 const getServerPath =
-	(path: string) =>
+	(file: TFile) =>
 	({ blog }: BlogContext) => {
-		if (getType(path) === FileType.ASSET) {
-			return path;
+		if (getType(file) === FileType.ASSET) {
+			return file.path;
 		}
 		return blog.syncFolder === "/"
-			? path
-			: path.slice(blog.syncFolder.length + 1);
+			? file.path
+			: file.path.slice(blog.syncFolder.length + 1);
 	};
 
-const getEmbeddedAssets = (path: string) =>
+const getEmbeddedAssets = (links: Record<string, string>) =>
 	pipe(
-		getResolvedLinks(path),
-		R.map((links) =>
-			pipe(
-				links,
-				r.toArray,
-				A.filter(([path, n]) => getType(path) === FileType.ASSET),
-				A.map(([path, n]) => path),
-				(paths) => new Set<string>(paths)
-			)
-		)
+		links,
+		(links) => Object.values(links),
+		A.filter((path) => !path.endsWith(".md")),
+		(paths) => new Set<string>(paths)
 	);
 
-const getSlug = (file: TFile) =>
-	pipe(
-		getFM(file),
-		R.flatMap(maybeGetSlug),
-		R.map(O.getOrElse(() => getDefaultSlug(file)))
-	);
+const getSlug = (file: TFile) => {
+	if (file.extension === "md") {
+		return pipe(
+			getFM(file),
+			R.flatMap(maybeGetSlug),
+			R.map(O.getOrElse(() => getDefaultSlug(file)))
+		);
+	}
+	return R.of(getAssetSlug(file));
+};
+
+const getAssetSlug = (file: TFile) => {
+	const [pathWithoutExt] = file.path.split(".");
+	return encodeURIComponent(pathWithoutExt) + "." + file.extension;
+};
 
 const maybeGetSlug =
 	(maybeFm: O.Option<Record<string, any>>) =>

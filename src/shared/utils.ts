@@ -1,5 +1,6 @@
 import { FileType } from "./types";
 import { RT, R, RTE, TE, Monoid, T } from "./fp";
+import { TFile } from "obsidian";
 
 type ResultMonoid<E, A> = [A[], E[]];
 
@@ -43,8 +44,8 @@ export const teeRTE = RTE.tapIO((e) => {
 	return () => console.log(JSON.stringify(e));
 });
 
-export const getType = (path: string) =>
-	path.endsWith(".md") ? FileType.POST : FileType.ASSET;
+export const getType = (file: TFile) =>
+	file.extension === "md" ? FileType.POST : FileType.ASSET;
 
 const delay = (ms: number) =>
 	new Promise<void>((resolve) => {
