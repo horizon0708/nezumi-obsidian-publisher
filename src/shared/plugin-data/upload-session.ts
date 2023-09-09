@@ -5,6 +5,21 @@ import { t, RTE, A, IO, O, TE } from "../fp";
 
 export type UploadSession = t.TypeOf<typeof uploadSessionSchema>;
 
+//TODO: statistics
+type SessionStats = {
+	type: "post" | "asset";
+	name:
+		| "total"
+		| "uploaded"
+		| "skip/md5"
+		| "skip/slug"
+		| "deleted"
+		| "error/upload"
+		| "error/file"
+		| "canceled";
+	count: number;
+};
+
 export const uploadSessionSchema = t.intersection([
 	t.type({
 		id: t.string,

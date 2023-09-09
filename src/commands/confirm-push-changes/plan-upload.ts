@@ -1,38 +1,71 @@
 import { pipe } from "fp-ts/lib/function";
-import { getFileListFp } from "src/shared/network";
 import { FileStatus, FileType, Item } from "../../shared/types";
 import { Separated } from "fp-ts/lib/Separated";
 import { A, E, NEA, O, R, RTE } from "src/shared/fp";
 import { SlugMap } from "./plan-upload/slug-map";
-import { ServerFile, getAssets, getPosts } from "src/shared/network-new";
+import { getAssets, getPosts } from "src/shared/network-new";
+import { ServerMap } from "./plan-upload/server-map";
 
 export type UploadPlan = ReturnType<ReturnType<typeof sortItems>>;
 
-export const planUpload = (itemResult: Separated<Error[], Item[]>) =>
+type PlanUploadArgs = {
+	posts: Separated<Error[], Item[]>;
+	assets: Separated<Error[], Item[]>;
+};
+
+export type UploadPlans = {
+	postPlan: UploadPlan;
+	assetPlan: UploadPlan;
+};
+
+export const planUpload = ({ posts, assets }: PlanUploadArgs) =>
 	pipe(
-		// getFileListFp,
 		RTE.Do,
-		RTE.apSW("posts", getPosts),
-		RTE.apSW("assets", getAssets),
-		RTE.map(({ posts, assets }) => createServerMap([...posts, ...assets])),
-		RTE.map(sortItems(itemResult)),
+		RTE.apSW("postPlan", planPostUpload(posts)),
+		RTE.apSW("assetPlan", planAssetUpload(assets)),
 		RTE.flatMapEither(checkConfirmationModalNeeded)
 	);
 
-export const createServerMap = (serverFiles: ServerFile[]) => {
-	const serverMap = new Map<string, string>();
-	serverFiles.forEach(({ slug, md5 }) => {
-		if (slug) {
-			serverMap.set(slug, md5);
-		}
-	});
-	return serverMap;
+const planPostUpload = (res: Separated<Error[], Item[]>) =>
+	pipe(
+		getPosts,
+		RTE.map((serverFiles) => new ServerMap(serverFiles)),
+		RTE.map(sortItems(res, "post"))
+	);
+
+const planAssetUpload = (res: Separated<Error[], Item[]>) =>
+	pipe(
+		getAssets,
+		RTE.map((serverFiles) => new ServerMap(serverFiles)),
+		RTE.map(sortItems(res, "asset"))
+	);
+
+const buildStats = (uploadPlan: UploadPlan, type: "post" | "asset") => {
+	return [
+		{
+			type,
+			name: "skip/md5",
+			count: uploadPlan.md5Collision ?? 0,
+		},
+		{
+			type,
+			name: "skip/slug",
+			count: uploadPlan.slugCollision ?? 0,
+		},
+		{
+			type,
+			name: "error/file",
+			count: uploadPlan.fileErrors ?? 0,
+		},
+	];
 };
 
-type ServerFileMap = Map<string, string>;
 const sortItems =
-	({ left: errors, right: items }: Separated<Error[], Item[]>) =>
-	(serverMap: Map<string, string>) => {
+	(
+		{ left: errors, right: items }: Separated<Error[], Item[]>,
+		type: "post" | "asset"
+	) =>
+	(serverMap: ServerMap) => {
 		const slugMap = new SlugMap();
 		// These mutate the maps - but it's contained & necessary evil
 		const updateFileStatus = (item: Item) => {
@@ -47,10 +80,6 @@ const sortItems =
 			});
 		};
 
-		const postCount = items.filter(
-			(item) => item.type === FileType.POST
-		).length;
-
 		return pipe(
 			items,
 			A.map(updateFileStatus),
@@ -59,19 +88,17 @@ const sortItems =
 				pending: groups[FileStatus.PENDING] ?? [],
 				md5Collision: groups[FileStatus.MD5_COLLISION] ?? [],
 				slugCollision: groups[FileStatus.SLUG_COLLISION] ?? [],
-				toDelete: Array.from(serverMap.keys()),
+				toDelete: serverMap.slugsToDelete,
 				fileErrors: groups[FileStatus.READ_ERROR] ?? [],
 				errors: errors,
 				totalCount: items.length,
-				postCount: postCount,
-				assetCount: items.length - postCount,
 				slugMap: slugMap,
 			})
 		);
 	};
 
 type CheckContext = {
-	serverMap: ServerFileMap;
+	serverMap: ServerMap;
 	slugMap: SlugMap;
 };
 
@@ -95,12 +122,7 @@ const checkForSlugCollision =
 const checkForMD5Collision =
 	(item: Item) =>
 	({ serverMap }: CheckContext) => {
-		const serverMd5 = serverMap.get(item.slug);
-		if (
-			serverMd5 &&
-			serverMd5 === item.md5 &&
-			item.status === FileStatus.PENDING
-		) {
+		if (serverMap.hasSameMd5(item) && item.status === FileStatus.PENDING) {
 			return {
 				...item,
 				status: FileStatus.MD5_COLLISION,
@@ -112,24 +134,19 @@ const checkForMD5Collision =
 const markItemOffFromServerMap =
 	(item: Item) =>
 	({ serverMap }: CheckContext) => {
-		const serverMd5 = serverMap.get(item.slug);
-		if (serverMd5) {
-			serverMap.delete(item.slug);
-		}
+		serverMap.markAsExisting(item);
 		return item;
 	};
 
 const checkConfirmationModalNeeded = E.fromPredicate(
-	(plan: UploadPlan) =>
-		plan.pending.length > 0 ||
-		plan.toDelete.length > 0 ||
-		// if there are any file errors or slug collisions, lets show friendly modal
-		plan.fileErrors.length > 0 ||
-		plan.slugCollision.length > 0,
-	(plan) =>
-		new Error(
-			plan.md5Collision
-				? "No changes to upload"
-				: "Couldn't find any files to upload!"
-		)
+	({ postPlan, assetPlan }: UploadPlans) =>
+		isUploadNeeded(postPlan) || isUploadNeeded(assetPlan),
+	() => new Error("No changes to upload")
 );
+
+const isUploadNeeded = (plan: UploadPlan) =>
+	plan.pending.length > 0 ||
+	plan.toDelete.length > 0 ||
+	// if there are any file errors or slug collisions, lets show friendly modal
+	plan.fileErrors.length > 0 ||
+	plan.slugCollision.length > 0;

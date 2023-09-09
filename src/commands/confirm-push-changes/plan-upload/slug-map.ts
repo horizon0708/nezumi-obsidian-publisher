@@ -30,4 +30,14 @@ export class SlugMap {
 	hasPath(path: string) {
 		return this.pathToSlug.has(path);
 	}
+
+	merge(slugMap: SlugMap) {
+		slugMap.slugToPath.forEach((path, slug) => {
+			this.slugToPath.set(slug, path);
+		});
+		slugMap.pathToSlug.forEach((slug, path) => {
+			this.pathToSlug.set(slug, path);
+		});
+		return this;
+	}
 }

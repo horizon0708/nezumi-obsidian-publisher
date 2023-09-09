@@ -1,6 +1,6 @@
 import { Setting } from "obsidian";
 import { UploadPlan } from "./plan-upload";
-import { FileStatus, ModalContext } from "src/shared/types";
+import { ModalContext } from "src/shared/types";
 import { pipe } from "fp-ts/lib/function";
 import { renderMarkdown } from "src/shared/obsidian-fp";
 import {
@@ -11,14 +11,42 @@ import {
 	renderModalSpan,
 } from "src/shared/obsidian-fp/modal";
 import { ConfirmPushChangesContext } from "../confirm-push-changes";
-import { RT, RIO, A } from "src/shared/fp";
+import { RT, RIO, A, E } from "src/shared/fp";
 
 type PushChanges = (
-	plan: UploadPlan
+	plan: UploadPlans
 ) => RT.ReaderTask<ConfirmPushChangesContext, void>;
 
+export type MergedUploadPlan = ReturnType<typeof mergeUploadPlan>;
+const mergeUploadPlan = ({
+	postPlan,
+	assetPlan,
+}: {
+	postPlan: UploadPlan;
+	assetPlan: UploadPlan;
+}) => {
+	return {
+		pending: [...postPlan.pending, ...assetPlan.pending],
+		md5Collision: [...postPlan.md5Collision, ...assetPlan.md5Collision],
+		slugCollision: [...postPlan.slugCollision, ...assetPlan.slugCollision],
+		toDelete: [...postPlan.toDelete, ...assetPlan.toDelete],
+		fileErrors: [...postPlan.fileErrors, ...assetPlan.fileErrors],
+		errors: [...postPlan.errors, ...assetPlan.errors],
+		totalCount: postPlan.totalCount + assetPlan.totalCount,
+		slugMap: postPlan.slugMap,
+	};
+};
+
+type UploadPlans = {
+	postPlan: UploadPlan;
+	assetPlan: UploadPlan;
+};
+
 export const openConfirmationModal =
-	(pushChanges: PushChanges) => (uploadPlan: UploadPlan) => {
+	(pushChanges: PushChanges) =>
+	({ postPlan, assetPlan }: UploadPlans) => {
+		const uploadPlan = mergeUploadPlan({ postPlan, assetPlan });
+
 		return pipe(
 			emptyModalContent(),
 			RIO.map(() => isWarningModal(uploadPlan)),
@@ -38,13 +66,16 @@ export const openConfirmationModal =
 			RIO.bindTo("isWarning"),
 			RIO.bindW("context", () => RIO.ask<ConfirmPushChangesContext>()),
 			RIO.tap(({ context, isWarning }) =>
-				renderFooterbuttons(pushChanges(uploadPlan)(context), isWarning)
+				renderFooterbuttons(
+					pushChanges({ postPlan, assetPlan })(context),
+					isWarning
+				)
 			),
 			RIO.tap(openModal)
 		);
 	};
 
-const renderContent = (uploadPlan: UploadPlan) => {
+const renderContent = (uploadPlan: MergedUploadPlan) => {
 	return pipe(
 		RIO.Do,
 		RIO.apSW("element", renderModalDiv()),
@@ -64,14 +95,14 @@ const renderContent = (uploadPlan: UploadPlan) => {
 	);
 };
 
-const buildInfoProps = (plan: UploadPlan) => ({
+const buildInfoProps = (plan: MergedUploadPlan) => ({
 	type: "success" as const,
 	title: `Following ${plan.pending.length} file(s) will be uploaded to your blog`,
 	lines: [],
 	items: plan.pending.map((x) => x.file.path),
 	show: plan.pending.length > 0,
 });
-const buildWarningProps = (plan: UploadPlan) => {
+const buildWarningProps = (plan: MergedUploadPlan) => {
 	return {
 		type: "warning" as const,
 		title: `Following ${plan.slugCollision.length} file(s) have colliding slugs and are skipped`,
@@ -82,7 +113,7 @@ const buildWarningProps = (plan: UploadPlan) => {
 		show: plan.slugCollision.length > 0,
 	};
 };
-const buildDeleteProps = (plan: UploadPlan) => ({
+const buildDeleteProps = (plan: MergedUploadPlan) => ({
 	type: "info" as const,
 	title: `Following ${plan.toDelete.length} file(s) will be deleted from your blog`,
 	lines: [
@@ -91,7 +122,7 @@ const buildDeleteProps = (plan: UploadPlan) => ({
 	items: plan.toDelete,
 	show: plan.toDelete.length > 0,
 });
-const buildErrorProps = (plan: UploadPlan) => ({
+const buildErrorProps = (plan: MergedUploadPlan) => ({
 	type: "error" as const,
 	title: `There were ${plan.errors.length} errors out while processing`,
 	lines: [
@@ -101,14 +132,14 @@ const buildErrorProps = (plan: UploadPlan) => ({
 	show: plan.errors.length > 0,
 });
 
-const isWarningModal = (plan: UploadPlan) =>
+const isWarningModal = (plan: MergedUploadPlan) =>
 	plan.pending.length === 0 && plan.toDelete.length === 0;
 
 type UploadPlanContext = {
-	uploadPlan: UploadPlan;
+	uploadPlan: MergedUploadPlan;
 };
 const renderCallout = (
-	calloutBuilder: (plan: UploadPlan) => CalloutBlockProps
+	calloutBuilder: (plan: MergedUploadPlan) => CalloutBlockProps
 ) =>
 	pipe(
 		RIO.asks((ctx: UploadPlanContext) => ctx.uploadPlan),

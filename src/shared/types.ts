@@ -74,3 +74,17 @@ export type ServerFileState = {
 	md5: string;
 	hasLocalCopy: boolean;
 };
+
+export type SessionStats = {
+	type: "post" | "asset";
+	name:
+		| "total"
+		| "uploaded"
+		| "skip/md5"
+		| "skip/slug"
+		| "deleted"
+		| "error/upload"
+		| "error/file"
+		| "canceled";
+	count: number;
+};
