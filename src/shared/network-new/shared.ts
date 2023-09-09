@@ -1,8 +1,10 @@
 import { flow } from "fp-ts/lib/function";
 import { DecodeError } from "../errors";
-import { E, R, TE, pipe, t } from "../fp";
+import { A, E, R, RTE, TE, pipe, t } from "../fp";
 import { fetchUrl } from "../obsidian-fp";
 import { BlogContext, PluginConfigContext } from "../types";
+import { concatAll } from "fp-ts/lib/Monoid";
+import { errorResultM, successResultM, resultM } from "../utils";
 
 export const serverFile = t.type({
 	md5: t.string,
@@ -52,3 +54,23 @@ export const createServerMap = (serverFiles: ServerFile[]) => {
 	});
 	return serverMap;
 };
+
+export const buildUploadMany =
+	<T, R, A>(rte: (t: T) => RTE.ReaderTaskEither<R, Error, A>) =>
+	(items: T[]) =>
+		pipe(
+			items,
+			A.map((p) =>
+				pipe(
+					rte(p),
+					RTE.bimap(
+						() => errorResultM(p),
+						() => successResultM<T, T>(p)
+					)
+				)
+			),
+			// sequentially for now. Look into batching later
+			RTE.sequenceSeqArray,
+			RTE.map(concatAll(resultM())),
+			RTE.map(([uploaded, errored]) => ({ uploaded, errored }))
+		);
