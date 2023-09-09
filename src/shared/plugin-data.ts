@@ -1,21 +1,15 @@
 import { loadData, saveData } from "./obsidian-fp";
-import {
-	UploadSession,
-	_updateCurrentUploadSession,
-	appendNewUploadSession,
-	appendToSessionLog,
-	getCurrentUploadSessionIdRTE,
-	getSession,
-	uploadSessionSchema,
-} from "./plugin-data/upload-session";
 import * as B from "./plugin-data/blog";
-import { LogLevel } from "./plugin-data/upload-session/log";
-import { BlogContext } from "./types";
-import { RT, RTE, pipe, t } from "./fp";
+import { BlogContext, PluginContextC } from "./types";
+import { A, RT, RTE, TE, pipe, t } from "./fp";
+import {
+	UploadSessionBuilder,
+	sessionSchema,
+} from "./plugin-data/upload-session-2";
 
 const pluginData = t.type({
 	blogs: t.array(B.savedBlogSchema),
-	uploadSessions: t.array(uploadSessionSchema),
+	uploadSessions: t.array(sessionSchema),
 });
 export type PluginData = t.TypeOf<typeof pluginData>;
 
@@ -105,31 +99,16 @@ export const getBlogs = pipe(
 // ----------------
 // sessions
 // ----------------
-export const setNewUploadSession = pipe(
-	loadPluginData(),
-	RTE.chainW((pluginData) =>
-		pipe(
-			pluginData.uploadSessions,
-			appendNewUploadSession,
-			RTE.map((uploadSessions) => ({ ...pluginData, uploadSessions }))
-		)
-	),
-	RTE.tap(savePluginData)
-);
-
-export const updateCurrentUploadSession = (
-	updatedSession: Partial<UploadSession>
-) =>
+export const saveUploadSession = (session: UploadSessionBuilder) =>
 	pipe(
 		loadPluginData(),
-		RTE.chain((pluginData) =>
-			pipe(
-				pluginData.uploadSessions,
-				_updateCurrentUploadSession(updatedSession),
-				RTE.map((uploadSessions) => ({ ...pluginData, uploadSessions }))
-			)
-		),
-		RTE.chainW(savePluginData)
+		RTE.map((pluginData) => ({
+			...pluginData,
+			uploadSessions: pluginData.uploadSessions.concat([
+				session.toJSON(),
+			]),
+		})),
+		RTE.chain(savePluginData)
 	);
 
 export const getBlogUploadSessions = (blogId: string) =>
@@ -154,47 +133,17 @@ export const clearUploadSessions = pipe(
 // ----------------
 // logs
 // ----------------
-export const logForSession = (message: string, level: LogLevel = "info") =>
-	pipe(
-		RTE.Do,
-		RTE.apSW("sessionId", getCurrentUploadSessionIdRTE),
-		RTE.apSW("pluginData", pipe(loadPluginData())),
-		RTE.map(({ sessionId, pluginData }) => {
-			return {
-				...pluginData,
-				uploadSessions: appendToSessionLog(
-					message,
-					level
-				)(pluginData.uploadSessions)(sessionId),
-			};
-		}),
-		RTE.chainW(savePluginData),
-		RTE.tapError((e) =>
-			RTE.fromIO(() => {
-				console.warn("logging failed with error:");
-				console.warn(e);
-			})
-		),
-		foldRTE(undefined as void)
-	);
-
 export const getLogsForSession = (sessionId: string) =>
 	pipe(
 		loadPluginData(),
 		RTE.chainW((pluginData) =>
 			pipe(
 				pluginData.uploadSessions,
-				getSession(sessionId),
+				A.findFirst((session) => session.id === sessionId),
 				RTE.fromOption(() => new Error("session not found")),
 				RTE.map((session) => session.logs)
 			)
 		)
-	);
-
-const foldRTE = <A>(a: A) =>
-	RTE.foldW(
-		() => RT.of(a),
-		() => RT.of(a)
 	);
 
 //  ----------
@@ -203,4 +152,3 @@ const foldRTE = <A>(a: A) =>
 
 export type { SavedBlog } from "./plugin-data/blog";
 export type { Log, LogLevel } from "./plugin-data/upload-session/log";
-export type { UploadSession } from "./plugin-data/upload-session";

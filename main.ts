@@ -6,12 +6,11 @@ import {
 	registerDebugPluginCommands,
 	registerPluginCommands,
 } from "src/commands";
-import { UploadSession } from "src/shared/plugin-data/upload-session";
 import { PluginData, maybeInitialisePluginData } from "src/shared/plugin-data";
 
 export default class BlogSync extends Plugin {
 	updateLog: Record<string, boolean>[] = [];
-	currentUploadSession: UploadSession | null = null;
+	currentSessionId: string | null = null;
 
 	async onload() {
 		const context = {
@@ -40,10 +39,10 @@ export default class BlogSync extends Plugin {
 	}
 
 	currentSession() {
-		return Promise.resolve(this.currentUploadSession);
+		return Promise.resolve(this.currentSessionId);
 	}
 
 	onunload() {
-		this.currentUploadSession = null;
+		this.currentSessionId = null;
 	}
 }

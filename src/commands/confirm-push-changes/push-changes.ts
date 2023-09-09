@@ -1,45 +1,38 @@
 import { pipe } from "fp-ts/lib/function";
-import { RTE, RT, A, O, r } from "src/shared/fp";
+import { RTE, RT, A, O, r, R } from "src/shared/fp";
 import { deletePosts, deleteAssets } from "src/shared/network-new";
 import { showNotice } from "src/shared/obsidian-fp";
 import { showErrorNoticeRTE } from "src/shared/obsidian-fp/notifications";
 import { UploadPlan, UploadPlans } from "./plan-upload";
 import { SlugMap } from "./plan-upload/slug-map";
 import { uploadItems } from "./upload-items";
-import { setNewUploadSession } from "src/shared/plugin-data";
-import { getCurrentUploadSessionIdRTE } from "src/shared/plugin-data/upload-session";
+import { newUploadSession } from "src/shared/plugin-data/upload-session-2";
+import { saveUploadSession } from "src/shared/plugin-data";
 
 export const pushChanges = ({ postPlan, assetPlan }: UploadPlans) => {
 	return pipe(
-		RTE.Do,
-		RTE.bindW("sessionId", setNewSession),
+		R.Do,
+		R.apSW("session", newUploadSession()),
+		RTE.rightReader,
 		RTE.tap(() => pushDeletes(postPlan, deletePosts)),
 		RTE.tap(() => pushDeletes(assetPlan, deleteAssets)),
 		RTE.let("combinedSlugMap", () =>
 			postPlan.slugMap.merge(assetPlan.slugMap)
 		),
-		RTE.bindW("postResult", ({ sessionId, combinedSlugMap }) =>
-			pushUploads(postPlan, sessionId, combinedSlugMap)
+		RTE.bindW("postResult", ({ session, combinedSlugMap }) =>
+			pushUploads(postPlan, session.id, combinedSlugMap)
 		),
-		RTE.bindW("assetResult", ({ sessionId, combinedSlugMap }) =>
-			pushUploads(assetPlan, sessionId, combinedSlugMap)
+		RTE.bindW("assetResult", ({ session, combinedSlugMap }) =>
+			pushUploads(assetPlan, session.id, combinedSlugMap)
 		),
-		// TODO: end session etc
 		RTE.tapError(showErrorNoticeRTE),
-		RTE.tapIO(
-			(e) => () => showNotice("[Tuhua Publisher] Upload complete!")
-		),
+		// TODO: add stats for uploadSession
+		RTE.tapIO(() => () => showNotice("[Tuhua Publisher] Upload complete!")),
+		RTE.tap(({ session }) => saveUploadSession(session)),
 		RTE.fold(
 			() => RT.of(undefined as void),
 			() => RT.of(undefined as void)
 		)
-	);
-};
-
-const setNewSession = () => {
-	return pipe(
-		setNewUploadSession,
-		RTE.flatMap(() => getCurrentUploadSessionIdRTE)
 	);
 };
 

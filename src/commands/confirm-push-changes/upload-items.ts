@@ -1,13 +1,19 @@
 import { pipe } from "fp-ts/lib/function";
 
-import { Asset, FileStatus, FileType, Item, Post } from "../../shared/types";
-import { uploadAsset, uploadPost } from "src/shared/network";
+import {
+	Asset,
+	FileStatus,
+	FileType,
+	Item,
+	PluginContextC,
+	Post,
+} from "../../shared/types";
 import { cachedRead, readBinary } from "src/shared/obsidian-fp";
-import { getCurrentUploadSessionIdRTE } from "src/shared/plugin-data/upload-session";
 import { LogLevel } from "src/shared/plugin-data";
-import { A, O, RT, RTE } from "src/shared/fp";
+import { A, O, RT, RTE, TE } from "src/shared/fp";
 import { NetworkError, SessionMismatchError } from "src/shared/errors";
 import { createPost, createAsset } from "src/shared/network-new";
+import BlogSync from "main";
 
 export const uploadItems = (items: Item[]) =>
 	pipe(
@@ -19,13 +25,28 @@ export const uploadItems = (items: Item[]) =>
 
 const uploadItem = (item: Item) => {
 	return pipe(
-		getCurrentUploadSessionIdRTE,
+		getCurrentSessionId(),
 		RTE.flatMap(checkItemSession(item)),
 		RTE.flatMap(uploadByType),
 		RTE.bimap(markSkipsOrFailures(item), () => markFetchSuccess(item)),
 		RTE.getOrElse((e: Item) => RT.of(e))
 	);
 };
+
+const getCurrentSessionId = () =>
+	pipe(
+		RTE.asks((ctx: PluginContextC) => ctx.plugin),
+		RTE.chainTaskEitherKW(getCId)
+	);
+
+const getCId = (plugin: BlogSync) =>
+	pipe(
+		TE.tryCatch(
+			() => plugin.currentSession(),
+			() => new Error("No session: cancelled")
+		),
+		TE.chain(TE.fromNullable(new Error("No session: cancelled")))
+	);
 
 const checkItemSession = (item: Item) => (currentSessionId: string) =>
 	pipe(

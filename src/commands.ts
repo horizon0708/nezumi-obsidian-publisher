@@ -11,7 +11,6 @@ import * as A from "fp-ts/Array";
 import * as RIO from "fp-ts/ReaderIO";
 import { confirmPushChanges } from "./commands/confirm-push-changes";
 import { showErrorNoticeRTE } from "./shared/obsidian-fp/notifications";
-import { deleteCurrentUploadSessionID } from "./shared/plugin-data/upload-session";
 
 type BlogCommandContext = AppContext & PluginContextC;
 
@@ -75,7 +74,7 @@ const stopUploadCommand = (blog: SavedBlog) => (ctx: PluginContextC) => () => {
 		name: `Stop upload ${blog.name}`,
 		// TODO: check callback
 		callback: () => {
-			deleteCurrentUploadSessionID({ ...ctx })();
+			ctx.plugin.currentSessionId = null;
 		},
 	});
 };

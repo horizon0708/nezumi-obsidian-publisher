@@ -6,31 +6,15 @@ import {
 	PluginConfigContext,
 	PluginContextC,
 } from "../shared/types";
-import {
-	UploadPlan,
-	UploadPlans,
-	planUpload,
-} from "./confirm-push-changes/plan-upload";
-import { uploadItems } from "./confirm-push-changes/upload-items";
-import { getFile, showNotice } from "src/shared/obsidian-fp";
-import { deleteFiles } from "src/shared/network";
-import { showErrorNoticeRTE } from "src/shared/obsidian-fp/notifications";
-import {
-	setNewUploadSession,
-	updateCurrentUploadSession,
-} from "src/shared/plugin-data";
+import { planUpload } from "./confirm-push-changes/plan-upload";
+import { getFile } from "src/shared/obsidian-fp";
 import { buildItems } from "./confirm-push-changes/build-items";
 import { openConfirmationModal } from "./confirm-push-changes/open-confirmation-modal";
-import { Modal, RequestUrlResponse } from "obsidian";
+import { Modal } from "obsidian";
 import { DEFAULT_CONFIG } from "src/shared/plugin-data/plugin-config";
-import { getCurrentUploadSessionIdRTE } from "src/shared/plugin-data/upload-session";
 import { O, A, RT, RTE, pipe, r, R } from "src/shared/fp";
 import { getPostsToCheck } from "./confirm-push-changes/get-posts-to-check";
-import { newLog } from "src/shared/plugin-data/upload-session/log";
-import { SlugMap } from "./confirm-push-changes/plan-upload/slug-map";
 import { Separated } from "fp-ts/lib/Separated";
-import { NetworkError } from "src/shared/errors";
-import { deleteAssets, deletePosts } from "src/shared/network-new";
 import { pushChanges } from "./confirm-push-changes/push-changes";
 
 export type ConfirmPushChangesContext = AppContext &
@@ -96,62 +80,6 @@ const concatSets = <T>(sets: Set<T>[]) => {
 	return set;
 };
 
-type DeleteRTE = typeof deletePosts;
-
-const pushDeletes = (plan: UploadPlan, deleteRTE: DeleteRTE) =>
-	pipe({ slugs: plan.toDelete }, deleteRTE);
-
-const pushUploads = (
-	plan: UploadPlan,
-	sessionId: string,
-	combinedSlugMap: SlugMap
-) => {
-	return pipe(
-		plan.pending,
-		A.map((x) => ({
-			...x,
-			sessionId: O.some(sessionId),
-			links: convertPathToSlug(x.links, combinedSlugMap),
-		})),
-		uploadItems,
-		RT.map(aggregateUploadResults),
-		RTE.rightReaderTask
-	);
-};
-
-const pushChanges2 = ({ postPlan, assetPlan }: UploadPlans) => {
-	return pipe(
-		RTE.Do,
-		RTE.bindW("sessionId", setNewSession),
-		RTE.tap(() => pushDeletes(postPlan, deletePosts)),
-		RTE.tap(() => pushDeletes(assetPlan, deleteAssets)),
-		// TODO: merge slug maps
-		RTE.let("combinedSlugMap", () => postPlan.slugMap),
-		RTE.bindW("postResult", ({ sessionId, combinedSlugMap }) =>
-			pushUploads(postPlan, sessionId, combinedSlugMap)
-		),
-		RTE.bindW("assetResult", ({ sessionId, combinedSlugMap }) =>
-			pushUploads(assetPlan, sessionId, combinedSlugMap)
-		),
-		// TODO: end session etc
-		RTE.tapError(showErrorNoticeRTE),
-		RTE.tapIO(
-			(e) => () => showNotice("[Tuhua Publisher] Upload complete!")
-		),
-		RTE.fold(
-			() => RT.of(undefined as void),
-			() => RT.of(undefined as void)
-		)
-	);
-};
-
-const setNewSession = () => {
-	return pipe(
-		setNewUploadSession,
-		RTE.flatMap(() => getCurrentUploadSessionIdRTE)
-	);
-};
-
 // const pushChanges = ({ postPlan, assetPlan }: UploadPlans) => {
 // 	const { pending, md5Collision, slugCollision, toDelete } = plan;
 // 	return pipe(
@@ -202,18 +130,6 @@ const setNewSession = () => {
 // 	);
 // };
 
-const convertPathToSlug = (links: Record<string, string>, slugMap: SlugMap) => {
-	const maybeTuples = Object.entries(links).map(([link, path]) => {
-		const slug = slugMap.getByPath(path);
-		if (!slug) {
-			return O.none;
-		}
-		return O.some([link, slug] as [string, string]);
-	});
-
-	return pipe(maybeTuples, A.compact, r.fromEntries);
-};
-
 const aggregateUploadResults = (items: Item[]) => {
 	// TODO: sort here?
 	const logs = items.flatMap((item) => item.logs);
@@ -234,13 +150,3 @@ const aggregateUploadResults = (items: Item[]) => {
 		errorCount,
 	};
 };
-
-const uploadedItemToResult = (items: readonly Item[]) =>
-	pipe(
-		Array.from(items),
-		A.partition((item) => item.status === FileStatus.UPLOAD_SUCCESS),
-		({ left, right }) => ({
-			successCount: right.length,
-			errorCount: left.length,
-		})
-	);

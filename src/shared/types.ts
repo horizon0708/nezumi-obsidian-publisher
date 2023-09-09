@@ -3,6 +3,7 @@ import { Log, SavedBlog } from "src/shared/plugin-data";
 import BlogSync from "main";
 import { PluginConfigT } from "./plugin-data/plugin-config";
 import { O } from "./fp";
+import { UploadSessionBuilder } from "./plugin-data/upload-session-2";
 
 export type AppContext = {
 	app: App;
@@ -21,6 +22,9 @@ export type PluginConfigContext = {
 };
 export type PluginContextC = {
 	plugin: BlogSync;
+};
+export type SessionContext = {
+	session: UploadSessionBuilder;
 };
 
 export enum FileStatus {

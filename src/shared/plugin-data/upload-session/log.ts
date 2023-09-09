@@ -20,20 +20,3 @@ export const logSchema = t.type({
 		error: null,
 	}),
 });
-
-// shouldn't need truncate anymore as sessions gets shifted
-export const appendLog = (message: string, level: LogLevel) => (logs: Log[]) =>
-	[
-		...logs,
-		{
-			timestamp: new Date().toISOString(),
-			message,
-			level,
-		},
-	];
-
-export const newLog = (message: string, level: LogLevel = "info") => ({
-	timestamp: new Date().toISOString(),
-	message,
-	level,
-});
