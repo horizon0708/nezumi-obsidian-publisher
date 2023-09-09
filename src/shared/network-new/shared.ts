@@ -45,16 +45,6 @@ export const sendRequest = <T extends t.Props>(decoder: t.TypeC<T>) =>
 		)
 	);
 
-export const createServerMap = (serverFiles: ServerFile[]) => {
-	const serverMap = new Map<string, string>();
-	serverFiles.forEach(({ slug, md5 }) => {
-		if (slug) {
-			serverMap.set(slug, md5);
-		}
-	});
-	return serverMap;
-};
-
 export const buildUploadMany =
 	<T, R, A>(rte: (t: T) => RTE.ReaderTaskEither<R, Error, A>) =>
 	(items: T[]) =>

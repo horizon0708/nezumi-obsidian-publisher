@@ -10,13 +10,12 @@ import { getFetchEnv, HttpMethod } from "./shared";
  *
  */
 type UploadAssetPayload = {
-	type: "asset";
-	path: string;
 	content: ArrayBuffer;
 	md5: string;
+	slug: string;
 };
 
-export const uploadAsset = (p: UploadAssetPayload) => {
+export const createAsset = (p: UploadAssetPayload) => {
 	const formDataBoundaryString =
 		buildFormDataBoundaryString(FORM_DATA_DELIMITER);
 
@@ -26,7 +25,7 @@ export const uploadAsset = (p: UploadAssetPayload) => {
 			headers: {
 				[apiKeyHeader]: apiKey,
 				["Content-Type"]: `multipart/form-data; boundary=----${formDataBoundaryString}`,
-				["x-file-path"]: p.path,
+				["x-file-slug"]: p.slug,
 				["x-file-md5"]: p.md5,
 			},
 			url: baseUrl + "/assets",

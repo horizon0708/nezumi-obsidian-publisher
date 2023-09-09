@@ -1,3 +1,4 @@
+export * from "./shared";
 export * from "./create-asset";
 export * from "./get-assets";
 export * from "./delete-assets";

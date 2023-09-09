@@ -25,6 +25,7 @@ import { getPostsToCheck } from "./confirm-push-changes/get-posts-to-check";
 import { newLog } from "src/shared/plugin-data/upload-session/log";
 import { SlugMap } from "./confirm-push-changes/plan-upload/slug-map";
 import { Separated } from "fp-ts/lib/Separated";
+import { deleteAssets, deletePosts } from "src/shared/network-new";
 
 export type ConfirmPushChangesContext = AppContext &
 	BlogContext &
@@ -97,7 +98,8 @@ const pushChanges = (plan: UploadPlan) => {
 		setNewUploadSession,
 		RTE.flatMap(() => getCurrentUploadSessionIdRTE),
 		// TODO: check deleted file success
-		RTE.tap(() => deleteFiles({ keys: plan.toDelete })),
+		RTE.tap(() => deleteAssets({ slugs: assetSlugsToDelete(toDelete) })),
+		RTE.tap(() => deletePosts({ slugs: postSlugsToDelete(toDelete) })),
 		RTE.flatMapReaderTask((sessionId) =>
 			pipe(
 				pending,
@@ -138,6 +140,13 @@ const pushChanges = (plan: UploadPlan) => {
 		)
 	);
 };
+
+// TODO: need to ban or validate user slugs..
+const assetSlugsToDelete = (slugs: string[]) =>
+	slugs.filter((slug) => slug.contains("."));
+
+const postSlugsToDelete = (slugs: string[]) =>
+	slugs.filter((slug) => !slug.contains("."));
 
 const convertPathToSlug = (links: Record<string, string>, slugMap: SlugMap) => {
 	const maybeTuples = Object.entries(links).map(([link, path]) => {

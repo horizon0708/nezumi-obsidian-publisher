@@ -7,12 +7,10 @@ import {
 } from "./shared";
 
 type UploadPostPayload = {
-	type: "post";
-	// TODO: remove path
-	path: string;
 	slug: string;
-	content: string;
 	md5: string;
+	title: string;
+	markdown: string;
 	links: Record<string, string>;
 };
 
@@ -28,7 +26,7 @@ export const createPost = (p: UploadPostPayload) =>
 				...jsonContentType,
 				[apiKeyHeader]: apiKey,
 			},
-			body: JSON.stringify(p),
+			body: JSON.stringify({ post: p }),
 			url: baseUrl + "/posts",
 			method: HttpMethod.POST,
 		})),

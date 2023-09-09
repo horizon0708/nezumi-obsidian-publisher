@@ -7,6 +7,7 @@ import { getCurrentUploadSessionIdRTE } from "src/shared/plugin-data/upload-sess
 import { LogLevel } from "src/shared/plugin-data";
 import { A, O, RT, RTE } from "src/shared/fp";
 import { NetworkError, SessionMismatchError } from "src/shared/errors";
+import { createPost, createAsset } from "src/shared/network-new";
 
 export const uploadItems = (items: Item[]) =>
 	pipe(
@@ -91,27 +92,25 @@ const uploadByType = (item: Item) => {
 const callUploadPost = (post: Post) =>
 	pipe(
 		{
-			type: post.type,
-			path: post.serverPath,
+			title: "stub title",
 			slug: post.slug,
 			md5: post.md5,
 			links: post.links,
 		},
 		RTE.of,
-		RTE.bind("content", () => cachedRead(post.file)),
-		RTE.chainW(uploadPost),
+		RTE.bind("markdown", () => cachedRead(post.file)),
+		RTE.chainW(createPost),
 		RTE.map(() => {})
 	);
 
 const callUploadAsset = (asset: Asset) =>
 	pipe(
 		{
-			type: asset.type,
-			path: asset.serverPath,
+			slug: asset.slug,
 			md5: asset.md5,
 		},
 		RTE.of,
 		RTE.bind("content", () => readBinary(asset.file)),
-		RTE.chainW(uploadAsset),
+		RTE.chainW(createAsset),
 		RTE.map(() => {})
 	);

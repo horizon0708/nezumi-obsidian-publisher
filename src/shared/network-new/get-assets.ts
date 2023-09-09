@@ -1,7 +1,6 @@
 import { R, RTE, pipe, t } from "../fp";
 import {
 	HttpMethod,
-	createServerMap,
 	getFetchEnv,
 	jsonContentType,
 	sendRequest,
@@ -24,5 +23,5 @@ export const getAssets = pipe(
 	})),
 	RTE.rightReader,
 	RTE.chainTaskEitherK(sendRequest(getAssetsResponse)),
-	RTE.map(({ data }) => createServerMap(data))
+	RTE.map(({ data }) => data)
 );

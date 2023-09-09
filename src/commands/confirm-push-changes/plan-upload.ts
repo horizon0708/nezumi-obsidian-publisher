@@ -4,15 +4,30 @@ import { FileStatus, FileType, Item } from "../../shared/types";
 import { Separated } from "fp-ts/lib/Separated";
 import { A, E, NEA, O, R, RTE } from "src/shared/fp";
 import { SlugMap } from "./plan-upload/slug-map";
+import { ServerFile, getAssets, getPosts } from "src/shared/network-new";
 
 export type UploadPlan = ReturnType<ReturnType<typeof sortItems>>;
 
 export const planUpload = (itemResult: Separated<Error[], Item[]>) =>
 	pipe(
-		getFileListFp,
+		// getFileListFp,
+		RTE.Do,
+		RTE.apSW("posts", getPosts),
+		RTE.apSW("assets", getAssets),
+		RTE.map(({ posts, assets }) => createServerMap([...posts, ...assets])),
 		RTE.map(sortItems(itemResult)),
 		RTE.flatMapEither(checkConfirmationModalNeeded)
 	);
+
+export const createServerMap = (serverFiles: ServerFile[]) => {
+	const serverMap = new Map<string, string>();
+	serverFiles.forEach(({ slug, md5 }) => {
+		if (slug) {
+			serverMap.set(slug, md5);
+		}
+	});
+	return serverMap;
+};
 
 type ServerFileMap = Map<string, string>;
 const sortItems =
