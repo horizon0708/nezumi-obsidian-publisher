@@ -95,7 +95,7 @@ const checkForSlugCollision =
 const checkForMD5Collision =
 	(item: Item) =>
 	({ serverMap }: CheckContext) => {
-		const serverMd5 = serverMap.get(item.serverPath);
+		const serverMd5 = serverMap.get(item.slug);
 		if (
 			serverMd5 &&
 			serverMd5 === item.md5 &&
@@ -112,9 +112,9 @@ const checkForMD5Collision =
 const markItemOffFromServerMap =
 	(item: Item) =>
 	({ serverMap }: CheckContext) => {
-		const serverMd5 = serverMap.get(item.serverPath);
+		const serverMd5 = serverMap.get(item.slug);
 		if (serverMd5) {
-			serverMap.delete(item.serverPath);
+			serverMap.delete(item.slug);
 		}
 		return item;
 	};
