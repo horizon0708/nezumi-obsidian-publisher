@@ -5,6 +5,7 @@ import { upsertBlog } from "src/shared/plugin-data";
 import { NetworkError, DecodeError } from "src/shared/errors";
 import { AppContext } from "src/shared/types";
 import { blogModalFormSchema } from "./edit-modal-config";
+import { connect } from "src/shared/network-new/connect";
 
 type SubmitFormProps = {
 	onSuccess: () => void;
@@ -22,8 +23,8 @@ export const submitForm = (
 		RE.bindTo("form"),
 		RE.mapLeft((e) => new DecodeError(e)),
 		RTE.fromReaderEither,
-		RTE.bindW("result", ({ form }) => pingBlogFP(form)),
-		RTE.map(({ result: { blog }, form }) => ({
+		RTE.bindW("result", ({ form }) => connect(form)),
+		RTE.map(({ result: { data: blog }, form }) => ({
 			...blog,
 			name: form.alias || blog.name,
 			apiKey: form.apiKey,
