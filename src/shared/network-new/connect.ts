@@ -3,7 +3,7 @@ import { AppContext, PluginConfigContext } from "../types";
 import { HttpMethod, sendRequest } from "./shared";
 
 export const blogSchema = t.type({
-	id: t.number,
+	id: t.string,
 	name: t.string,
 	subdomain: t.string,
 });

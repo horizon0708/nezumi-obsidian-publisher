@@ -49,7 +49,7 @@ const sendRequest = <T extends t.Props>(r: t.TypeC<T>) =>
  *
  */
 export const blogSchema = t.type({
-	id: t.number,
+	id: t.string,
 	name: t.string,
 	subdomain: t.string,
 });
