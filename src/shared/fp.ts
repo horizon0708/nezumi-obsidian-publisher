@@ -18,6 +18,8 @@ import { pipe } from "fp-ts/lib/function";
 import { withMessage } from "io-ts-types";
 import * as Monoid from "fp-ts/Monoid";
 import * as NEA from "fp-ts/NonEmptyArray";
+import * as Separated from "fp-ts/Separated";
+import { semigroup } from "fp-ts";
 
 export {
 	RTE,
@@ -40,4 +42,6 @@ export {
 	withMessage,
 	Monoid,
 	NEA,
+	Separated,
+	semigroup,
 };
