@@ -7,7 +7,7 @@ import {
 	deletePosts,
 	uploadPayload,
 } from "src/shared/network-new";
-import { resolveLocalDeps } from "./temp-context";
+import { LocalDeps, addLocalContext } from "../../shared/add-local-context";
 import { cachedRead, readBinary } from "src/shared/obsidian-fp";
 
 type UploadArgs = {
@@ -15,28 +15,25 @@ type UploadArgs = {
 	right: PFileWithMd5[];
 	manifest: Manifest;
 };
-
-type BuildUploadArgs = {
-	args: UploadArgs;
-};
+type LocalContext = LocalDeps<Manifest>;
 
 /**
  * Build upload callback used by the confirmation modal
  */
-export const buildUpload = () => {
+export const buildUpload = ({ left, right, manifest }: UploadArgs) => {
 	return pipe(
 		callDelete,
-		RTE.flatMap(() => RTE.ask<BuildUploadArgs>()),
-		RTE.flatMapReaderTask((deps) => uploadMany(deps.args.right)),
-		RTE.flatMapReader(flatten),
-		resolveLocalDeps<UploadArgs>()
+		RTE.flatMapReaderTask(() => uploadMany(right)),
+		RTE.map(flattenSeparated({ left, right })),
+		RTE.let("manifest", () => manifest),
+		addLocalContext(manifest)
 	);
 };
 
 // callDelete
-const getPostsToDelete = ({ args: { manifest } }: BuildUploadArgs) =>
+const getPostsToDelete = ({ args: manifest }: LocalContext) =>
 	TE.of(manifest.getItemsToDelete.posts.map((x) => x.slug));
-const getAssetsToDelete = ({ args: { manifest } }: BuildUploadArgs) =>
+const getAssetsToDelete = ({ args: manifest }: LocalContext) =>
 	TE.of(manifest.getItemsToDelete.assets.map((x) => x.slug));
 
 const callDelete = pipe(
@@ -54,7 +51,7 @@ const callDelete = pipe(
 // uploadMany
 const replacePathWithSlug =
 	(links: LinkToPath[]) =>
-	({ args: { manifest } }: BuildUploadArgs) => {
+	({ args: manifest }: LocalContext) => {
 		return pipe(
 			links,
 			A.map(({ link, path }) => {
@@ -110,9 +107,9 @@ const uploadMany = flow(
 );
 
 // flatten
-const flatten =
-	<A>(a: Separated.Separated<Error[], A[]>) =>
-	({ args: { left } }: BuildUploadArgs) => ({
-		left: [...left, ...a.left],
-		right: a.right,
+const flattenSeparated =
+	<A, B>(a: Separated.Separated<Error[], A[]>) =>
+	(b: Separated.Separated<Error[], B[]>) => ({
+		left: [...a.left, ...b.left],
+		right: b.right,
 	});
