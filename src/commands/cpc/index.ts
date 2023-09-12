@@ -2,7 +2,7 @@ import { E, RE, RTE, pipe } from "src/shared/fp";
 import { getPosts, getAssets } from "src/shared/network-new";
 import { filterCandidates } from "./filter-candidates";
 import { getCandidates } from "./get-candidates";
-import { Manifest } from "../confirm-push-changes/plan-upload/manifest";
+import { Manifest } from "./shared/manifest";
 import {
 	AppContext,
 	BlogContext,

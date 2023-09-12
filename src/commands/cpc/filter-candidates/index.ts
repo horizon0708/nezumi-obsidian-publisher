@@ -3,7 +3,7 @@ import { PFile } from "../shared/types";
 import { checkSlugCollision } from "./check-slugs";
 import { checkMd5Collision } from "./check-md5";
 import { readMd5 } from "./read-md5";
-import { Manifest } from "src/commands/confirm-push-changes/plan-upload/manifest";
+import { Manifest } from "src/commands/cpc/shared/manifest";
 
 export const filterCandidates = (manifest: Manifest) => {
 	const checkSlug = checkSlugCollision(manifest);

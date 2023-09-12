@@ -1,7 +1,7 @@
 import { E } from "src/shared/fp";
 import { TFile } from "obsidian";
 import { SlugCollisionError } from "src/shared/errors";
-import { Manifest } from "src/commands/confirm-push-changes/plan-upload/manifest";
+import { Manifest } from "src/commands/cpc/shared/manifest";
 
 interface HasSlug {
 	slug: string;

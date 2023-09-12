@@ -1,4 +1,4 @@
-import { Manifest } from "src/commands/confirm-push-changes/plan-upload/manifest";
+import { Manifest } from "src/commands/cpc/shared/manifest";
 import { PFileWithMd5 } from "../shared/types";
 import { A, RT, RTE, Separated, pipe } from "src/shared/fp";
 import {

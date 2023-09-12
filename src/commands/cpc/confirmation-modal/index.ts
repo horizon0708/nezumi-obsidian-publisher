@@ -1,5 +1,5 @@
 import { App, MarkdownRenderer, Modal, Setting } from "obsidian";
-import { Manifest } from "../../confirm-push-changes/plan-upload/manifest";
+import { Manifest } from "../shared/manifest";
 import { PFileWithMd5 } from "../shared/types";
 import { A, RIO, pipe } from "src/shared/fp";
 import BlogSync from "main";

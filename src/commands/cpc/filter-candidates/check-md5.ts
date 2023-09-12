@@ -3,7 +3,7 @@ import { E, RTE, pipe } from "src/shared/fp";
 import { FileProcessingError } from "src/shared/errors";
 import SparkMD5 from "spark-md5";
 import { cachedRead, readBinary } from "src/shared/obsidian-fp";
-import { Manifest } from "src/commands/confirm-push-changes/plan-upload/manifest";
+import { Manifest } from "src/commands/cpc/shared/manifest";
 
 interface HasFile {
 	file: TFile;
