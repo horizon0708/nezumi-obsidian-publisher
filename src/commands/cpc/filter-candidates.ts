@@ -5,7 +5,7 @@ import { TFile } from "obsidian";
 import SparkMD5 from "spark-md5";
 import { cachedRead, readBinary } from "src/shared/obsidian-fp";
 import { FileProcessingError, SlugCollisionError } from "src/shared/errors";
-import { LocalDeps, buildLocal, resolveLocalDeps } from "./temp-context";
+import { LocalDeps, injectDeps } from "./temp-context";
 
 type Args = {
 	manifest: Manifest;
@@ -16,13 +16,11 @@ type Args = {
 };
 type Deps = LocalDeps<Args>;
 
-const args = buildLocal<Args>();
-
-export const filterCandidates = () => {
+export const filterCandidates = (args: Args) => {
 	return pipe(
-		args.asks((deps) => deps.candidates),
-		RTE.flatMap(processManySeq(processAndFilterFile)),
-		args.injectDeps
+		args.candidates,
+		processManySeq(processAndFilterFile),
+		injectDeps(args)
 	);
 };
 

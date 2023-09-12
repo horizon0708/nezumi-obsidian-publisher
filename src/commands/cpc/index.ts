@@ -19,7 +19,7 @@ export const cpc = async (ctx: Context) => {
 		RE.bindTo("candidates"),
 		RTE.fromReaderEither,
 		RTE.bindW("manifest", () => createManifest),
-		RTE.bindW("filteredCandidates", filterCandidates()),
+		RTE.bindW("filteredCandidates", filterCandidates),
 		RTE.map(({ manifest, filteredCandidates }) => ({
 			...filteredCandidates,
 			manifest,

@@ -15,26 +15,18 @@ export const resolveLocalDeps =
 		);
 	};
 
+/**
+ * Injects the passed in variable as a dependency in the ReaderTaskEither monad.
+ * The passed in dependency is "removed" (i.e. does not widen the Reader type)
+ * after the monad is run.
+ */
+export const injectDeps =
+	<R2>(r2: R2) =>
+	<R1, E, A>(rte: RTE.ReaderTaskEither<R1 & { args: R2 }, E, A>) => {
+		return pipe(
+			RTE.ask<R1>(),
+			RTE.flatMapTaskEither((a) => rte({ ...a, args: r2 }))
+		);
+	};
+
 export type LocalDeps<R2> = { args: R2 };
-
-export const buildLocal = <R>() => {
-	return {
-		injectDeps: resolveLocalDeps<R>(),
-		ask: RTE.ask<LocalDeps<R>>(),
-		asks: <T>(getter: (r: R) => T) =>
-			RTE.asks((deps: LocalDeps<R>) => getter(deps.args)),
-	};
-};
-
-export const askLocalDeps = <R2>() => RTE.ask<{ args: R2 }>();
-
-export const resolveLocalDepsK =
-	<R2>() =>
-	<R1, E, A, B>(rteK: (a: A) => RTE.ReaderTaskEither<R1 & R2, E, B>) =>
-	(r2: R2) => {
-		return (a: A) =>
-			pipe(
-				RTE.ask<R1>(),
-				RTE.flatMapTaskEither((r1) => rteK(a)({ ...r1, ...r2 }))
-			);
-	};
