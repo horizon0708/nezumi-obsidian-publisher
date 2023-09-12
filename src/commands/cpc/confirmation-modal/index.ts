@@ -6,9 +6,7 @@ import BlogSync from "main";
 import { SlugCollisionError } from "src/shared/errors";
 
 type ModalData = {
-	left: Error[];
-	right: PFileWithMd5[];
-	manifest: Manifest;
+	markdown: string;
 	onUpload: () => Promise<void>;
 };
 
@@ -22,14 +20,7 @@ export class ConfirmationModal extends Modal {
 		const mainEl = this.contentEl.createDiv();
 		const footerEl = this.contentEl.createDiv();
 
-		// render main content
-		[
-			filesToUploadVm(data.right),
-			filesToDeleteVm(data.manifest),
-			slugCollisionsVm(data.left),
-		]
-			.map(renderCalloutBlockMarkdown)
-			.forEach((x) => this.renderMarkdown(mainEl, x));
+		this.renderMarkdown(mainEl, data.markdown);
 
 		// render footer
 		this.renderFooter(footerEl, data.onUpload, true);

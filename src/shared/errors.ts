@@ -44,6 +44,8 @@ export class FileProcessingError extends Error {
 	}
 }
 
+export class Md5CollisionError extends FileProcessingError {}
+
 export class SlugCollisionError extends FileProcessingError {}
 
 export class DecodeError extends Error {

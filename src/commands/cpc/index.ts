@@ -11,6 +11,7 @@ import {
 } from "src/shared/types";
 import { ConfirmationModal } from "./confirmation-modal";
 import { buildUpload } from "./build-upload";
+import { buildCalloutMarkdown } from "./confirmation-modal/build-callout-markdown";
 
 type Context = AppContext & BlogContext & PluginConfigContext & PluginContextC;
 export const cpc = async (ctx: Context) => {
@@ -23,7 +24,8 @@ export const cpc = async (ctx: Context) => {
 		RTE.map(({ manifest, filteredCandidates }) => ({
 			...filteredCandidates,
 			manifest,
-		}))
+		})),
+		RTE.let("markdown", buildCalloutMarkdown)
 	)(ctx)();
 
 	if (E.isRight(result)) {
@@ -36,7 +38,7 @@ export const cpc = async (ctx: Context) => {
 			}
 		};
 		const modal = new ConfirmationModal(ctx.app, ctx.plugin);
-		modal.render({ ...result.right, onUpload });
+		modal.render({ markdown: result.right.markdown, onUpload });
 		modal.open();
 	}
 	// TODO: show modal on error too

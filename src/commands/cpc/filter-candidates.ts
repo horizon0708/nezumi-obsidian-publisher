@@ -4,7 +4,11 @@ import { Manifest } from "src/commands/cpc/shared/manifest";
 import { TFile } from "obsidian";
 import SparkMD5 from "spark-md5";
 import { cachedRead, readBinary } from "src/shared/obsidian-fp";
-import { FileProcessingError, SlugCollisionError } from "src/shared/errors";
+import {
+	FileProcessingError,
+	Md5CollisionError,
+	SlugCollisionError,
+} from "src/shared/errors";
 import { LocalDeps, addLocalContext } from "../../shared/add-local-context";
 
 type Args = {
@@ -75,7 +79,7 @@ const checkMd5Collision =
 	<T extends HasMd5>(item: T) =>
 	({ args: manifest }: LocalContext) => {
 		if (manifest.hasSameMd5(item)) {
-			return E.left(new FileProcessingError(item.file));
+			return E.left(new Md5CollisionError(item.file));
 		}
 		return E.right(item);
 	};
