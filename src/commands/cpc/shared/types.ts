@@ -20,6 +20,7 @@ export type PFile = {
 	links: LinkToPath[];
 	embeds: LinkToPath[];
 };
+
 export type FileReadE = {
 	_tag: "FILE_READ_FAILURE";
 	path: string;
@@ -46,11 +47,8 @@ export type Md5CollisionE = {
  * Files ready for upload
  */
 export type PUpload =
-	| ({ type: FType.Post; content: string; sessionId: string } & Omit<
-			PFileWithMd5,
-			"type"
-	  >)
-	| ({ type: FType.Asset; content: ArrayBuffer; sessionId: string } & Omit<
+	| ({ type: FType.Post; content: string } & Omit<PFileWithMd5, "type">)
+	| ({ type: FType.Asset; content: ArrayBuffer } & Omit<
 			PFileWithMd5,
 			"type"
 	  >);

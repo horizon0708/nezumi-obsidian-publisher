@@ -9,13 +9,13 @@ import { getFetchEnv, HttpMethod } from "./shared";
  *  Upload asset
  *
  */
-type UploadAssetPayload = {
+export type CreateAssetPayload = {
 	content: ArrayBuffer;
 	md5: string;
 	slug: string;
 };
 
-export const createAsset = (p: UploadAssetPayload) => {
+export const createAsset = (p: CreateAssetPayload) => {
 	const formDataBoundaryString =
 		buildFormDataBoundaryString(FORM_DATA_DELIMITER);
 

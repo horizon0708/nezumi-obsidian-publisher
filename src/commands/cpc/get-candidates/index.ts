@@ -6,6 +6,7 @@ import { FType, PFile } from "../shared/types";
 import { getPostCandidates } from "./get-post-candidates";
 import { getFile } from "src/shared/obsidian-fp";
 import { separatedSemigroup } from "../shared/separate-errors";
+import { FileProcessingError } from "src/shared/errors";
 
 export const getCandidates = () =>
 	pipe(
@@ -28,7 +29,7 @@ const getPosts = () =>
 		RE.fromReader,
 		RE.map(A.map(buildCandidate)),
 		RE.flatMapReader(A.sequence(R.Applicative)),
-		RE.map(A.separate<Error, PFile>)
+		RE.map(A.separate<FileProcessingError, PFile>)
 	);
 
 const buildCandidate = (file: TFile) =>
@@ -47,7 +48,8 @@ const buildCandidate = (file: TFile) =>
 		RE.apSW(
 			"embeds",
 			getLinksToPaths(file, (cm) => cm.embeds ?? [])
-		)
+		),
+		RE.mapLeft((e) => new FileProcessingError(file))
 	);
 
 const getAssetPaths = (files: PFile[]) => {
@@ -66,7 +68,7 @@ const getAssets = (files: PFile[]) =>
 		RE.rightReader,
 		RE.map(A.map(buildCandidate)),
 		RE.flatMapReader(A.sequence(R.Applicative)),
-		RE.map(A.separate<Error, PFile>)
+		RE.map(A.separate<FileProcessingError, PFile>)
 	);
 
 const getFilesFromPaths = (paths: string[]) =>

@@ -5,6 +5,16 @@ export class SlugMap {
 	slugToPath: Map<string, string> = new Map();
 	pathToSlug: Map<string, string> = new Map();
 
+	slugToMap: Map<
+		string,
+		{
+			path?: string;
+			slug: string;
+			serverMd5: string;
+			hasLocalCopy: boolean;
+		}
+	> = new Map();
+
 	constructor() {
 		this.slugToPath = new Map();
 		this.pathToSlug = new Map();
@@ -25,6 +35,11 @@ export class SlugMap {
 
 	hasSlug(slug: string) {
 		return this.slugToPath.has(slug);
+	}
+
+	getPostBySlug(slug: string) {
+		const path = this.getBySlug(slug);
+		return path && path.endsWith(".md") ? path : undefined;
 	}
 
 	hasPath(path: string) {

@@ -1,4 +1,5 @@
 import * as t from "io-ts";
+import { TFile } from "obsidian";
 
 export class NetworkError extends Error {
 	status: number;
@@ -34,6 +35,16 @@ export class NetworkError extends Error {
 		}
 	}
 }
+
+export class FileProcessingError extends Error {
+	file: TFile;
+	constructor(file: TFile, message?: string) {
+		super(message);
+		this.file = file;
+	}
+}
+
+export class SlugCollisionError extends FileProcessingError {}
 
 export class DecodeError extends Error {
 	errors: t.Errors;

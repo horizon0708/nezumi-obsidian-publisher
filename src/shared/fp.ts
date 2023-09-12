@@ -14,7 +14,7 @@ import * as t from "io-ts";
 import * as struct from "fp-ts/struct";
 import * as CS from "fp-ts/Console";
 import * as Debug from "fp-ts-std/Debug";
-import { pipe } from "fp-ts/lib/function";
+import { pipe, flow } from "fp-ts/lib/function";
 import { withMessage } from "io-ts-types";
 import * as Monoid from "fp-ts/Monoid";
 import * as NEA from "fp-ts/NonEmptyArray";
@@ -44,4 +44,5 @@ export {
 	NEA,
 	Separated,
 	semigroup,
+	flow,
 };

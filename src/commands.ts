@@ -11,6 +11,9 @@ import * as A from "fp-ts/Array";
 import * as RIO from "fp-ts/ReaderIO";
 import { confirmPushChanges } from "./commands/confirm-push-changes";
 import { showErrorNoticeRTE } from "./shared/obsidian-fp/notifications";
+import { ConfirmationModal } from "./commands/cpc/confirmation-modal";
+import { cpc } from "./commands/cpc";
+import { DEFAULT_CONFIG } from "./shared/plugin-data/plugin-config";
 
 type BlogCommandContext = AppContext & PluginContextC;
 
@@ -95,7 +98,10 @@ const addGeneralDebug =
 		ctx.plugin.addCommand({
 			id: `debug-${blog.id}`,
 			name: `Debug it up!`,
-			callback: async () => {},
+			callback: async () => {
+				new ConfirmationModal(ctx.app, ctx.plugin).open();
+				await cpc({ ...ctx, blog, pluginConfig: DEFAULT_CONFIG });
+			},
 		});
 	};
 

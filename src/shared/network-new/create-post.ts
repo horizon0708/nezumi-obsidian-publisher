@@ -1,4 +1,5 @@
 import { t, pipe, R, RTE } from "../fp";
+import { fetchUrl } from "../obsidian-fp";
 import {
 	getFetchEnv,
 	jsonContentType,
@@ -6,19 +7,20 @@ import {
 	sendRequest,
 } from "./shared";
 
-type UploadPostPayload = {
+export type CreatePostPayload = {
 	slug: string;
 	md5: string;
 	title: string;
 	markdown: string;
-	links: Record<string, string>;
+	links: { link: string; slug: string }[];
+	embeds: { link: string; slug: string }[];
 };
 
 const createPostResponse = t.type({
 	slug: t.string,
 });
 
-export const createPost = (p: UploadPostPayload) =>
+export const createPost = (p: CreatePostPayload) =>
 	pipe(
 		getFetchEnv,
 		R.map(({ baseUrl, apiKey, apiKeyHeader }) => ({
@@ -31,5 +33,6 @@ export const createPost = (p: UploadPostPayload) =>
 			method: HttpMethod.POST,
 		})),
 		RTE.rightReader,
-		RTE.chainTaskEitherK(sendRequest(createPostResponse))
+		RTE.chainTaskEitherK(fetchUrl)
+		// RTE.chainTaskEitherK(sendRequest(createPostResponse))
 	);
