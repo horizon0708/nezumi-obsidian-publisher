@@ -17,6 +17,15 @@ export const resolveLocalDeps =
 
 export type LocalDeps<R2> = { args: R2 };
 
+export const buildLocal = <R>() => {
+	return {
+		injectDeps: resolveLocalDeps<R>(),
+		ask: RTE.ask<LocalDeps<R>>(),
+		asks: <T>(getter: (r: R) => T) =>
+			RTE.asks((deps: LocalDeps<R>) => getter(deps.args)),
+	};
+};
+
 export const askLocalDeps = <R2>() => RTE.ask<{ args: R2 }>();
 
 export const resolveLocalDepsK =

@@ -16,7 +16,7 @@ type UploadArgs = {
 	manifest: Manifest;
 };
 
-export type BuildUploadArgs = {
+type BuildUploadArgs = {
 	args: UploadArgs;
 };
 

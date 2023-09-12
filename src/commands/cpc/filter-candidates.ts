@@ -5,7 +5,7 @@ import { TFile } from "obsidian";
 import SparkMD5 from "spark-md5";
 import { cachedRead, readBinary } from "src/shared/obsidian-fp";
 import { FileProcessingError, SlugCollisionError } from "src/shared/errors";
-import { LocalDeps, resolveLocalDeps } from "./temp-context";
+import { LocalDeps, buildLocal, resolveLocalDeps } from "./temp-context";
 
 type Args = {
 	manifest: Manifest;
@@ -14,12 +14,15 @@ type Args = {
 		right: PFile[];
 	};
 };
+type Deps = LocalDeps<Args>;
+
+const args = buildLocal<Args>();
 
 export const filterCandidates = () => {
 	return pipe(
-		RTE.asks((deps: LocalDeps<Args>) => deps.args.candidates),
+		args.asks((deps) => deps.candidates),
 		RTE.flatMap(processManySeq(processAndFilterFile)),
-		resolveLocalDeps<Args>()
+		args.injectDeps
 	);
 };
 
@@ -46,9 +49,9 @@ type HasSlug = {
 	slug: string;
 	file: TFile;
 };
-export const checkSlugCollision =
+const checkSlugCollision =
 	<T extends HasSlug>(pFile: T) =>
-	({ args: { manifest } }: LocalDeps<Args>) => {
+	({ args: { manifest } }: Deps) => {
 		const { slug, file } = pFile;
 		const post = manifest.getPostBySlug(slug);
 		if (post && !!post.path) {
@@ -60,7 +63,7 @@ export const checkSlugCollision =
 // register slug - manifest IOs
 const registerSlug =
 	<T extends PFile>(pFile: T) =>
-	({ args: { manifest } }: LocalDeps<Args>) =>
+	({ args: { manifest } }: Deps) =>
 	() => {
 		const { slug, file } = pFile;
 		manifest.registerLocalSlug(slug, file);
@@ -70,9 +73,9 @@ const registerSlug =
 type HasMd5 = {
 	md5: string;
 } & HasSlug;
-export const checkMd5Collision =
+const checkMd5Collision =
 	<T extends HasMd5>(item: T) =>
-	({ args: { manifest } }: LocalDeps<Args>) => {
+	({ args: { manifest } }: Deps) => {
 		if (manifest.hasSameMd5(item)) {
 			return E.left(new FileProcessingError(item.file));
 		}
