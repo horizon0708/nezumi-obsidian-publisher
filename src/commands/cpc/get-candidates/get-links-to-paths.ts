@@ -9,13 +9,13 @@ import { resolveLink, getFileCache } from "src/shared/obsidian-fp";
  */
 export const getLinksToPaths = (
 	file: TFile,
-	getter: (cm: CachedMetadata) => HasLink[]
+	key: (keyof CachedMetadata & "links") | "embeds"
 ) =>
 	pipe(
 		getFileCache(file),
 		RE.chainReaderK((cm) =>
 			pipe(
-				getter(cm),
+				cm[key] ?? [],
 				buildManyLinkToPath,
 				(reader) => reader(file),
 				R.map(A.compact)
