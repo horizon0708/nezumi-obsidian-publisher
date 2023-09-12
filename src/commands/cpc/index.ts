@@ -19,9 +19,7 @@ export const cpc = async (ctx: Context) => {
 		RE.bindTo("candidates"),
 		RTE.fromReaderEither,
 		RTE.bindW("manifest", () => createManifest),
-		RTE.bindW("filteredCandidates", ({ candidates, manifest }) =>
-			filterCandidates(manifest)(candidates)
-		),
+		RTE.bindW("filteredCandidates", filterCandidates()),
 		RTE.map(({ manifest, filteredCandidates }) => ({
 			...filteredCandidates,
 			manifest,
@@ -31,7 +29,7 @@ export const cpc = async (ctx: Context) => {
 	if (E.isRight(result)) {
 		const onUpload = async () => {
 			try {
-				const res = await buildUpload()({ args: result.right })(ctx)();
+				const res = await buildUpload()(result.right)(ctx)();
 			} catch (e) {
 				console.log(e);
 				// TODO: show another modal
