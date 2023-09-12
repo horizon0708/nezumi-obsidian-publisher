@@ -4,6 +4,11 @@ import { ServerFile } from "src/shared/network";
 /**
  *  Wrapper to map slug <-> path
  */
+interface HasMd5 {
+	file: TFile;
+	slug: string;
+	md5: string;
+}
 
 type ManifestItem = {
 	slug: string;
@@ -34,8 +39,6 @@ export class Manifest {
 					slug,
 				});
 		});
-		console.log(this.slugToPost);
-		console.log(this.slugToAsset);
 	}
 
 	registerLocalSlug(slug: string, file: TFile) {
@@ -72,10 +75,4 @@ export class Manifest {
 			),
 		};
 	}
-}
-
-interface HasMd5 {
-	file: TFile;
-	slug: string;
-	md5: string;
 }

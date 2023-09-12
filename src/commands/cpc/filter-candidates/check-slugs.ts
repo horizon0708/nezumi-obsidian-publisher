@@ -1,7 +1,6 @@
-import { E, pipe } from "src/shared/fp";
-import { SlugMap } from "../../confirm-push-changes/plan-upload/slug-map";
+import { E } from "src/shared/fp";
 import { TFile } from "obsidian";
-import { FileProcessingError, SlugCollisionError } from "src/shared/errors";
+import { SlugCollisionError } from "src/shared/errors";
 import { Manifest } from "src/commands/confirm-push-changes/plan-upload/manifest";
 
 interface HasSlug {
@@ -15,11 +14,6 @@ export const checkSlugCollision =
 		const { slug, file } = pFile;
 		const post = slugMap.getPostBySlug(slug);
 		if (post && !!post.path) {
-			console.log("colliding! ----");
-			console.log(slugMap.slugToPost);
-			console.log(slug, file.path, post.path);
-			console.log("colliding! END ----");
-			// TODO: pass the path to the error
 			return E.left(new SlugCollisionError(file, post.path));
 		}
 		return E.right(pFile);

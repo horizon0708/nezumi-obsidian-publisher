@@ -6,7 +6,7 @@ import {
 	deletePosts,
 	uploadPayload,
 } from "src/shared/network-new";
-import { buildPayload } from "../build-payload";
+import { buildPayload } from "./build-payload";
 
 type UploadArgs = {
 	left: Error[];

@@ -6,7 +6,6 @@ import { readMd5 } from "./read-md5";
 import { Manifest } from "src/commands/confirm-push-changes/plan-upload/manifest";
 
 export const filterCandidates = (manifest: Manifest) => {
-	console.log(JSON.stringify(Array.from(manifest.slugToPost.entries())));
 	const checkSlug = checkSlugCollision(manifest);
 	const checkMd5 = checkMd5Collision(manifest);
 	const registerSlug = buildRegisterSlug(manifest);
@@ -28,7 +27,6 @@ const buildRegisterSlug =
 	<T extends PFile>(pFile: T) =>
 	() => {
 		const { slug, file } = pFile;
-		console.log("registering slug", slug, file.path);
 		manifest.registerLocalSlug(slug, file);
 	};
 
@@ -38,7 +36,6 @@ type FileProcessor<R, A, T extends PFile> = (
 const processManySeq =
 	<R, A, T extends PFile>(sorter: FileProcessor<R, A, T>) =>
 	(result: Separated.Separated<Error[], T[]>) => {
-		console.log(result.right.map((x) => x.file.path));
 		return pipe(
 			result.right,
 			A.map(sorter),

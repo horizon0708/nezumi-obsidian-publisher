@@ -12,7 +12,6 @@ export const getCandidates = () =>
 	pipe(
 		RE.Do,
 		RE.apSW("postCandidates", getPosts()),
-
 		RE.bindW("assetCandidates", ({ postCandidates }) =>
 			getAssets(postCandidates.right)
 		),

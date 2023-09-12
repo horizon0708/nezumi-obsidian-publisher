@@ -1,6 +1,6 @@
 import { A, O, RT, RTE, TE, pipe } from "src/shared/fp";
-import { Manifest } from "../confirm-push-changes/plan-upload/manifest";
-import { FType, LinkToPath, PFileWithMd5 } from "./shared/types";
+import { Manifest } from "../../confirm-push-changes/plan-upload/manifest";
+import { FType, LinkToPath, PFileWithMd5 } from "../shared/types";
 import { cachedRead, readBinary } from "src/shared/obsidian-fp";
 import { UploadPayload } from "src/shared/network-new";
 

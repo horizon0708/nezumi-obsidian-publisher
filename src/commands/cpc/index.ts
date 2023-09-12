@@ -1,5 +1,4 @@
-import { flip, pipe } from "fp-ts/lib/function";
-import { E, RE, RTE } from "src/shared/fp";
+import { E, RE, RTE, pipe } from "src/shared/fp";
 import { getPosts, getAssets } from "src/shared/network-new";
 import { filterCandidates } from "./filter-candidates";
 import { getCandidates } from "./get-candidates";
@@ -29,21 +28,20 @@ export const cpc = async (ctx: Context) => {
 		}))
 	)(ctx)();
 
-	console.log(result);
 	if (E.isRight(result)) {
 		const onUpload = async () => {
-			console.log("called");
 			try {
 				const res = await buildUpload(result.right)(ctx)();
-				console.log(res);
 			} catch (e) {
 				console.log(e);
+				// TODO: show another modal
 			}
 		};
 		const modal = new ConfirmationModal(ctx.app, ctx.plugin);
 		modal.render({ ...result.right, onUpload });
 		modal.open();
 	}
+	// TODO: show modal on error too
 };
 
 const createManifest = pipe(
