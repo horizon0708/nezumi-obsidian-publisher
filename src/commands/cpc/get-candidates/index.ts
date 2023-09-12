@@ -12,6 +12,7 @@ export const getCandidates = () =>
 	pipe(
 		RE.Do,
 		RE.apSW("postCandidates", getPosts()),
+
 		RE.bindW("assetCandidates", ({ postCandidates }) =>
 			getAssets(postCandidates.right)
 		),
@@ -55,7 +56,9 @@ const buildCandidate = (file: TFile) =>
 const getAssetPaths = (files: PFile[]) => {
 	const embeddedAssetPaths = new Set<string>();
 	files.forEach((f) =>
-		f.embeds.forEach((e) => embeddedAssetPaths.add(e.path))
+		f.embeds.forEach((e) => {
+			!e.path.endsWith(".md") && embeddedAssetPaths.add(e.path);
+		})
 	);
 	return Array.from(embeddedAssetPaths);
 };

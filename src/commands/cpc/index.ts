@@ -1,4 +1,4 @@
-import { pipe } from "fp-ts/lib/function";
+import { flip, pipe } from "fp-ts/lib/function";
 import { E, RE, RTE } from "src/shared/fp";
 import { getPosts, getAssets } from "src/shared/network-new";
 import { filterCandidates } from "./filter-candidates";
@@ -11,6 +11,7 @@ import {
 	PluginContextC,
 } from "src/shared/types";
 import { ConfirmationModal } from "./confirmation-modal";
+import { buildUpload } from "./build-upload";
 
 type Context = AppContext & BlogContext & PluginConfigContext & PluginContextC;
 export const cpc = async (ctx: Context) => {
@@ -30,8 +31,17 @@ export const cpc = async (ctx: Context) => {
 
 	console.log(result);
 	if (E.isRight(result)) {
+		const onUpload = async () => {
+			console.log("called");
+			try {
+				const res = await buildUpload(result.right)(ctx)();
+				console.log(res);
+			} catch (e) {
+				console.log(e);
+			}
+		};
 		const modal = new ConfirmationModal(ctx.app, ctx.plugin);
-		modal.render(result.right);
+		modal.render({ ...result.right, onUpload });
 		modal.open();
 	}
 };

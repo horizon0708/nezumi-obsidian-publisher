@@ -5,6 +5,13 @@ import { A, RIO, pipe } from "src/shared/fp";
 import BlogSync from "main";
 import { SlugCollisionError } from "src/shared/errors";
 
+type ModalData = {
+	left: Error[];
+	right: PFileWithMd5[];
+	manifest: Manifest;
+	onUpload: () => Promise<void>;
+};
+
 export class ConfirmationModal extends Modal {
 	constructor(app: App, private plugin: BlogSync) {
 		super(app);
@@ -25,7 +32,7 @@ export class ConfirmationModal extends Modal {
 			.forEach((x) => this.renderMarkdown(mainEl, x));
 
 		// render footer
-		this.renderFooter(footerEl, () => Promise.resolve(), true);
+		this.renderFooter(footerEl, data.onUpload, true);
 	}
 
 	renderMarkdown(el: HTMLElement, markdown: string) {
@@ -57,12 +64,6 @@ export class ConfirmationModal extends Modal {
 			});
 	}
 }
-
-type ModalData = {
-	left: Error[];
-	right: PFileWithMd5[];
-	manifest: Manifest;
-};
 
 type CalloutBlockProps = {
 	title: string;

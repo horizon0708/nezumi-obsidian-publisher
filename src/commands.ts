@@ -99,7 +99,6 @@ const addGeneralDebug =
 			id: `debug-${blog.id}`,
 			name: `Debug it up!`,
 			callback: async () => {
-				new ConfirmationModal(ctx.app, ctx.plugin).open();
 				await cpc({ ...ctx, blog, pluginConfig: DEFAULT_CONFIG });
 			},
 		});

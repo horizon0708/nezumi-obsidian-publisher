@@ -1,8 +1,7 @@
 import { Manifest } from "src/commands/confirm-push-changes/plan-upload/manifest";
-import { PFile, PFileWithMd5 } from "../shared/types";
+import { PFileWithMd5 } from "../shared/types";
 import { A, RT, RTE, Separated, pipe } from "src/shared/fp";
 import {
-	UploadPayload,
 	deleteAssets,
 	deletePosts,
 	uploadPayload,
@@ -18,28 +17,33 @@ type UploadArgs = {
 /**
  * Build upload callback used by the confirmation modal
  */
-export const buildUpload = ({ left, right, manifest }: UploadArgs) => {
+export const buildUpload = (args: UploadArgs) => {
+	const { left, right, manifest } = args;
+	const callDelete = buildCallDelete(args);
+	const uploadMany = buildUploadMany(args);
+	const flatten = buildFlatten({ left, right });
+
 	return pipe(
-		callDeletes(manifest),
-		RTE.flatMap(() => uploadMany(manifest)(right)),
-		RTE.map(flatten({ left, right })),
+		callDelete,
+		RTE.flatMap(() => uploadMany),
+		RTE.map(flatten),
 		RTE.let("manifest", () => manifest)
 	);
 };
 
-const flatten =
+const buildFlatten =
 	<A, B>(a: Separated.Separated<Error[], A[]>) =>
 	(b: Separated.Separated<Error[], B[]>) => ({
 		left: [...a.left, ...b.left],
 		right: b.right,
 	});
 
-const uploadMany = (manifest: Manifest) => (pFiles: PFileWithMd5[]) => {
+const buildUploadMany = ({ manifest, right }: UploadArgs) => {
 	const upload = (pFile: PFileWithMd5) =>
 		pipe(pFile, buildPayload(manifest), RTE.flatMap(uploadPayload));
 
 	return pipe(
-		pFiles,
+		right,
 		A.map(upload),
 		A.sequence(RT.ApplicativeSeq),
 		RT.map(A.separate),
@@ -47,7 +51,7 @@ const uploadMany = (manifest: Manifest) => (pFiles: PFileWithMd5[]) => {
 	);
 };
 
-const callDeletes = (manifest: Manifest) =>
+const buildCallDelete = ({ manifest }: UploadArgs) =>
 	pipe(
 		RTE.Do,
 		RTE.let("postsToDelete", () =>

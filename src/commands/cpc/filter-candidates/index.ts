@@ -6,26 +6,40 @@ import { readMd5 } from "./read-md5";
 import { Manifest } from "src/commands/confirm-push-changes/plan-upload/manifest";
 
 export const filterCandidates = (manifest: Manifest) => {
+	console.log(JSON.stringify(Array.from(manifest.slugToPost.entries())));
 	const checkSlug = checkSlugCollision(manifest);
 	const checkMd5 = checkMd5Collision(manifest);
+	const registerSlug = buildRegisterSlug(manifest);
 
 	const processAndFilterFile = (pFile: PFile) =>
 		pipe(
 			readMd5(pFile),
 			RTE.flatMapEither(checkSlug),
+			RTE.tapIO(registerSlug),
 			RTE.flatMapEither(checkMd5)
 		);
 
 	return pipe(processManySeq(processAndFilterFile));
 };
 
+// manifest IOs
+const buildRegisterSlug =
+	(manifest: Manifest) =>
+	<T extends PFile>(pFile: T) =>
+	() => {
+		const { slug, file } = pFile;
+		console.log("registering slug", slug, file.path);
+		manifest.registerLocalSlug(slug, file);
+	};
+
 type FileProcessor<R, A, T extends PFile> = (
 	t: T
 ) => RTE.ReaderTaskEither<R, Error, A>;
 const processManySeq =
 	<R, A, T extends PFile>(sorter: FileProcessor<R, A, T>) =>
-	(result: Separated.Separated<Error[], T[]>) =>
-		pipe(
+	(result: Separated.Separated<Error[], T[]>) => {
+		console.log(result.right.map((x) => x.file.path));
+		return pipe(
 			result.right,
 			A.map(sorter),
 			A.sequence(RT.ApplicativeSeq),
@@ -33,6 +47,7 @@ const processManySeq =
 			RT.map(flatten(result)),
 			RTE.rightReaderTask
 		);
+	};
 
 const flatten =
 	<A, B>(a: Separated.Separated<Error[], A[]>) =>

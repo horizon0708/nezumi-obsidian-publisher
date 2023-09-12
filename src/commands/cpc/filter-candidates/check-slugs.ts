@@ -15,12 +15,12 @@ export const checkSlugCollision =
 		const { slug, file } = pFile;
 		const post = slugMap.getPostBySlug(slug);
 		if (post && !!post.path) {
+			console.log("colliding! ----");
 			console.log(slugMap.slugToPost);
 			console.log(slug, file.path, post.path);
+			console.log("colliding! END ----");
 			// TODO: pass the path to the error
 			return E.left(new SlugCollisionError(file, post.path));
 		}
-		console.log("register", slug, file.path);
-		slugMap.registerLocalSlug(slug, file);
 		return E.right(pFile);
 	};
