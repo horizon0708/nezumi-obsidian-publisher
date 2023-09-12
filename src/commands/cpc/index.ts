@@ -31,7 +31,7 @@ export const cpc = async (ctx: Context) => {
 	if (E.isRight(result)) {
 		const onUpload = async () => {
 			try {
-				const res = await buildUpload(result.right)(ctx)();
+				const res = await buildUpload()({ args: result.right })(ctx)();
 			} catch (e) {
 				console.log(e);
 				// TODO: show another modal
