@@ -38,7 +38,15 @@ export const cpc = async (ctx: Context) => {
 			}
 		};
 		const modal = new ConfirmationModal(ctx.app, ctx.plugin);
-		modal.render({ markdown: result.right.markdown, onUpload });
+		const showUpload =
+			!!result.right.right.length ||
+			!!result.right.manifest.getItemsToDelete.posts.length ||
+			!!result.right.manifest.getItemsToDelete.assets.length;
+
+		modal.render({ markdown: result.right.markdown, onUpload, showUpload });
+		modal.open();
+	} else {
+		const modal = new ConfirmationModal(ctx.app, ctx.plugin);
 		modal.open();
 	}
 	// TODO: show modal on error too

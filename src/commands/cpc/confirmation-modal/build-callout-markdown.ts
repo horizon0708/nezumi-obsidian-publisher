@@ -38,14 +38,37 @@ type CalloutBlockProps = {
 export const buildCalloutMarkdown = ({ left, right, manifest }: Args) => {
 	const success = pipe(filesToUploadProps(right));
 
+	const info = filesToDeleteVm(manifest);
+
 	const warnings = pipe(left, sortErrors, A.map(sortedFailureToCalloutBlock));
 
 	return pipe(
-		[success, ...warnings],
+		[success, info, ...warnings],
 		A.compact,
 		A.map(renderCalloutBlockMarkdown),
+		A.prepend(buildHeading({ right, left, manifest })),
+		A.append(buildWarning({ right, left, manifest })),
 		(msgs) => msgs.join("\n\n")
 	);
+};
+
+const buildHeading = ({ right, left }: Args) => {
+	const fileCount = right.length + left.length;
+	if (!right.length) {
+		return `## No changes to upload\n\n ${fileCount} file(s) have been checked for changes`;
+	}
+	return `## Changes to upload\n\n ${fileCount} file(s) have been checked for changes`;
+};
+
+const buildWarning = ({ right, manifest }: Args) => {
+	if (
+		!right.length &&
+		!manifest.getItemsToDelete.posts.length &&
+		!manifest.getItemsToDelete.assets.length
+	) {
+		return "";
+	}
+	return "These changes are for your blog only. This plugin will _never_ modify your local obsidian files.";
 };
 
 const filesToUploadProps = (
@@ -68,17 +91,28 @@ const filesToUploadProps = (
 	});
 };
 
-const filesToDeleteVm = (manifest: Manifest) => {
+const filesToDeleteVm = (manifest: Manifest): O.Option<CalloutBlockProps> => {
 	const { posts, assets } = manifest.getItemsToDelete;
-	const allItems = [...posts, ...assets];
+	if (!posts.length && !assets.length) {
+		return O.none;
+	}
+	const items = pipe(
+		posts,
+		A.map((x) => "/" + x.slug)
+	);
 
-	return {
+	const lines = assets.length
+		? [
+				`${assets.length} asset(s) that are no longer referenced will be deleted as well`,
+		  ]
+		: [];
+
+	return O.some({
 		type: "warning" as const,
-		title: `Following ${allItems.length} file(s) will be deleted from your blog`,
-		lines: [],
-		items: allItems.map((x) => x.path).filter((x): x is string => !!x),
-		show: allItems.length > 0,
-	};
+		title: `Following ${posts.length} post(s) will be deleted from your blog`,
+		lines,
+		items,
+	});
 };
 
 // sort errors
@@ -122,9 +156,9 @@ const sortErrors = (errors: Error[]): SortedFailures[] => {
 const slugCollisionsProps = (errors: SlugCollisionError[]) => {
 	return {
 		type: "warning" as const,
-		title: `Following ${errors.length} file(s) have colliding slugs and are skipped`,
+		title: `Following ${errors.length} file(s) have colliding slugs and have been skipped`,
 		lines: [
-			"You may need to set slugs manually in the frontmatter to resolve the conflicts.",
+			"You can manually set slugs in the frontmatter to resolve the conflicts.",
 		],
 		items: errors.map(
 			(x) => `${x.file.path} (collising with ${x.message})`

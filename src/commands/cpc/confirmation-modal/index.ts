@@ -3,6 +3,7 @@ import BlogSync from "main";
 
 type ModalData = {
 	markdown: string;
+	showUpload?: boolean;
 	onUpload: () => Promise<void>;
 };
 
@@ -19,7 +20,7 @@ export class ConfirmationModal extends Modal {
 		this.renderMarkdown(mainEl, data.markdown);
 
 		// render footer
-		this.renderFooter(footerEl, data.onUpload, true);
+		this.renderFooter(footerEl, data.onUpload, data.showUpload);
 	}
 
 	renderMarkdown(el: HTMLElement, markdown: string) {
