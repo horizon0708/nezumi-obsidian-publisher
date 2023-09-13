@@ -4,7 +4,6 @@ import * as RTE from "fp-ts/ReaderTaskEither";
 import * as A from "fp-ts/Array";
 import { pipe } from "fp-ts/lib/function";
 import { Blog } from "./shared/network";
-import { deleteBlog, getBlogById, getBlogs } from "./shared/plugin-data";
 import { EditModal } from "./settings/edit-modal";
 import { buildPluginConfig } from "src/shared/plugin-config";
 import { PluginContextC } from "src/shared/types";
@@ -17,6 +16,7 @@ import {
 	editModalFields,
 	editModalHiddenFields,
 } from "./settings/edit-modal/edit-modal-config";
+import { deleteBlog, getBlogById, getBlogs } from "./plugin-data/blogs";
 
 type BlogListContext = {
 	containerEl: HTMLElement;
