@@ -1,7 +1,7 @@
 {
 	"id": "nezumi-blog-publisher",
 	"name": "Blog Publisher for Nezumi",
-	"version": "0.0.3",
+	"version": "0.0.4",
 	"minAppVersion": "0.12.0",
 	"description": "Publish a folder as a blog with Nezumi or with other apps that implements the sync protocol",
 	"author": "James Kim"

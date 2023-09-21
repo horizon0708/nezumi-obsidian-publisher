@@ -1,6 +1,6 @@
 {
 	"name": "tuhua-blog-publisher",
-	"version": "0.0.3",
+	"version": "0.0.4",
 	"description": "Publish a folder as a blog with Tuhua or with other apps that implements the sync protocol",
 	"main": "main.js",
 	"scripts": {
