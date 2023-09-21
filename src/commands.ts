@@ -1,17 +1,14 @@
 import { pipe } from "fp-ts/lib/function";
 import { AppContext, PluginContextC } from "./shared/types";
-import {
-	SavedBlog,
-	clearPluginData,
-	clearUploadSessions,
-	getBlogs,
-} from "./shared/plugin-data";
 import * as RTE from "fp-ts/ReaderTaskEither";
 import * as A from "fp-ts/Array";
 import * as RIO from "fp-ts/ReaderIO";
 import { showErrorNoticeRTE } from "./shared/obsidian-fp/notifications";
 import { pushChanges } from "./commands/push-changes";
 import { DEFAULT_CONFIG } from "./shared/plugin-data/plugin-config";
+import { SavedBlog } from "./plugin-data/types";
+import { getBlogs } from "./plugin-data/blogs";
+import { clearPluginData } from "./plugin-data/plugin-data";
 
 type BlogCommandContext = AppContext & PluginContextC;
 
@@ -42,7 +39,7 @@ export const registerBlogCommands = (
 	);
 };
 export const registerDebugBlogCommands = () => {
-	return registerBlogCommands([addDebugSessionClearCommand, addGeneralDebug]);
+	return registerBlogCommands([addGeneralDebug]);
 };
 
 export const registerPluginCommands = (
@@ -85,17 +82,6 @@ const stopUploadCommand = (blog: SavedBlog) => (ctx: PluginContextC) => () => {
 		},
 	});
 };
-
-const addDebugSessionClearCommand =
-	(blog: SavedBlog) => (ctx: PluginContextC) => () => {
-		ctx.plugin.addCommand({
-			id: `debug-blog-session-clear-${blog.id}`,
-			name: `clear all sessions`,
-			callback: async () => {
-				await clearUploadSessions({ ...ctx })();
-			},
-		});
-	};
 
 const addGeneralDebug =
 	(blog: SavedBlog) => (ctx: BlogCommandContext) => () => {
