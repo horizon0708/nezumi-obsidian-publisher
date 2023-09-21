@@ -1,4 +1,4 @@
-import { Manifest } from "src/commands/cpc/shared/manifest";
+import { Manifest } from "src/commands/push-changes/shared/manifest";
 import { FType, LinkToPath, PFileWithMd5 } from "./shared/types";
 import { A, O, R, RT, RTE, Separated, TE, flow, pipe } from "src/shared/fp";
 import {

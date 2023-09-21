@@ -1,6 +1,6 @@
 import { A, E, RT, RTE, Separated, pipe } from "src/shared/fp";
 import { PFile } from "./shared/types";
-import { Manifest } from "src/commands/cpc/shared/manifest";
+import { Manifest } from "src/commands/push-changes/shared/manifest";
 import { TFile } from "obsidian";
 import SparkMD5 from "spark-md5";
 import { cachedRead, readBinary } from "src/shared/obsidian-fp";

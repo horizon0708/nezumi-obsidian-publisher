@@ -9,10 +9,8 @@ import {
 import * as RTE from "fp-ts/ReaderTaskEither";
 import * as A from "fp-ts/Array";
 import * as RIO from "fp-ts/ReaderIO";
-import { confirmPushChanges } from "./commands/confirm-push-changes";
 import { showErrorNoticeRTE } from "./shared/obsidian-fp/notifications";
-import { ConfirmationModal } from "./commands/cpc/confirmation-modal";
-import { cpc } from "./commands/cpc";
+import { pushChanges } from "./commands/push-changes";
 import { DEFAULT_CONFIG } from "./shared/plugin-data/plugin-config";
 
 type BlogCommandContext = AppContext & PluginContextC;
@@ -47,7 +45,9 @@ export const registerDebugBlogCommands = () => {
 	return registerBlogCommands([addDebugSessionClearCommand, addGeneralDebug]);
 };
 
-export const registerPluginCommands = (commands: PluginCommand[] = []) => {
+export const registerPluginCommands = (
+	commands: PluginCommand[] = [clearAllData]
+) => {
 	return pipe(
 		commands,
 		RIO.sequenceArray,
@@ -57,7 +57,7 @@ export const registerPluginCommands = (commands: PluginCommand[] = []) => {
 };
 
 export const registerDebugPluginCommands = () => {
-	return registerPluginCommands([debugClearAllData]);
+	return registerPluginCommands([]);
 };
 
 const addBlogUploadCommand =
@@ -66,7 +66,11 @@ const addBlogUploadCommand =
 			id: `test-upload-blog-${blog.id}`,
 			name: `Test upload ${blog.name}`,
 			callback: async () => {
-				await confirmPushChanges({ ...ctx, blog });
+				await pushChanges({
+					...ctx,
+					blog,
+					pluginConfig: DEFAULT_CONFIG,
+				});
 			},
 		});
 	};
@@ -98,13 +102,11 @@ const addGeneralDebug =
 		ctx.plugin.addCommand({
 			id: `debug-${blog.id}`,
 			name: `Debug it up! ${blog.name}`,
-			callback: async () => {
-				await cpc({ ...ctx, blog, pluginConfig: DEFAULT_CONFIG });
-			},
+			callback: async () => {},
 		});
 	};
 
-const debugClearAllData: PluginCommand = (ctx: PluginContextC) => () => {
+const clearAllData: PluginCommand = (ctx: PluginContextC) => () => {
 	ctx.plugin.addCommand({
 		id: `debug-clear-all-data`,
 		name: `DEBUG clear all data`,

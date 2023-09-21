@@ -14,7 +14,7 @@ import { buildUpload } from "./build-upload";
 import { buildCalloutMarkdown } from "./confirmation-modal/build-callout-markdown";
 
 type Context = AppContext & BlogContext & PluginConfigContext & PluginContextC;
-export const cpc = async (ctx: Context) => {
+export const pushChanges = async (ctx: Context) => {
 	const result = await pipe(
 		getCandidates(),
 		RE.bindTo("candidates"),
@@ -33,8 +33,9 @@ export const cpc = async (ctx: Context) => {
 		const onUpload = async () => {
 			try {
 				const res = await buildUpload(result.right)(ctx)();
+				console.log(res);
 			} catch (e) {
-				console.log(e);
+				console.error(e);
 				// TODO: show another modal
 			}
 		};
@@ -47,7 +48,17 @@ export const cpc = async (ctx: Context) => {
 		modal.render({ markdown: result.right.markdown, onUpload, showUpload });
 		modal.open();
 	} else {
+		console.error(result.left);
 		const modal = new ConfirmationModal(ctx.app, ctx.plugin);
+		const markdown = `
+		## Unexpected error
+		Please check the console for more details.
+		`;
+		modal.render({
+			markdown,
+			onUpload: () => Promise.resolve(),
+			showUpload: false,
+		});
 		modal.open();
 	}
 	// TODO: show modal on error too

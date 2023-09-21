@@ -9,7 +9,7 @@ const saveBlogChanges = (cb: (blogs: SavedBlog[]) => SavedBlog[]) =>
 	}));
 
 // deletes
-const deleteById = (id: string) => (blogs: SavedBlog[]) =>
+const deleteById = (id: number) => (blogs: SavedBlog[]) =>
 	pipe(
 		blogs,
 		A.findIndex((blog: SavedBlog) => blog.id === id),
@@ -38,7 +38,7 @@ export const getBlogs = pipe(
 	RTE.map((data) => data.blogs)
 );
 
-const getById = (id: string) => (blogs: SavedBlog[]) =>
+const getById = (id: number) => (blogs: SavedBlog[]) =>
 	pipe(
 		blogs,
 		A.findFirst((blog) => blog.id === id),
