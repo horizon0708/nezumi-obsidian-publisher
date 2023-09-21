@@ -97,7 +97,7 @@ const addGeneralDebug =
 	(blog: SavedBlog) => (ctx: BlogCommandContext) => () => {
 		ctx.plugin.addCommand({
 			id: `debug-${blog.id}`,
-			name: `Debug it up!`,
+			name: `Debug it up! ${blog.name}`,
 			callback: async () => {
 				await cpc({ ...ctx, blog, pluginConfig: DEFAULT_CONFIG });
 			},

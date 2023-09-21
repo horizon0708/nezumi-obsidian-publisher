@@ -16,8 +16,7 @@ export const getSlug = (file: TFile) => {
 };
 
 const getAssetSlug = (file: TFile) => {
-	const [pathWithoutExt] = file.path.split(".");
-	return encodeURIComponent(pathWithoutExt) + "." + file.extension;
+	return file.path;
 };
 
 const maybeGetSlug =

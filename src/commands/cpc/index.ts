@@ -29,6 +29,7 @@ export const cpc = async (ctx: Context) => {
 	)(ctx)();
 
 	if (E.isRight(result)) {
+		console.log(result.right);
 		const onUpload = async () => {
 			try {
 				const res = await buildUpload(result.right)(ctx)();

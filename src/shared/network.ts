@@ -49,7 +49,7 @@ const sendRequest = <T extends t.Props>(r: t.TypeC<T>) =>
  *
  */
 export const blogSchema = t.type({
-	id: t.string,
+	id: t.number,
 	name: t.string,
 	subdomain: t.string,
 });
@@ -98,7 +98,7 @@ const serverFile = t.intersection([
 export type ServerFile = t.TypeOf<typeof serverFile>;
 
 const getFilesResponse = t.type({
-	blog: t.type({ id: t.string }),
+	blog: t.type({ id: t.number }),
 	posts: t.array(serverFile),
 	assets: t.array(serverFile),
 });

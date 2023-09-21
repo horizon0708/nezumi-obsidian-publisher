@@ -50,7 +50,7 @@ export type UploadSession = t.TypeOf<typeof sessionSchema>;
 
 export const sessionSchema = t.type({
 	id: t.string,
-	blogId: t.string,
+	blogId: t.number,
 	startedAt: t.string,
 	logs: t.array(logSchema),
 	stats: t.array(t.any),
