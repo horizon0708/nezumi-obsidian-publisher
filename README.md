@@ -1,6 +1,6 @@
 # Blog Publisher for Tuhua
 
-**This plugin is an alpha version. It isn't ready to be used generally**
+**This plugin is an alpha version. It isn't ready to be used for the general public**
 
 This is an Obsidian plugin to publish your folder as a blog hosted on Tuhua. 
 

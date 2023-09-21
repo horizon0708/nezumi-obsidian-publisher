@@ -61,7 +61,6 @@ export const pushChanges = async (ctx: Context) => {
 		});
 		modal.open();
 	}
-	// TODO: show modal on error too
 };
 
 const createManifest = pipe(

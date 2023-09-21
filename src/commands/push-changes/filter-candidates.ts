@@ -4,11 +4,7 @@ import { Manifest } from "src/commands/push-changes/shared/manifest";
 import { TFile } from "obsidian";
 import SparkMD5 from "spark-md5";
 import { cachedRead, readBinary } from "src/shared/obsidian-fp";
-import {
-	FileProcessingError,
-	Md5CollisionError,
-	SlugCollisionError,
-} from "src/shared/errors";
+import { Md5CollisionError, SlugCollisionError } from "src/shared/errors";
 import { LocalDeps, addLocalContext } from "../../shared/add-local-context";
 
 type Args = {

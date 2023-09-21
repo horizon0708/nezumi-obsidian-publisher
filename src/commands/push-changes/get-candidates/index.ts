@@ -1,5 +1,5 @@
 import { TFile } from "obsidian";
-import { A, R, RE, RTE, pipe } from "src/shared/fp";
+import { A, E, R, RE, RTE, pipe } from "src/shared/fp";
 import { getSlug } from "./get-slug";
 import { getLinksToPaths } from "./get-links-to-paths";
 import { FType, PFile } from "../shared/types";
@@ -46,13 +46,15 @@ const buildCandidate = (file: TFile) =>
 		RE.mapLeft((e) => new FileProcessingError(file))
 	);
 
+const separate = (e: E.Either<FileProcessingError, PFile>[]) => A.separate(e);
+
 const getPosts = pipe(
 	getFiles,
 	R.flatMap(postsInsideSyncFolder),
 	RE.fromReader,
 	RE.map(A.map(buildCandidate)),
 	RE.flatMapReader(A.sequence(R.Applicative)),
-	RE.map(A.separate<FileProcessingError, PFile>)
+	RE.map(separate)
 );
 
 // getAssets
@@ -77,5 +79,5 @@ const getAssets = (files: PFile[]) =>
 		RE.rightReader,
 		RE.map(A.map(buildCandidate)),
 		RE.flatMapReader(A.sequence(R.Applicative)),
-		RE.map(A.separate<FileProcessingError, PFile>)
+		RE.map(separate)
 	);

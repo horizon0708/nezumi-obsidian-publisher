@@ -1,5 +1,5 @@
 import { TFile } from "obsidian";
-import { ServerFile } from "src/shared/network";
+import { ServerFile } from "src/shared/network-new";
 
 /**
  *  Wrapper to map slug <-> path
