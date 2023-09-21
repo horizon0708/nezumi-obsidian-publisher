@@ -3,13 +3,10 @@ import * as RIO from "fp-ts/ReaderIO";
 import * as RTE from "fp-ts/ReaderTaskEither";
 import * as A from "fp-ts/Array";
 import { pipe } from "fp-ts/lib/function";
-import { Blog } from "./shared/network";
 import { EditModal } from "./settings/edit-modal";
-import { buildPluginConfig } from "src/shared/plugin-config";
 import { PluginContextC } from "src/shared/types";
 import { showErrorNoticeRTE } from "src/shared/obsidian-fp/notifications";
 import BlogSync from "main";
-import { SessionsModal } from "./settings/sessions-modal";
 import {
 	buildUpdateFormFields,
 	buildUpdateHiddenFormFields,
@@ -17,13 +14,13 @@ import {
 	editModalHiddenFields,
 } from "./settings/edit-modal/edit-modal-config";
 import { deleteBlog, getBlogById, getBlogs } from "./plugin-data/blogs";
+import { DEFAULT_CONFIG, SavedBlog } from "./plugin-data/types";
 
 type BlogListContext = {
 	containerEl: HTMLElement;
-	onEdit: (id: string) => Promise<void>;
-	onDelete: (id: string) => Promise<void>;
+	onEdit: (id: number) => Promise<void>;
+	onDelete: (id: number) => Promise<void>;
 	onAdd: () => void;
-	onViewLog: (id: string) => Promise<void>;
 };
 
 export class TuhuaSettingTab extends PluginSettingTab {
@@ -38,10 +35,8 @@ export class TuhuaSettingTab extends PluginSettingTab {
 		const pluginContext = {
 			app: this.app,
 			plugin: this.plugin,
-			pluginConfig: buildPluginConfig(),
+			pluginConfig: DEFAULT_CONFIG,
 		};
-
-		const sessionsMondal = new SessionsModal(this.app, this.plugin);
 
 		const context: BlogListContext & PluginContextC = {
 			containerEl: this.containerEl,
@@ -73,10 +68,7 @@ export class TuhuaSettingTab extends PluginSettingTab {
 				});
 				addModal.open();
 			},
-			onViewLog: async (id) => {
-				await sessionsMondal.render(id);
-				sessionsMondal.open();
-			},
+
 			...pluginContext,
 		};
 
@@ -101,27 +93,20 @@ const createAddBlogButton =
 		});
 	};
 
-const createBlogItemList = (blogs: Blog[]) => {
+const createBlogItemList = (blogs: SavedBlog[]) => {
 	const createBlogItem =
-		(blog: Blog) =>
-		({ containerEl, onEdit, onDelete, onViewLog }: BlogListContext) =>
+		(blog: SavedBlog) =>
+		({ containerEl, onEdit, onDelete }: BlogListContext) =>
 		() => {
 			const el = new DocumentFragment();
 			const anchor = el.createEl("a");
-			anchor.href = `https://${blog.subdomain}.${
-				buildPluginConfig().domain
-			}`;
+			anchor.href = `https://${blog.subdomain}.${DEFAULT_CONFIG.domain}`;
 			anchor.innerText = anchor.href;
 			el.appendChild(anchor);
 
 			new Setting(containerEl)
 				.setName(blog.name)
 				.setDesc(el)
-				.addButton((btn) => {
-					btn.setButtonText("history").onClick(async () => {
-						await onViewLog(blog.id);
-					});
-				})
 				.addButton((btn) => {
 					btn.setIcon("edit").onClick(() => onEdit(blog.id));
 				})

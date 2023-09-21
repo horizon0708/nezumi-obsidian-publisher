@@ -6,7 +6,8 @@ import {
 	registerDebugPluginCommands,
 	registerPluginCommands,
 } from "src/commands";
-import { PluginData, maybeInitialisePluginData } from "src/shared/plugin-data";
+import { PluginData } from "src/plugin-data/types";
+import { maybeInitialisePluginData } from "src/plugin-data/plugin-data";
 
 export default class BlogSync extends Plugin {
 	updateLog: Record<string, boolean>[] = [];

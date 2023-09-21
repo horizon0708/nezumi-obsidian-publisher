@@ -1,9 +1,7 @@
 import { App, TFile, Modal } from "obsidian";
-import { Log, SavedBlog } from "src/shared/plugin-data";
 import BlogSync from "main";
-import { PluginConfigT } from "./plugin-data/plugin-config";
 import { O } from "./fp";
-import { UploadSessionBuilder } from "./plugin-data/upload-session-2";
+import { PluginConfigT, SavedBlog } from "src/plugin-data/types";
 
 export type AppContext = {
 	app: App;
@@ -23,10 +21,6 @@ export type PluginConfigContext = {
 export type PluginContextC = {
 	plugin: BlogSync;
 };
-export type SessionContext = {
-	session: UploadSessionBuilder;
-};
-
 export enum FileStatus {
 	NOOP = "NOOP",
 	PENDING = "PENDING",
@@ -59,7 +53,7 @@ export type BaseItem = ErroredItem & {
 	serverMd5: O.Option<string>;
 	type: FileType;
 	sessionId: O.Option<string>;
-	logs: Log[];
+	logs: any[];
 	slug: string;
 	links: Record<string, string>;
 };

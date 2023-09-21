@@ -5,8 +5,7 @@ import * as A from "fp-ts/Array";
 import * as RIO from "fp-ts/ReaderIO";
 import { showErrorNoticeRTE } from "./shared/obsidian-fp/notifications";
 import { pushChanges } from "./commands/push-changes";
-import { DEFAULT_CONFIG } from "./shared/plugin-data/plugin-config";
-import { SavedBlog } from "./plugin-data/types";
+import { DEFAULT_CONFIG, SavedBlog } from "./plugin-data/types";
 import { getBlogs } from "./plugin-data/blogs";
 import { clearPluginData } from "./plugin-data/plugin-data";
 

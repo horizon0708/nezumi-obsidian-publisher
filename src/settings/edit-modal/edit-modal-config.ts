@@ -1,8 +1,7 @@
-import { DEFAULT_CONFIG } from "src/shared/plugin-data/plugin-config";
 import { ControlProps } from "../edit-modal";
-import { SavedBlog } from "src/shared/plugin-data";
 import { A, t, withMessage } from "src/shared/fp";
 import { App, TFolder } from "obsidian";
+import { DEFAULT_CONFIG, SavedBlog } from "src/plugin-data/types";
 
 // If you update the order, update `buildUpdateFormFields` below!
 export const editModalFields: ControlProps[] = [

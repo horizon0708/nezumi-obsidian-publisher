@@ -1,5 +1,4 @@
 import { App, Modal, Setting } from "obsidian";
-import { DEFAULT_CONFIG } from "src/shared/plugin-data/plugin-config";
 import { submitForm } from "./edit-modal/submit-form";
 import BlogSync from "main";
 import {
@@ -10,6 +9,7 @@ import {
 	FolderSelectField,
 	FolderSelectFieldProps,
 } from "./edit-modal/folder-select-field";
+import { DEFAULT_CONFIG } from "src/plugin-data/types";
 
 export type ControlProps = FolderSelectFieldProps | TextInputFieldProps;
 export type FormField = { key: string; control: IFormControl };

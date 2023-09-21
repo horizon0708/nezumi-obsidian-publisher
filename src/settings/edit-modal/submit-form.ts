@@ -1,11 +1,10 @@
 import { E, RE, RTE, TE, pipe, t } from "src/shared/fp";
 import { FormField } from "../edit-modal";
-import { pingBlogFP } from "src/shared/network";
-import { upsertBlog } from "src/shared/plugin-data";
 import { NetworkError, DecodeError } from "src/shared/errors";
 import { AppContext } from "src/shared/types";
 import { blogModalFormSchema } from "./edit-modal-config";
 import { connect } from "src/shared/network-new/connect";
+import { upsertBlog } from "src/plugin-data/blogs";
 
 type SubmitFormProps = {
 	onSuccess: () => void;
