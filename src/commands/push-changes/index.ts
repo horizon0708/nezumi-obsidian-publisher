@@ -12,6 +12,7 @@ import {
 import { ConfirmationModal } from "./confirmation-modal";
 import { buildUpload } from "./build-upload";
 import { buildCalloutMarkdown } from "./confirmation-modal/build-callout-markdown";
+import { Notice } from "obsidian";
 
 type Context = AppContext & BlogContext & PluginConfigContext & PluginContextC;
 export const pushChanges = async (ctx: Context) => {
@@ -34,7 +35,9 @@ export const pushChanges = async (ctx: Context) => {
 			try {
 				const res = await buildUpload(result.right)(ctx)();
 				console.log(res);
+				new Notice("Upload successful");
 			} catch (e) {
+				new Notice("Upload failed!");
 				console.error(e);
 				// TODO: show another modal
 			}
